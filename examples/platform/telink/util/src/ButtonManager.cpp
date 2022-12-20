@@ -190,7 +190,6 @@ void button_pressed(const struct device *dev, struct gpio_callback *cb,
 
 void ButtonManager::PollIRQ(void)
 {
-    int ret = 0;
     for (unsigned int i = 0; i < mButtons.size(); i++)
     {
         mButtons[i].PollIRQ();

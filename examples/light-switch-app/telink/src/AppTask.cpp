@@ -66,7 +66,9 @@ uint8_t sTestEventTriggerEnableKey[TestEventTriggerDelegate::kEnableKeyLength] =
 K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppEvent));
 k_timer sFactoryResetTimer;
 
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
 LEDWidget sStatusLED;
+#endif
 
 Button sFactoryResetButton;
 Button sSwitchButton;
@@ -134,11 +136,13 @@ CHIP_ERROR AppTask::Init()
     LOG_INF("SW Version: %u, %s", CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION, CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING);
 
     // Initialize status LED
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
     LEDWidget::InitGpio(SYSTEM_STATE_LED_PORT);
     LEDWidget::SetStateUpdateCallback(LEDStateUpdateHandler);
     sStatusLED.Init(SYSTEM_STATE_LED_PIN);
 
     UpdateStatusLED();
+#endif
 
     InitButtons();
 
@@ -351,6 +355,7 @@ void AppTask::LEDStateUpdateHandler(LEDWidget * ledWidget)
     sAppTask.PostEvent(&event);
 }
 
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
 void AppTask::UpdateStatusLED()
 {
     if (sIsThreadProvisioned && sIsThreadEnabled)
@@ -369,6 +374,7 @@ void AppTask::UpdateStatusLED()
         sStatusLED.Blink(50, 950);
     }
 }
+#endif
 
 void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
 {
@@ -376,13 +382,17 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
     {
     case DeviceEventType::kCHIPoBLEAdvertisingChange:
         sHaveBLEConnections = ConnectivityMgr().NumBLEConnections() != 0;
-        UpdateStatusLED();
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+       UpdateStatusLED();
+#endif
         break;
     case DeviceEventType::kThreadStateChange:
         sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
         sIsThreadEnabled     = ConnectivityMgr().IsThreadEnabled();
         sIsThreadAttached    = ConnectivityMgr().IsThreadAttached();
-        UpdateStatusLED();
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+       UpdateStatusLED();
+#endif
         break;
     case DeviceEventType::kThreadConnectivityChange:
 #if CONFIG_CHIP_OTA_REQUESTOR
