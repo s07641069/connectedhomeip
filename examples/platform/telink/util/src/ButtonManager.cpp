@@ -31,7 +31,7 @@ LOG_MODULE_REGISTER(ButtonManager);
 ButtonManager ButtonManager::sInstance;
 
 static struct gpio_callback button_cb_data;
-void button_pressed(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
+void button_pressed(const struct device * dev, struct gpio_callback * cb, uint32_t pins);
 
 void Button::Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t inPin, bool intBothLevel, void (*callback)(void))
 {
@@ -48,31 +48,29 @@ int Button::Init(void)
 {
     int ret = 0;
 
-    #if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
-
+#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
     ret = gpio_pin_configure(mPort, mInPin, GPIO_INPUT | GPIO_PULL_UP);
     if (ret < 0)
     {
-        printk("Configure input pin - fail. Status %d", ret);
+        LOG_ERR("Config in pin err: %d", ret);
         return ret;
     }
+
     ret = gpio_pin_interrupt_configure(mPort, mInPin, GPIO_INT_EDGE_FALLING);
     if (ret < 0)
     {
-        printk("Configure irq pin - fail. Status %d", ret);
+        LOG_ERR("Config irq pin err: %d", ret);
         return ret;
     }
 
     gpio_init_callback(&button_cb_data, button_pressed, mInPin);
-
     ret = gpio_add_callback(mPort, &button_cb_data);
     if (ret < 0)
     {
-        printk("Configure gpio_init_callback - fail. Status %d", ret);
+        LOG_ERR("Config gpio_init_callback err: %d", ret);
         return ret;
     }
-
-    #else
+#else
 
     ret = gpio_pin_configure(mPort, mOutPin, GPIO_OUTPUT_ACTIVE);
     if (ret < 0)
@@ -87,7 +85,7 @@ int Button::Init(void)
         LOG_ERR("Config in pin err: %d", ret);
         return ret;
     }
-    #endif
+#endif
 
     return ret;
 }
@@ -180,9 +178,7 @@ void ButtonEntry(void * param1, void * param2, void * param3)
 }
 
 #if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
-
-void button_pressed(const struct device *dev, struct gpio_callback *cb,
-		    uint32_t pins)
+void button_pressed(const struct device * dev, struct gpio_callback * cb, uint32_t pins)
 {
     ButtonManager & sInstance = ButtonManagerInst();
     sInstance.PollIRQ();
@@ -198,8 +194,7 @@ void ButtonManager::PollIRQ(void)
 
 void Button::PollIRQ()
 {
-    int ret = 0;
-    ret = gpio_pin_get(mPort, mInPin);
+    int ret = gpio_pin_get(mPort, mInPin);
     if (ret == STATE_LOW)
     {
         if (mCallback != NULL)
@@ -219,7 +214,6 @@ void Button::Configure(const struct device * port, gpio_pin_t inPin, void (*call
 
     Init();
 }
-
 
 #else
 K_THREAD_DEFINE(buttonThread, 512, ButtonEntry, NULL, NULL, NULL, K_PRIO_COOP(CONFIG_NUM_COOP_PRIORITIES - 1), 0, 0);

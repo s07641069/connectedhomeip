@@ -383,7 +383,7 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
     case DeviceEventType::kCHIPoBLEAdvertisingChange:
         sHaveBLEConnections = ConnectivityMgr().NumBLEConnections() != 0;
 #if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
-       UpdateStatusLED();
+        UpdateStatusLED();
 #endif
         break;
     case DeviceEventType::kThreadStateChange:
@@ -391,7 +391,7 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
         sIsThreadEnabled     = ConnectivityMgr().IsThreadEnabled();
         sIsThreadAttached    = ConnectivityMgr().IsThreadAttached();
 #if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
-       UpdateStatusLED();
+        UpdateStatusLED();
 #endif
         break;
     case DeviceEventType::kThreadConnectivityChange:
