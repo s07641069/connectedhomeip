@@ -224,13 +224,8 @@ CHIP_ERROR AppTask::StartApp()
 
     while (true)
     {
-        int ret = k_msgq_get(&sAppEventQueue, &event, K_MSEC(10));
-
-        while (!ret)
-        {
-            DispatchEvent(&event);
-            ret = k_msgq_get(&sAppEventQueue, &event, K_NO_WAIT);
-        }
+        k_msgq_get(&sAppEventQueue, &event, K_FOREVER);
+        DispatchEvent(&event);
     }
 }
 
@@ -461,10 +456,17 @@ void AppTask::FactoryResetTimerEventHandler(AppEvent * aEvent)
 
 void AppTask::InitButtons(void)
 {
+#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
+    sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_1, FactoryResetButtonEventHandler);
+    sSwitchButton.Configure(BUTTON_PORT, BUTTON_PIN_2, SwitchActionButtonEventHandler);
+    sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, StartThreadButtonEventHandler);
+    sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, StartBleAdvButtonEventHandler);
+#else
     sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_1, true, FactoryResetButtonEventHandler);
     sSwitchButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_1, false, SwitchActionButtonEventHandler);
     sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_2, false, StartThreadButtonEventHandler);
     sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_2, false, StartBleAdvButtonEventHandler);
+#endif
 
     ButtonManagerInst().AddButton(sFactoryResetButton);
     ButtonManagerInst().AddButton(sSwitchButton);
