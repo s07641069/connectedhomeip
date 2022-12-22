@@ -53,10 +53,11 @@ using namespace ::chip::Credentials;
 using namespace ::chip::DeviceLayer;
 
 namespace {
-constexpr int kFactoryResetTriggerTimeout = 2000;
-constexpr int kAppEventQueueSize          = 10;
-constexpr uint8_t kButtonPushEvent        = 1;
-constexpr uint8_t kButtonReleaseEvent     = 0;
+constexpr int kFactoryResetCalcTimeout = 3000;
+constexpr int kFactoryResetTriggerCntr = 3;
+constexpr int kAppEventQueueSize       = 10;
+constexpr uint8_t kButtonPushEvent     = 1;
+constexpr uint8_t kButtonReleaseEvent  = 0;
 
 // NOTE! This key is for test/certification only and should not be available in production devices!
 // If CONFIG_CHIP_FACTORY_DATA is enabled, this value is read from the factory data.
@@ -65,6 +66,7 @@ uint8_t sTestEventTriggerEnableKey[TestEventTriggerDelegate::kEnableKeyLength] =
 
 K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppEvent));
 k_timer sFactoryResetTimer;
+uint8_t sFactoryResetCntr = 0;
 
 #if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
 LEDWidget sStatusLED;
@@ -79,7 +81,6 @@ bool sIsThreadProvisioned       = false;
 bool sIsThreadEnabled           = false;
 bool sIsThreadAttached          = false;
 bool sHaveBLEConnections        = false;
-bool sIsFactoryResetTimerActive = false;
 
 chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
 
@@ -267,15 +268,20 @@ void AppTask::FactoryResetButtonEventHandler(void)
 
 void AppTask::FactoryResetHandler(AppEvent * aEvent)
 {
-    if (!sIsFactoryResetTimerActive)
+    if (sFactoryResetCntr == 0)
     {
-        k_timer_start(&sFactoryResetTimer, K_MSEC(kFactoryResetTriggerTimeout), K_NO_WAIT);
-        sIsFactoryResetTimerActive = true;
+        k_timer_start(&sFactoryResetTimer, K_MSEC(kFactoryResetCalcTimeout), K_NO_WAIT);
     }
-    else
+
+    sFactoryResetCntr++;
+
+    if (sFactoryResetCntr == kFactoryResetTriggerCntr)
     {
         k_timer_stop(&sFactoryResetTimer);
-        sIsFactoryResetTimerActive = false;
+        sFactoryResetCntr = 0;
+
+        LOG_INF("FactoryResetHandler");
+        chip::Server::GetInstance().ScheduleFactoryReset();
     }
 }
 
@@ -338,6 +344,7 @@ void AppTask::StartBleAdvHandler(AppEvent * aEvent)
     }
 }
 
+#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
 void AppTask::UpdateLedStateEventHandler(AppEvent * aEvent)
 {
     if (aEvent->Type == AppEvent::kEventType_UpdateLedState)
@@ -355,7 +362,6 @@ void AppTask::LEDStateUpdateHandler(LEDWidget * ledWidget)
     sAppTask.PostEvent(&event);
 }
 
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
 void AppTask::UpdateStatusLED()
 {
     if (sIsThreadProvisioned && sIsThreadEnabled)
@@ -459,9 +465,7 @@ void AppTask::FactoryResetTimerEventHandler(AppEvent * aEvent)
         return;
     }
 
-    sIsFactoryResetTimerActive = false;
-    LOG_INF("FactoryResetHandler");
-    chip::Server::GetInstance().ScheduleFactoryReset();
+    sFactoryResetCntr = 0;
 }
 
 void AppTask::InitButtons(void)
@@ -472,10 +476,10 @@ void AppTask::InitButtons(void)
     sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, StartThreadButtonEventHandler);
     sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, StartBleAdvButtonEventHandler);
 #else
-    sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_1, true, FactoryResetButtonEventHandler);
-    sSwitchButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_1, false, SwitchActionButtonEventHandler);
-    sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_2, false, StartThreadButtonEventHandler);
-    sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_2, false, StartBleAdvButtonEventHandler);
+    sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_1, FactoryResetButtonEventHandler);
+    sSwitchButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_1, SwitchActionButtonEventHandler);
+    sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_2, StartThreadButtonEventHandler);
+    sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_2, StartBleAdvButtonEventHandler);
 #endif
 
     ButtonManagerInst().AddButton(sFactoryResetButton);

@@ -26,7 +26,7 @@
 class Button
 {
 public:
-    void Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t inPin, bool intBothLevel, void (*callback)(void));
+    void Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t inPin, void (*callback)(void));
     void Configure(const struct device * port, gpio_pin_t inPin, void (*callback)(void));
     void Poll(Button * previous);
     void PollIRQ(void);
@@ -40,7 +40,6 @@ private:
     gpio_pin_t mOutPin;
     gpio_pin_t mInPin;
     int mPreviousState      = STATE_LOW;
-    bool mIntBothLevel      = false;
     void (*mCallback)(void) = NULL;
 };
 

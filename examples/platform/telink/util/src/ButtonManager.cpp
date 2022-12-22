@@ -30,17 +30,18 @@ LOG_MODULE_REGISTER(ButtonManager);
 
 ButtonManager ButtonManager::sInstance;
 
+#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
 static struct gpio_callback button_cb_data;
 void button_pressed(const struct device * dev, struct gpio_callback * cb, uint32_t pins);
+#endif
 
-void Button::Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t inPin, bool intBothLevel, void (*callback)(void))
+void Button::Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t inPin, void (*callback)(void))
 {
     __ASSERT(device_is_ready(port), "%s is not ready\n", port->name);
 
     mPort         = port;
     mOutPin       = outPin;
     mInPin        = inPin;
-    mIntBothLevel = intBothLevel;
     mCallback     = callback;
 }
 
@@ -121,7 +122,7 @@ void Button::Poll(Button * previous)
     ret = gpio_pin_get(mPort, mInPin);
     assert(ret >= 0);
 
-    if ((mIntBothLevel && ret != mPreviousState) || (!mIntBothLevel && ret == STATE_HIGH && ret != mPreviousState))
+    if (ret == STATE_HIGH && ret != mPreviousState)
     {
         if (mCallback != NULL)
         {
