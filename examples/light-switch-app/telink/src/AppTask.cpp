@@ -53,7 +53,7 @@ using namespace ::chip::Credentials;
 using namespace ::chip::DeviceLayer;
 
 namespace {
-constexpr int kFactoryResetCalcTimeout = 2000;
+constexpr int kFactoryResetCalcTimeout = 3000;
 constexpr int kFactoryResetTriggerCntr = 3;
 constexpr int kAppEventQueueSize       = 10;
 constexpr uint8_t kButtonPushEvent     = 1;
@@ -274,6 +274,15 @@ void AppTask::FactoryResetHandler(AppEvent * aEvent)
     }
 
     sFactoryResetCntr++;
+    LOG_INF("Factory Reset Trigger Counter: %d/%d", sFactoryResetCntr, kFactoryResetTriggerCntr);
+
+    if (sFactoryResetCntr == kFactoryResetTriggerCntr)
+    {
+        k_timer_stop(&sFactoryResetTimer);
+        sFactoryResetCntr = 0;
+
+        chip::Server::GetInstance().ScheduleFactoryReset();
+    }
 }
 
 void AppTask::StartThreadButtonEventHandler(void)
@@ -456,13 +465,8 @@ void AppTask::FactoryResetTimerEventHandler(AppEvent * aEvent)
         return;
     }
 
-    if (sFactoryResetCntr >= kFactoryResetTriggerCntr)
-    {
-        LOG_INF("FactoryResetHandler");
-        chip::Server::GetInstance().ScheduleFactoryReset();
-    }
-
     sFactoryResetCntr = 0;
+    LOG_INF("Factory Reset Trigger Counter is cleared");
 }
 
 void AppTask::InitButtons(void)
