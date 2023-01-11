@@ -34,6 +34,7 @@
 #include <cstdint>
 
 struct k_timer;
+struct Identify;
 
 class AppTask
 {
@@ -52,6 +53,9 @@ public:
         kButtonId_StartThread,
         kButtonId_StartBleAdv
     } ButtonId;
+
+    static void IdentifyStartHandler(Identify *);
+    static void IdentifyStopHandler(Identify *);
 
 private:
 #ifdef CONFIG_CHIP_PW_RPC

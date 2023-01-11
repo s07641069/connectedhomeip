@@ -58,6 +58,8 @@ constexpr int kFactoryResetTriggerTimeout = 2000;
 constexpr int kAppEventQueueSize          = 10;
 constexpr uint8_t kButtonPushEvent        = 1;
 constexpr uint8_t kButtonReleaseEvent     = 0;
+constexpr EndpointId kLightEndpointId     = 1;
+constexpr uint32_t kIdentifyBlinkRateMs   = 500;
 constexpr uint8_t kDefaultMinLevel        = 0;
 constexpr uint8_t kDefaultMaxLevel        = 254;
 
@@ -77,6 +79,8 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 
 LEDWidget sStatusLED;
+LEDWidget sIdentifyLED;
+
 #if USE_RGB_PWM
 uint8_t sBrightness;
 PWMDevice::Action_t sColorAction = PWMDevice::INVALID_ACTION;
@@ -121,13 +125,8 @@ void OnIdentifyTriggerEffect(Identify * identify)
     return;
 }
 
-Identify sIdentify = {
-    chip::EndpointId{ 1 },
-    [](Identify *) { ChipLogProgress(Zcl, "OnIdentifyStart"); },
-    [](Identify *) { ChipLogProgress(Zcl, "OnIdentifyStop"); },
-    EMBER_ZCL_IDENTIFY_IDENTIFY_TYPE_VISIBLE_LED,
-    OnIdentifyTriggerEffect,
-};
+Identify sIdentify = { kLightEndpointId, AppTask::IdentifyStartHandler, AppTask::IdentifyStopHandler,
+                       EMBER_ZCL_IDENTIFY_IDENTIFY_TYPE_VISIBLE_LED, OnIdentifyTriggerEffect };
 
 } // namespace
 
@@ -148,10 +147,12 @@ CHIP_ERROR AppTask::Init()
 {
     LOG_INF("SW Version: %u, %s", CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION, CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING);
 
-    // Initialize status LED
-    LEDWidget::InitGpio(SYSTEM_STATE_LED_PORT);
+    // Initialize LEDs
+    LEDWidget::InitGpio(LEDS_PORT);
     LEDWidget::SetStateUpdateCallback(LEDStateUpdateHandler);
-    sStatusLED.Init(SYSTEM_STATE_LED_PIN);
+
+    sStatusLED.Init(SYSTEM_STATE_LED);
+    sIdentifyLED.Init(IDENTIFY_LED);
 
     UpdateStatusLED();
 
@@ -163,10 +164,10 @@ CHIP_ERROR AppTask::Init()
 
     // Init lighting manager
     uint8_t minLightLevel = kDefaultMinLevel;
-    Clusters::LevelControl::Attributes::MinLevel::Get(1, &minLightLevel);
+    Clusters::LevelControl::Attributes::MinLevel::Get(kLightEndpointId, &minLightLevel);
 
     uint8_t maxLightLevel = kDefaultMaxLevel;
-    Clusters::LevelControl::Attributes::MaxLevel::Get(1, &maxLightLevel);
+    Clusters::LevelControl::Attributes::MaxLevel::Get(kLightEndpointId, &maxLightLevel);
 
     CHIP_ERROR err = sAppTask.mBluePwmLed.Init(&sBluePwmLed, minLightLevel, maxLightLevel, maxLightLevel);
     if (err != CHIP_NO_ERROR)
@@ -318,6 +319,22 @@ void AppTask::LightingActionEventHandler(AppEvent * aEvent)
     {
         LOG_INF("Action is in progress or active");
     }
+}
+
+void AppTask::IdentifyStartHandler(Identify *)
+{
+    AppEvent event;
+    event.Type    = AppEvent::kEventType_IdentifyStart;
+    event.Handler = [](AppEvent *) { sIdentifyLED.Blink(kIdentifyBlinkRateMs); };
+    sAppTask.PostEvent(&event);
+}
+
+void AppTask::IdentifyStopHandler(Identify *)
+{
+    AppEvent event;
+    event.Type    = AppEvent::kEventType_IdentifyStop;
+    event.Handler = [](AppEvent *) { sIdentifyLED.Set(false); };
+    sAppTask.PostEvent(&event);
 }
 
 void AppTask::FactoryResetButtonEventHandler(void)
@@ -531,7 +548,7 @@ void AppTask::UpdateClusterState()
     bool isTurnedOn  = sAppTask.mBluePwmLed.IsTurnedOn();
 #endif
     // write the new on/off value
-    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(1, isTurnedOn);
+    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(kLightEndpointId, isTurnedOn);
 
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
@@ -552,7 +569,7 @@ void AppTask::UpdateClusterState()
 #else
     uint8_t setLevel = sAppTask.mBluePwmLed.GetLevel();
 #endif
-    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(1, setLevel);
+    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kLightEndpointId, setLevel);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
         LOG_ERR("Update CurrentLevel fail: %x", status);

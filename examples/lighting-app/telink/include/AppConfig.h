@@ -29,9 +29,9 @@
 #define BUTTON_PIN_2 0
 
 // LEDs config
-// System led config
-#define SYSTEM_STATE_LED_PORT DEVICE_DT_GET(DT_NODELABEL(gpiob))
-#define SYSTEM_STATE_LED_PIN 7
+#define LEDS_PORT DEVICE_DT_GET(DT_NODELABEL(gpiob))
+#define SYSTEM_STATE_LED 7
+#define IDENTIFY_LED 6
 
 // Lighting LED config
 #define USE_RGB_PWM 0
