@@ -21,6 +21,7 @@
 #include "AppConfig.h"
 #include "AppEvent.h"
 #include "ButtonManager.h"
+#include "ColorFormat.h"
 
 #include "ThreadUtil.h"
 
@@ -60,7 +61,11 @@ constexpr uint8_t kButtonReleaseEvent     = 0;
 constexpr uint8_t kDefaultMinLevel        = 0;
 constexpr uint8_t kDefaultMaxLevel        = 254;
 
-const struct pwm_dt_spec sLightPwmDevice = LIGHTING_PWM_SPEC;
+const struct pwm_dt_spec sBluePwmLed = LIGHTING_PWM_SPEC_BLUE;
+#if USE_RGB_PWM
+const struct pwm_dt_spec sGreenPwmLed = LIGHTING_PWM_SPEC_GREEN;
+const struct pwm_dt_spec sRedPwmLed = LIGHTING_PWM_SPEC_RED;
+#endif
 
 #if CONFIG_CHIP_FACTORY_DATA
 // NOTE! This key is for test/certification only and should not be available in production devices!
@@ -72,6 +77,7 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 
 LEDWidget sStatusLED;
+uint8_t sCurrentLevel;
 
 Button sFactoryResetButton;
 Button sLightingButton;
@@ -156,13 +162,28 @@ CHIP_ERROR AppTask::Init()
     uint8_t maxLightLevel = kDefaultMaxLevel;
     Clusters::LevelControl::Attributes::MaxLevel::Get(1, &maxLightLevel);
 
-    CHIP_ERROR err = sAppTask.GetPWMDevice().Init(&sLightPwmDevice, minLightLevel, maxLightLevel, maxLightLevel);
+    CHIP_ERROR err = sAppTask.mBluePwmLed.Init(&sBluePwmLed, minLightLevel, maxLightLevel, maxLightLevel);
     if (err != CHIP_NO_ERROR)
     {
-        LOG_ERR("LightingMgr Init fail");
+        LOG_ERR("Blue PWM Device Init fail");
         return err;
     }
-    sAppTask.GetPWMDevice().SetCallbacks(ActionInitiated, ActionCompleted);
+#if USE_RGB_PWM
+    err = sAppTask.mRedPwmLed.Init(&sRedPwmLed, minLightLevel, maxLightLevel, maxLightLevel);
+    if (err != CHIP_NO_ERROR)
+    {
+        LOG_ERR("Red PWM Device Init fail");
+        return err;
+    }
+
+    err = sAppTask.mGreenPwmLed.Init(&sGreenPwmLed, minLightLevel, maxLightLevel, maxLightLevel);
+    if (err != CHIP_NO_ERROR)
+    {
+        LOG_ERR("Green PWM Device Init fail");
+        return err;
+    }
+#endif
+    sAppTask.mBluePwmLed.SetCallbacks(ActionInitiated, ActionCompleted);
 
     // Initialize CHIP server
 #if CONFIG_CHIP_FACTORY_DATA
@@ -266,11 +287,16 @@ void AppTask::LightingActionEventHandler(AppEvent * aEvent)
     }
     else if (aEvent->Type == AppEvent::kEventType_Button)
     {
-        action = sAppTask.GetPWMDevice().IsTurnedOn() ? PWMDevice::OFF_ACTION : PWMDevice::ON_ACTION;
+        action = sAppTask.mBluePwmLed.IsTurnedOn() ? PWMDevice::OFF_ACTION : PWMDevice::ON_ACTION;
         actor  = AppEvent::kEventType_Button;
     }
 
-    if (action != PWMDevice::INVALID_ACTION && !sAppTask.GetPWMDevice().InitiateAction(action, actor, NULL))
+    if (action != PWMDevice::INVALID_ACTION && (
+#if USE_RGB_PWM
+            !sAppTask.mRedPwmLed.InitiateAction(action, actor, NULL) ||
+            !sAppTask.mGreenPwmLed.InitiateAction(action, actor, NULL) ||
+#endif
+            !sAppTask.mBluePwmLed.InitiateAction(action, actor, NULL)))
     {
         LOG_INF("Action is in progress or active");
     }
@@ -482,14 +508,14 @@ void AppTask::DispatchEvent(AppEvent * aEvent)
 void AppTask::UpdateClusterState()
 {
     // write the new on/off value
-    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(1, sAppTask.GetPWMDevice().IsTurnedOn());
+    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(1, sAppTask.mBluePwmLed.IsTurnedOn());
 
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
         LOG_ERR("Update OnOff fail: %x", status);
     }
 
-    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(1, sAppTask.GetPWMDevice().GetLevel());
+    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(1, sAppTask.mBluePwmLed.GetLevel());
 
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
@@ -557,4 +583,63 @@ void AppTask::InitButtons(void)
     ButtonManagerInst().AddButton(sLightingButton);
     ButtonManagerInst().AddButton(sThreadStartButton);
     ButtonManagerInst().AddButton(sBleAdvStartButton);
+}
+
+void AppTask::SetInitiateAction(PWMDevice::Action_t aAction, int32_t aActor, uint8_t * value)
+{
+    bool setRgbAction = false;
+    RgbColor_t rgb;
+
+    if (aAction == PWMDevice::ON_ACTION || aAction == PWMDevice::OFF_ACTION || aAction == PWMDevice::LEVEL_ACTION) 
+    {
+        if (aAction == PWMDevice::LEVEL_ACTION)
+        {
+            // Save brightness for ColorControl
+            sCurrentLevel = *value;
+        }
+
+        sAppTask.mBluePwmLed.InitiateAction(aAction, aActor, value);
+#if USE_RGB_PWM
+        sAppTask.mRedPwmLed.InitiateAction(aAction, aActor, value);
+        sAppTask.mGreenPwmLed.InitiateAction(aAction, aActor, value);
+#endif
+    }
+    else if (aAction == PWMDevice::COLOR_ACTION_XY)
+    {
+        XyColor_t xy = *reinterpret_cast<XyColor_t *>(value);
+        rgb = XYToRgb(sCurrentLevel, xy.x, xy.y);
+        ChipLogProgress(Zcl, "XY to RGB: X: %u, Y: %u, Level: %u | R: %u, G: %u, B: %u",
+                xy.x, xy.y, sCurrentLevel, rgb.r, rgb.g, rgb.b);
+        setRgbAction = true;
+    }
+    else if (aAction == PWMDevice::COLOR_ACTION_HSV)
+    {
+        HsvColor_t hsv = *reinterpret_cast<HsvColor_t *>(value);
+        hsv.v = sCurrentLevel;
+        rgb = HsvToRgb(hsv);
+        ChipLogProgress(Zcl, "HSV to RGB: H: %u, S: %u, V: %u | R: %u, G: %u, B: %u",
+                hsv.h, hsv.s, hsv.v, rgb.r, rgb.g, rgb.b);
+        setRgbAction = true;
+    }
+    else if (aAction == PWMDevice::COLOR_ACTION_CT)
+    {
+        CtColor_t ct = *reinterpret_cast<CtColor_t *>(value);
+        if (ct.ctMireds)
+        {
+            rgb = CTToRgb(ct);
+            ChipLogProgress(Zcl, "ColorTemp to RGB: CT: %u | R: %u, G: %u, B: %u", ct.ctMireds, rgb.r, rgb.g, rgb.b);
+            setRgbAction = true;
+        }
+    }
+
+    if (setRgbAction)
+    {
+#if USE_RGB_PWM
+        sAppTask.mRedPwmLed.InitiateAction(aAction, aActor, &rgb.r);
+        sAppTask.mGreenPwmLed.InitiateAction(aAction, aActor, &rgb.g);
+        sAppTask.mBluePwmLed.InitiateAction(aAction, aActor, &rgb.b);
+#else
+        ChipLogProgress(Zcl, "RGB led mode is disabled (USE_RGB_PWM is 0)");
+#endif
+    }
 }
