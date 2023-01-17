@@ -1,0 +1,8 @@
+&pwm0 {
+	status = "okay";
+	clock-frequency = <93750>;
+	// Use the following line for RGB PWM mode
+	// pinctrl-0 = <&pwm_ch0_pb4_default &pwm_ch1_pb5_default &pwm_ch2_pb7_default>;
+	pinctrl-0 = <&pwm_ch0_pb4_default>;
+	pinctrl-names = "default";
+};
