@@ -77,7 +77,13 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 
 LEDWidget sStatusLED;
-uint8_t sCurrentLevel;
+#if USE_RGB_PWM
+uint8_t sBrightness;
+PWMDevice::Action_t sColorAction = PWMDevice::INVALID_ACTION;
+XyColor_t sXY;
+HsvColor_t sHSV;
+CtColor_t sCT;
+#endif
 
 Button sFactoryResetButton;
 Button sLightingButton;
@@ -287,7 +293,17 @@ void AppTask::LightingActionEventHandler(AppEvent * aEvent)
     }
     else if (aEvent->Type == AppEvent::kEventType_Button)
     {
+#if USE_RGB_PWM
+        if (sAppTask.mRedPwmLed.IsTurnedOn() || sAppTask.mGreenPwmLed.IsTurnedOn() || sAppTask.mBluePwmLed.IsTurnedOn())
+        {
+            action = PWMDevice::OFF_ACTION;
+        }
+        else {
+            action = PWMDevice::ON_ACTION;
+        }
+#else
         action = sAppTask.mBluePwmLed.IsTurnedOn() ? PWMDevice::OFF_ACTION : PWMDevice::ON_ACTION;
+#endif
         actor  = AppEvent::kEventType_Button;
     }
 
@@ -507,16 +523,35 @@ void AppTask::DispatchEvent(AppEvent * aEvent)
 
 void AppTask::UpdateClusterState()
 {
+#if USE_RGB_PWM
+    bool isTurnedOn = sAppTask.mRedPwmLed.IsTurnedOn() || sAppTask.mGreenPwmLed.IsTurnedOn() || sAppTask.mBluePwmLed.IsTurnedOn();
+#else
+    bool isTurnedOn = sAppTask.mBluePwmLed.IsTurnedOn();
+#endif
     // write the new on/off value
-    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(1, sAppTask.mBluePwmLed.IsTurnedOn());
+    EmberAfStatus status = Clusters::OnOff::Attributes::OnOff::Set(1, isTurnedOn);
 
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
         LOG_ERR("Update OnOff fail: %x", status);
     }
 
-    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(1, sAppTask.mBluePwmLed.GetLevel());
-
+#if USE_RGB_PWM
+    uint8_t setLevel;
+    if (sColorAction == PWMDevice::COLOR_ACTION_XY
+            || sColorAction == PWMDevice::COLOR_ACTION_HSV
+            || sColorAction == PWMDevice::COLOR_ACTION_CT)
+    {
+        setLevel = sBrightness;
+    }
+    else
+    {
+        setLevel = sAppTask.mBluePwmLed.GetLevel();
+    }
+#else
+    uint8_t setLevel = sAppTask.mBluePwmLed.GetLevel();
+#endif
+    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(1, setLevel);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
     {
         LOG_ERR("Update CurrentLevel fail: %x", status);
@@ -587,59 +622,87 @@ void AppTask::InitButtons(void)
 
 void AppTask::SetInitiateAction(PWMDevice::Action_t aAction, int32_t aActor, uint8_t * value)
 {
+ #if USE_RGB_PWM
     bool setRgbAction = false;
     RgbColor_t rgb;
+#endif
 
-    if (aAction == PWMDevice::ON_ACTION || aAction == PWMDevice::OFF_ACTION || aAction == PWMDevice::LEVEL_ACTION) 
+    if (aAction == PWMDevice::ON_ACTION || aAction == PWMDevice::OFF_ACTION) 
     {
-        if (aAction == PWMDevice::LEVEL_ACTION)
-        {
-            // Save brightness for ColorControl
-            sCurrentLevel = *value;
-        }
-
         sAppTask.mBluePwmLed.InitiateAction(aAction, aActor, value);
 #if USE_RGB_PWM
         sAppTask.mRedPwmLed.InitiateAction(aAction, aActor, value);
         sAppTask.mGreenPwmLed.InitiateAction(aAction, aActor, value);
 #endif
     }
+    else if (aAction == PWMDevice::LEVEL_ACTION) 
+    {
+#if USE_RGB_PWM
+        uint8_t levelLast = sBrightness;
+
+        // Save a new brightness for ColorControl
+        sBrightness = *value;
+
+        if (sColorAction == PWMDevice::COLOR_ACTION_XY)
+        {
+            rgb = XYToRgb(sBrightness, sXY.x, sXY.y);
+        }
+        else if (sColorAction == PWMDevice::COLOR_ACTION_HSV)
+        {
+            sHSV.v = sBrightness;
+            rgb = HsvToRgb(sHSV);
+        }
+        else
+        {
+            rgb.r = sBrightness;
+            rgb.g = sBrightness;
+            rgb.b = sBrightness;
+        }
+
+        ChipLogProgress(Zcl, "New brightness: %u | R: %u, G: %u, B: %u", sBrightness, rgb.r, rgb.g, rgb.b);
+        setRgbAction = true;
+#else
+        sAppTask.mBluePwmLed.InitiateAction(aAction, aActor, value);
+#endif
+    }
+ 
+#if USE_RGB_PWM
     else if (aAction == PWMDevice::COLOR_ACTION_XY)
     {
-        XyColor_t xy = *reinterpret_cast<XyColor_t *>(value);
-        rgb = XYToRgb(sCurrentLevel, xy.x, xy.y);
+        sXY = *reinterpret_cast<XyColor_t *>(value);
+        rgb = XYToRgb(sBrightness, sXY.x, sXY.y);
         ChipLogProgress(Zcl, "XY to RGB: X: %u, Y: %u, Level: %u | R: %u, G: %u, B: %u",
-                xy.x, xy.y, sCurrentLevel, rgb.r, rgb.g, rgb.b);
+                sXY.x, sXY.y, sBrightness, rgb.r, rgb.g, rgb.b);
         setRgbAction = true;
+        sColorAction = PWMDevice::COLOR_ACTION_XY;
     }
     else if (aAction == PWMDevice::COLOR_ACTION_HSV)
     {
-        HsvColor_t hsv = *reinterpret_cast<HsvColor_t *>(value);
-        hsv.v = sCurrentLevel;
-        rgb = HsvToRgb(hsv);
+        sHSV = *reinterpret_cast<HsvColor_t *>(value);
+        sHSV.v = sBrightness;
+        rgb = HsvToRgb(sHSV);
         ChipLogProgress(Zcl, "HSV to RGB: H: %u, S: %u, V: %u | R: %u, G: %u, B: %u",
-                hsv.h, hsv.s, hsv.v, rgb.r, rgb.g, rgb.b);
+                sHSV.h, sHSV.s, sHSV.v, rgb.r, rgb.g, rgb.b);
         setRgbAction = true;
+        sColorAction = PWMDevice::COLOR_ACTION_HSV;
     }
     else if (aAction == PWMDevice::COLOR_ACTION_CT)
     {
-        CtColor_t ct = *reinterpret_cast<CtColor_t *>(value);
-        if (ct.ctMireds)
+        sCT = *reinterpret_cast<CtColor_t *>(value);
+        if (sCT.ctMireds)
         {
-            rgb = CTToRgb(ct);
-            ChipLogProgress(Zcl, "ColorTemp to RGB: CT: %u | R: %u, G: %u, B: %u", ct.ctMireds, rgb.r, rgb.g, rgb.b);
+            rgb = CTToRgb(sCT);
+            ChipLogProgress(Zcl, "ColorTemp to RGB: CT: %u | R: %u, G: %u, B: %u", sCT.ctMireds, rgb.r, rgb.g, rgb.b);
             setRgbAction = true;
+            sColorAction = PWMDevice::COLOR_ACTION_CT;
         }
     }
 
     if (setRgbAction)
     {
-#if USE_RGB_PWM
         sAppTask.mRedPwmLed.InitiateAction(aAction, aActor, &rgb.r);
         sAppTask.mGreenPwmLed.InitiateAction(aAction, aActor, &rgb.g);
         sAppTask.mBluePwmLed.InitiateAction(aAction, aActor, &rgb.b);
-#else
-        ChipLogProgress(Zcl, "RGB led mode is disabled (USE_RGB_PWM is 0)");
-#endif
     }
+#endif
 }
