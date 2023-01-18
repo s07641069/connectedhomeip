@@ -29,6 +29,10 @@
 #define BUTTON_PIN_2 0
 
 // LEDs config
+// System led config
+#define SYSTEM_STATE_LED_PORT DEVICE_DT_GET(DT_NODELABEL(gpiob))
+#define SYSTEM_STATE_LED_PIN 7
+
 // Lighting LED config
 #define USE_RGB_PWM 0
 
@@ -36,12 +40,4 @@
 #if USE_RGB_PWM
 #define LIGHTING_PWM_SPEC_GREEN PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1))
 #define LIGHTING_PWM_SPEC_RED PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2))
-#endif
-
-// System led config
-#define SYSTEM_STATE_LED_PORT DEVICE_DT_GET(DT_NODELABEL(gpiob))
-#if USE_RGB_PWM
-#define SYSTEM_STATE_LED_PIN 6
-#else
-#define SYSTEM_STATE_LED_PIN 7
 #endif

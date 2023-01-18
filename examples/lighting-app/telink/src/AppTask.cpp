@@ -638,8 +638,6 @@ void AppTask::SetInitiateAction(PWMDevice::Action_t aAction, int32_t aActor, uin
     else if (aAction == PWMDevice::LEVEL_ACTION) 
     {
 #if USE_RGB_PWM
-        uint8_t levelLast = sBrightness;
-
         // Save a new brightness for ColorControl
         sBrightness = *value;
 
