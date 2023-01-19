@@ -31,7 +31,7 @@
 // LEDs config
 #define LEDS_PORT DEVICE_DT_GET(DT_NODELABEL(gpiob))
 #define SYSTEM_STATE_LED 7
-#define IDENTIFY_LED 6
+// #define IDENTIFY_LED 6
 
 // Lighting LED config
 #define USE_RGB_PWM 0
@@ -41,3 +41,4 @@
 #define LIGHTING_PWM_SPEC_GREEN PWM_DT_SPEC_GET(DT_ALIAS(pwm_led1))
 #define LIGHTING_PWM_SPEC_RED PWM_DT_SPEC_GET(DT_ALIAS(pwm_led2))
 #endif
+#define LIGHTING_PWM_SPEC_WHITE PWM_DT_SPEC_GET(DT_ALIAS(pwm_led3))

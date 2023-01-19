@@ -60,6 +60,7 @@ constexpr uint8_t kButtonPushEvent        = 1;
 constexpr uint8_t kButtonReleaseEvent     = 0;
 constexpr EndpointId kLightEndpointId     = 1;
 constexpr uint32_t kIdentifyBlinkRateMs   = 500;
+constexpr uint32_t kIdentifyBreatheRateMs = 1000;
 constexpr uint8_t kDefaultMinLevel        = 0;
 constexpr uint8_t kDefaultMaxLevel        = 254;
 
@@ -68,6 +69,7 @@ const struct pwm_dt_spec sBluePwmLed = LIGHTING_PWM_SPEC_BLUE;
 const struct pwm_dt_spec sGreenPwmLed = LIGHTING_PWM_SPEC_GREEN;
 const struct pwm_dt_spec sRedPwmLed   = LIGHTING_PWM_SPEC_RED;
 #endif
+const struct pwm_dt_spec sWhitePwmLed = LIGHTING_PWM_SPEC_WHITE;
 
 #if CONFIG_CHIP_FACTORY_DATA
 // NOTE! This key is for test/certification only and should not be available in production devices!
@@ -79,7 +81,7 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 
 LEDWidget sStatusLED;
-LEDWidget sIdentifyLED;
+// LEDWidget sIdentifyLED;
 
 #if USE_RGB_PWM
 uint8_t sBrightness;
@@ -108,15 +110,23 @@ void OnIdentifyTriggerEffect(Identify * identify)
     {
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK:
         ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK");
+        // sIdentifyLED.Blink(kIdentifyBlinkRateMs);
         break;
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BREATHE:
         ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BREATHE");
+        // sIdentifyLED.Breathe(kIdentifyBreatheRateMs);
         break;
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_OKAY:
         ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_OKAY");
         break;
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_CHANNEL_CHANGE:
         ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_CHANNEL_CHANGE");
+        break;
+    case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_FINISH_EFFECT:
+        ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_FINISH_EFFECT");
+        break;
+    case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT:
+        ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT");
         break;
     default:
         ChipLogProgress(Zcl, "No identifier effect");
@@ -152,9 +162,17 @@ CHIP_ERROR AppTask::Init()
     LEDWidget::SetStateUpdateCallback(LEDStateUpdateHandler);
 
     sStatusLED.Init(SYSTEM_STATE_LED);
-    sIdentifyLED.Init(IDENTIFY_LED);
+    // sIdentifyLED.Init(IDENTIFY_LED);
 
     UpdateStatusLED();
+
+    // Initialize LEDs
+    CHIP_ERROR err = sAppTask.mWhitePwmLed.Init(&sWhitePwmLed, 0, 100, 100);
+    if (err != CHIP_NO_ERROR)
+    {
+        LOG_ERR("White PWM Device Init fail");
+        return err;
+    }
 
     InitButtons();
 
@@ -169,7 +187,7 @@ CHIP_ERROR AppTask::Init()
     uint8_t maxLightLevel = kDefaultMaxLevel;
     Clusters::LevelControl::Attributes::MaxLevel::Get(kLightEndpointId, &maxLightLevel);
 
-    CHIP_ERROR err = sAppTask.mBluePwmLed.Init(&sBluePwmLed, minLightLevel, maxLightLevel, maxLightLevel);
+    err = sAppTask.mBluePwmLed.Init(&sBluePwmLed, minLightLevel, maxLightLevel, maxLightLevel);
     if (err != CHIP_NO_ERROR)
     {
         LOG_ERR("Blue PWM Device Init fail");
@@ -284,6 +302,11 @@ void AppTask::LightingActionButtonEventHandler(void)
 
 void AppTask::LightingActionEventHandler(AppEvent * aEvent)
 {
+    Identify * identify;
+    identify->mCurrentEffectIdentifier = EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BREATHE; //EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK;
+    OnIdentifyTriggerEffect(identify);
+
+#if 0
     PWMDevice::Action_t action = PWMDevice::INVALID_ACTION;
     int32_t actor              = 0;
 
@@ -319,13 +342,14 @@ void AppTask::LightingActionEventHandler(AppEvent * aEvent)
     {
         LOG_INF("Action is in progress or active");
     }
+#endif
 }
 
 void AppTask::IdentifyStartHandler(Identify *)
 {
     AppEvent event;
     event.Type    = AppEvent::kEventType_IdentifyStart;
-    event.Handler = [](AppEvent *) { sIdentifyLED.Blink(kIdentifyBlinkRateMs); };
+    // event.Handler = [](AppEvent *) { sIdentifyLED.Blink(kIdentifyBlinkRateMs); };
     sAppTask.PostEvent(&event);
 }
 
@@ -333,7 +357,7 @@ void AppTask::IdentifyStopHandler(Identify *)
 {
     AppEvent event;
     event.Type    = AppEvent::kEventType_IdentifyStop;
-    event.Handler = [](AppEvent *) { sIdentifyLED.Set(false); };
+    // event.Handler = [](AppEvent *) { sIdentifyLED.Set(false); };
     sAppTask.PostEvent(&event);
 }
 
