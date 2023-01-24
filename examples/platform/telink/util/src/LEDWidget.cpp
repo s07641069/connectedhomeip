@@ -20,10 +20,6 @@
 
 #include <zephyr/zephyr.h>
 
-static void breathe_thread();
-
-K_THREAD_DEFINE(BreatheController, 1024 /*BLE_THREAD_STACK_SIZE*/, breathe_thread, NULL, NULL, NULL, 2 /*BLE_THREAD_PRIORITY*/, 0, -1);
-
 const struct device * LEDWidget::mPort = NULL;
 static LEDWidget::LEDWidgetStateUpdateHandler sStateUpdateCallback;
 
@@ -84,43 +80,6 @@ void LEDWidget::Blink(uint32_t onTimeMS, uint32_t offTimeMS)
         DoSet(!mState);
         ScheduleStateChange();
     }
-}
-
-void LEDWidget::Breathe(uint32_t changeRateMS)
-{
-    Breathe(changeRateMS, changeRateMS);
-}
-
-void LEDWidget::Breathe(uint32_t onTimeMS, uint32_t offTimeMS)
-{
-    // k_timer_stop(&mLedTimer);
-
-    // mBreatheOnTimeMS  = onTimeMS;
-    // mBreatheOffTimeMS = offTimeMS;
-
-    /* Start Breathe thread */
-	k_thread_start(BreatheController);
-
-    // if (mBlinkOnTimeMS != 0 && mBlinkOffTimeMS != 0)
-    // {
-    //     DoSet(!mState);
-    //     ScheduleStateChange();
-    // }
-}
-
-static void breathe_thread()
-{
-	while (1) {
-        // constexpr uint32_t kPwmWidthUs  = 20000u;
-        // const uint8_t maxEffectiveLevel = mMaxLevel - mMinLevel;
-        // const uint8_t effectiveLevel    = mState == kState_On ? chip::min<uint8_t>(mLevel - mMinLevel, maxEffectiveLevel) : 0;
-
-		// pwm_set(mPwmDevice->dev, mPwmDevice->channel, PWM_USEC(kPwmWidthUs), PWM_USEC(kPwmWidthUs * effectiveLevel / maxEffectiveLevel), 0);
-
-        printk("thread \n");
-		
-        k_msleep(1000);//10);
-	}
 }
 
 void LEDWidget::ScheduleStateChange()

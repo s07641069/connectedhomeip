@@ -34,8 +34,6 @@ public:
     void Invert(void);
     void Blink(uint32_t changeRateMS);
     void Blink(uint32_t onTimeMS, uint32_t offTimeMS);
-    void Breathe(uint32_t changeRateMS);
-    void Breathe(uint32_t onTimeMS, uint32_t offTimeMS);
     void UpdateState();
 
 private:

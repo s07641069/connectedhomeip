@@ -27,6 +27,10 @@
 
 LOG_MODULE_DECLARE(app);
 
+constexpr uint8_t kBreatheStepNumb = 50;
+
+static PWMDevice::PWMTimerCallback_fn mActionBlinkStateUpdate_CB;
+
 CHIP_ERROR PWMDevice::Init(const pwm_dt_spec * pwmDevice, uint8_t aMinLevel, uint8_t aMaxLevel, uint8_t aDefaultLevel)
 {
     // We use a gpioPin instead of a LEDWidget here because we want to use PWM
@@ -44,14 +48,19 @@ CHIP_ERROR PWMDevice::Init(const pwm_dt_spec * pwmDevice, uint8_t aMinLevel, uin
         return CHIP_ERROR_INCORRECT_STATE;
     }
 
+    k_timer_init(&mPwmLedTimer, &PWMDevice::PwmLedTimerHandler, nullptr);
+    k_timer_user_data_set(&mPwmLedTimer, this);
+
+    ClearAction();
     Set(false);
     return CHIP_NO_ERROR;
 }
 
-void PWMDevice::SetCallbacks(PWMCallback_fn aActionInitiated_CB, PWMCallback_fn aActionCompleted_CB)
+void PWMDevice::SetCallbacks(PWMCallback_fn aActionInitiated_CB, PWMCallback_fn aActionCompleted_CB , PWMTimerCallback_fn aActionBlinkStateUpdate_CB)
 {
     mActionInitiated_CB = aActionInitiated_CB;
     mActionCompleted_CB = aActionCompleted_CB;
+    mActionBlinkStateUpdate_CB = aActionBlinkStateUpdate_CB;
 }
 
 bool PWMDevice::InitiateAction(Action_t aAction, int32_t aActor, uint8_t * value)
@@ -122,12 +131,164 @@ void PWMDevice::Set(bool aOn)
     UpdateLight();
 }
 
-void PWMDevice::UpdateLight()
+void PWMDevice::UpdateLight(void)
 {
     constexpr uint32_t kPwmWidthUs  = 20000u;
     const uint8_t maxEffectiveLevel = mMaxLevel - mMinLevel;
     const uint8_t effectiveLevel    = mState == kState_On ? chip::min<uint8_t>(mLevel - mMinLevel, maxEffectiveLevel) : 0;
 
-    pwm_set(mPwmDevice->dev, mPwmDevice->channel, PWM_USEC(kPwmWidthUs), PWM_USEC(kPwmWidthUs * effectiveLevel / maxEffectiveLevel),
-            0);
+    pwm_set(mPwmDevice->dev, mPwmDevice->channel, PWM_USEC(kPwmWidthUs), PWM_USEC(kPwmWidthUs * effectiveLevel / maxEffectiveLevel), 0);
+}
+
+void PWMDevice::InitiateBlinkAction(uint32_t onTimeMS, uint32_t offTimeMS)
+{
+    ClearAction();
+
+    if (onTimeMS != 0 && offTimeMS != 0)
+    {
+        mBlinkOnTimeMS  = onTimeMS;
+        mBlinkOffTimeMS = offTimeMS;
+
+        Set(mState != kState_On ? true : false);
+        StartBlinkTimer();
+    }
+    else
+    {
+        LOG_ERR("Invalid InitiateBlinkAction parameters. onTimeMS = %u, offTimeMS = %u", onTimeMS, offTimeMS);
+    }
+}
+
+void PWMDevice::InitiateBreatheAction(BreatheType_t type, uint32_t cycleTimeMS)
+{
+    ClearAction();
+
+    if (type != kBreatheType_Invalid && cycleTimeMS != 0) 
+    {
+        mBreatheType = type;
+        mBreatheStepLevel = (mMaxLevel - mMinLevel)/kBreatheStepNumb;
+        mBreatheStepTimeMS = cycleTimeMS/kBreatheStepNumb;
+
+        if (mBreatheType == kBreatheType_Both)
+        {
+            mBreatheBothDirection = true;
+            mBreatheType = mState == kState_On ? kBreatheType_Falling : kBreatheType_Rising;
+        }
+
+        if (mBreatheType == kBreatheType_Falling)
+        {
+            mLevel = mMaxLevel;
+        }
+        else 
+        {
+            mLevel = mMinLevel;
+        }
+
+        Set(true);
+        StartBreatheTimer(mBreatheStepTimeMS);
+    }
+    else
+    {
+        LOG_ERR("Invalid InitiateBreatheAction parameters. Type = %u, cycleTimeMS = %u", type, cycleTimeMS);
+    }
+}
+
+void PWMDevice::StopAction(void)
+{
+    ClearAction();
+    Set(false);
+}
+
+void PWMDevice::UpdateAction(void)
+{
+    // Update of Breathe action
+    if (mBreatheType != kBreatheType_Invalid && mBreatheStepLevel != 0 && mBreatheStepTimeMS != 0)
+    {
+        if (mBreatheStepCntr == kBreatheStepNumb)
+        {
+            mBreatheStepCntr = 0;
+            if (mBreatheBothDirection)
+            {
+                mBreatheType = mBreatheType == kBreatheType_Rising ? kBreatheType_Falling : kBreatheType_Rising;
+            }
+        }
+        else
+        {
+            mBreatheStepCntr++;
+        }
+
+
+        if (mBreatheType == kBreatheType_Rising)
+        {
+            if (mBreatheStepCntr == kBreatheStepNumb)
+            {
+                mLevel = mMaxLevel;
+            }
+            else if (mBreatheStepCntr == 0)
+            {
+                mLevel = mMinLevel;
+            }
+            else
+            {
+                mLevel += mBreatheStepLevel;
+            }
+        }
+        else if (mBreatheType == kBreatheType_Falling)
+        {
+            if (mBreatheStepCntr == kBreatheStepNumb)
+            {
+                mLevel = mMinLevel;
+            }
+            else if (mBreatheStepCntr == 0)
+            {
+                mLevel = mMaxLevel;
+            }
+            else
+            {
+                mLevel -= mBreatheStepLevel;
+            }
+        }
+
+        Set(true);
+        StartBreatheTimer(mBreatheStepTimeMS);
+    }
+    // Update of Blink action
+    else if (mBlinkOnTimeMS != 0 && mBlinkOffTimeMS != 0)
+    {
+            Set(mState != kState_On ? true : false);
+            StartBlinkTimer();
+    }
+    else
+    {
+        LOG_ERR("PWM LED update state is incorrect");
+    }
+}
+
+void PWMDevice::StartBlinkTimer(void)
+{
+    k_timer_start(&mPwmLedTimer, K_MSEC(mState == kState_On ? mBlinkOnTimeMS : mBlinkOffTimeMS), K_NO_WAIT);
+}
+
+void PWMDevice::StartBreatheTimer(uint32_t stepTimeMS)
+{
+    k_timer_start(&mPwmLedTimer, K_MSEC(stepTimeMS), K_NO_WAIT);
+}
+
+void PWMDevice::ClearAction(void)
+{
+    k_timer_stop(&mPwmLedTimer);
+    mBreatheBothDirection = false;
+    mBreatheType = kBreatheType_Invalid;
+    mBreatheStepLevel = 0;
+    mBreatheStepTimeMS = 0;
+    mBlinkOnTimeMS = 0;
+    mBlinkOffTimeMS = 0;
+    mLevel = mMaxLevel;
+}
+
+void PWMDevice::PwmLedTimerHandler(k_timer * timer)
+{
+    if (mActionBlinkStateUpdate_CB)
+    {
+        mActionBlinkStateUpdate_CB(timer);
+    }
 }
