@@ -86,7 +86,6 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 
 LEDWidget sStatusLED;
-
 #if USE_RGB_PWM
 uint8_t sBrightness;
 PWMDevice::Action_t sColorAction = PWMDevice::INVALID_ACTION;

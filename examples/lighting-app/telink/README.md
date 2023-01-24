@@ -78,8 +78,8 @@ following states:
 
 **Blue** LED shows current state of lightbulb
 
-**White** LED used to identify the device. The LED starts blinking evenly (500
-ms on/500 ms off) when the Identify command of the Identify cluster is received.
+**Green** LED used to identify the device. The LED starts blinking evenly (200
+ms on/200 ms off) when the Identify command of the Identify cluster is received.
 The command's argument can be used to specify the duration of the effect.
 
 ### CHIP tool commands
