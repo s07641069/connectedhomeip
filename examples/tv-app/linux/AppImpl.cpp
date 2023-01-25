@@ -89,7 +89,7 @@ MyPincodeService gMyPincodeService;
 class MyPostCommissioningListener : public PostCommissioningListener
 {
     void CommissioningCompleted(uint16_t vendorId, uint16_t productId, NodeId nodeId, Messaging::ExchangeManager & exchangeMgr,
-                                SessionHandle & sessionHandle) override
+                                const SessionHandle & sessionHandle) override
     {
         // read current binding list
         chip::Controller::BindingCluster cluster(exchangeMgr, sessionHandle, kTargetBindingClusterEndpointId);
@@ -184,7 +184,7 @@ class MyPostCommissioningListener : public PostCommissioningListener
     }
 
     void cacheContext(uint16_t vendorId, uint16_t productId, NodeId nodeId, Messaging::ExchangeManager & exchangeMgr,
-                      SessionHandle & sessionHandle)
+                      const SessionHandle & sessionHandle)
     {
         mVendorId    = vendorId;
         mProductId   = productId;
@@ -349,7 +349,7 @@ constexpr CommandId contentLauncherIncomingCommands[] = {
     kInvalidCommandId,
 };
 constexpr CommandId contentLauncherOutgoingCommands[] = {
-    app::Clusters::ContentLauncher::Commands::LaunchResponse::Id,
+    app::Clusters::ContentLauncher::Commands::LauncherResponse::Id,
     kInvalidCommandId,
 };
 // TODO: Sort out when the optional commands here should be listed.
