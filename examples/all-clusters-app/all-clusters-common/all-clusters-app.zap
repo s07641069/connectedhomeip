@@ -9366,7 +9366,7 @@
           "mfgCode": null,
           "define": "ON_OFF_CLUSTER",
           "side": "client",
-          "enabled": 0,
+          "enabled": 1,
           "commands": [
             {
               "name": "Off",
@@ -17717,7 +17717,7 @@
               "code": 1,
               "mfgCode": null,
               "side": "server",
-              "type": "LineupInfo",
+              "type": "LineupInfoStruct",
               "included": 0,
               "storageOption": "External",
               "singleton": 0,
@@ -17733,7 +17733,7 @@
               "code": 2,
               "mfgCode": null,
               "side": "server",
-              "type": "ChannelInfo",
+              "type": "ChannelInfoStruct",
               "included": 0,
               "storageOption": "External",
               "singleton": 0,

@@ -1,7 +1,7 @@
 /*
  *
  *    Copyright (c) 2020 Project CHIP Authors
- *    Copyright (c) 2020 Google LLC.
+ *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -16,27 +16,16 @@
  *    limitations under the License.
  */
 
-#ifndef __GATT_DB_H
-#define __GATT_DB_H
+#pragma once
 
-#if __cplusplus
-extern "C" {
-#endif
+#define APP_TASK_NAME "APP"
+#define APP_TASK_PRIORITY 15
 
-#include "bg_gattdb_def.h"
+#define EXT_DISCOVERY_TIMEOUT_SECS 20
 
-extern const struct bg_gattdb_def bg_gattdb_data;
-
-#define gattdb_service_changed_char 3
-#define gattdb_database_hash 6
-#define gattdb_client_support_features 8
-#define gattdb_device_name 11
-#define gattdb_ota_control 23
-#define gattdb_CHIPoBLEChar_Rx 26
-#define gattdb_CHIPoBLEChar_Tx 28
-
-#if __cplusplus
-}
-#endif
-
+#ifdef __cplusplus
+#include <lib/core/CHIPError.h>
+void appError(CHIP_ERROR error);
+#else
+void appError(int err);
 #endif
