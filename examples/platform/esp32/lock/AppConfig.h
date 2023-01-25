@@ -1,8 +1,6 @@
 /*
  *
  *    Copyright (c) 2020 Project CHIP Authors
- *    Copyright (c) 2019 Google LLC.
- *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
  *    you may not use this file except in compliance with the License.
@@ -19,30 +17,27 @@
 
 #pragma once
 
-// ---- Lighting Example App Config ----
+// ---- Lock Example App Config ----
 
-#define APP_TASK_NAME "APP"
+#define APP_TASK_NAME "LOCK-APP"
+#if CONFIG_IDF_TARGET_ESP32
+#define SYSTEM_STATE_LED GPIO_NUM_25
+#define LOCK_STATE_LED GPIO_NUM_26
 
-#define APP_BUTTON_PRESS_JITTER 50
-#define APP_BUTTON_PRESS_SHORT 1000
-#define APP_BUTTON_PRESS_LONG 4000
+#define APP_LOCK_BUTTON GPIO_NUM_34
+#define APP_FUNCTION_BUTTON GPIO_NUM_35
+#elif CONFIG_IDF_TARGET_ESP32C3
+#define SYSTEM_STATE_LED GPIO_NUM_8
+#define LOCK_STATE_LED GPIO_NUM_9
 
-#define APP_TASK_PRIORITY 15
-#define EXT_DISCOVERY_TIMEOUT_SECS 20
-#define APP_LIGHT_ENDPOINT_ID 1
-#define APP_REBOOT_RESET_COUNT 3
-#define APP_REBOOT_RESET_COUNT_KEY "app_reset_cnt"
-
-#ifdef __cplusplus
-extern "C" {
+#define APP_LOCK_BUTTON GPIO_NUM_18
+#define APP_FUNCTION_BUTTON GPIO_NUM_19
 #endif
+#define APP_BUTTON_DEBOUNCE_PERIOD_MS 50
 
-#define BL_LOG(...) printf(__VA_ARGS__);
-void appError(int err);
+#define APP_BUTTON_PRESSED 0
+#define APP_BUTTON_RELEASED 1
 
-#ifdef __cplusplus
-}
-
-#include <lib/core/CHIPError.h>
-void appError(CHIP_ERROR error);
-#endif
+// Time it takes in ms for the simulated actuator to move from one
+// state to another.
+#define ACTUATOR_MOVEMENT_PERIOS_MS 2000
