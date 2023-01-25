@@ -66,7 +66,7 @@ private:
 
     static void ActionInitiated(PWMDevice::Action_t aAction, int32_t aActor);
     static void ActionCompleted(PWMDevice::Action_t aAction, int32_t aActor);
-    static void ActionBlinkStateUpdateHandler(k_timer * timer);
+    static void ActionIdentifyStateUpdateHandler(k_timer * timer);
 
     void DispatchEvent(AppEvent * event);
 
@@ -87,7 +87,7 @@ private:
     static void LightingActionEventHandler(AppEvent * aEvent);
     static void StartBleAdvHandler(AppEvent * aEvent);
     static void UpdateLedStateEventHandler(AppEvent * aEvent);
-    static void UpdateBlinkStateEventHandler(AppEvent * aEvent);
+    static void UpdateIdentifyStateEventHandler(AppEvent * aEvent);
 
     static void ButtonEventHandler(ButtonId_t btnId, bool btnPressed);
     static void InitButtons(void);

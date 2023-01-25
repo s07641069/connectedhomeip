@@ -190,7 +190,7 @@ CHIP_ERROR AppTask::Init(void)
     }
 #endif
     sAppTask.mPwmRgbBlueLed.SetCallbacks(ActionInitiated, ActionCompleted, nullptr);
-    sAppTask.mPwmIdentifyLed.SetCallbacks(nullptr, nullptr, ActionBlinkStateUpdateHandler);
+    sAppTask.mPwmIdentifyLed.SetCallbacks(nullptr, nullptr, ActionIdentifyStateUpdateHandler);
 
     // Initialize CHIP server
 #if CONFIG_CHIP_FACTORY_DATA
@@ -324,7 +324,7 @@ void AppTask::LightingActionEventHandler(AppEvent * aEvent)
 void AppTask::IdentifyEffectHandler(EmberAfIdentifyEffectIdentifier aEffect)
 {
     AppEvent event;
-    bool postEvent = true;
+    event.Type = AppEvent::kEventType_IdentifyStart;
 
     switch (aEffect)
     {
@@ -351,17 +351,14 @@ void AppTask::IdentifyEffectHandler(EmberAfIdentifyEffectIdentifier aEffect)
     case EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT:
         ChipLogProgress(Zcl, "EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT");
         event.Handler = [](AppEvent *) { sAppTask.mPwmIdentifyLed.StopAction(); };
+        event.Type = AppEvent::kEventType_IdentifyStop;
         break;
     default:
         ChipLogProgress(Zcl, "No identifier effect");
-        postEvent = false;
-        break;
+        return;
     }
 
-    if (postEvent)
-    {
-        sAppTask.PostEvent(&event);
-    }
+    sAppTask.PostEvent(&event);
 }
 
 void AppTask::FactoryResetButtonEventHandler(void)
@@ -510,15 +507,15 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
     }
 }
 
-void AppTask::ActionBlinkStateUpdateHandler(k_timer * timer)
+void AppTask::ActionIdentifyStateUpdateHandler(k_timer * timer)
 {
     AppEvent event;
     event.Type                          = AppEvent::kEventType_UpdateLedState;
-    event.Handler                       = UpdateBlinkStateEventHandler;
+    event.Handler                       = UpdateIdentifyStateEventHandler;
     sAppTask.PostEvent(&event);
 }
 
-void AppTask::UpdateBlinkStateEventHandler(AppEvent * aEvent)
+void AppTask::UpdateIdentifyStateEventHandler(AppEvent * aEvent)
 {
     sAppTask.mPwmIdentifyLed.UpdateAction();
 }
