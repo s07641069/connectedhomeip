@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Project CHIP Authors
+# Copyright (c) 2023 Project CHIP Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,21 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: 44.3.2. [TC-DGSW-3.2] Commands Generated [DUT as Client]
+import("//build_overrides/build.gni")
+import("//build_overrides/chip.gni")
 
-PICS:
-    - DGSW.C
+static_library("websocket-server") {
+  output_name = "libWebSocketServer"
 
-config:
-    nodeId: 0x12344321
-    cluster: "Software Diagnostics"
-    endpoint: 0
+  sources = [
+    "WebSocketServer.cpp",
+    "WebSocketServer.h",
+    "WebSocketServerDelegate.h",
+  ]
 
-tests:
-    - label: "Wait for the device to be commissioned"
-      cluster: "DelayCommands"
-      command: "WaitForCommissioning"
-
-    - label: "DUT sends ResetWatermarks to TH"
-      PICS: DGSW.C.C00.Tx
-      wait: "ResetWatermarks"
+  public_deps = [
+    "${chip_root}/src/lib/support",
+    "${chip_root}/third_party/libwebsockets",
+  ]
+}

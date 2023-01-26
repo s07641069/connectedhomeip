@@ -13409,7 +13409,7 @@
               "outgoing": 1
             },
             {
-              "name": "StopPlayback",
+              "name": "Stop",
               "code": 2,
               "mfgCode": null,
               "source": "client",
