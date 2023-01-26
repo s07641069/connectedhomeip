@@ -77,7 +77,7 @@ private:
     uint8_t mBreatheStepCntr;
     bool mBreatheBothDirection;
     BreatheType_t mBreatheType;
-    uint32_t mBreatheStepTimeMS;
+    uint32_t mBreatheStepNumb;
     uint32_t mBlinkOnTimeMS;
     uint32_t mBlinkOffTimeMS;
     k_timer mPwmLedTimer;

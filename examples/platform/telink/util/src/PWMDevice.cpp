@@ -27,7 +27,7 @@
 
 LOG_MODULE_DECLARE(app);
 
-constexpr uint8_t kBreatheStepNumb = 50;
+constexpr uint32_t kBreatheStepTimeMS = 10;
 
 static PWMDevice::PWMTimerCallback_fn mActionBlinkStateUpdate_CB;
 
@@ -165,8 +165,8 @@ void PWMDevice::InitiateBreatheAction(BreatheType_t type, uint32_t cycleTimeMS)
     if (type != kBreatheType_Invalid && cycleTimeMS != 0) 
     {
         mBreatheType = type;
-        mBreatheStepLevel = (mMaxLevel - mMinLevel)/kBreatheStepNumb;
-        mBreatheStepTimeMS = cycleTimeMS/kBreatheStepNumb;
+        mBreatheStepNumb = cycleTimeMS/kBreatheStepTimeMS;
+        mBreatheStepLevel = (mMaxLevel - mMinLevel)/mBreatheStepNumb;
 
         if (mBreatheType == kBreatheType_Both)
         {
@@ -184,7 +184,7 @@ void PWMDevice::InitiateBreatheAction(BreatheType_t type, uint32_t cycleTimeMS)
         }
 
         Set(true);
-        StartBreatheTimer(mBreatheStepTimeMS);
+        StartBreatheTimer(kBreatheStepTimeMS);
     }
     else
     {
@@ -201,9 +201,9 @@ void PWMDevice::StopAction(void)
 void PWMDevice::UpdateAction(void)
 {
     // Update of Breathe action
-    if (mBreatheType != kBreatheType_Invalid && mBreatheStepLevel != 0 && mBreatheStepTimeMS != 0)
+    if (mBreatheType != kBreatheType_Invalid && mBreatheStepLevel != 0 && mBreatheStepNumb != 0)
     {
-        if (mBreatheStepCntr == kBreatheStepNumb)
+        if (mBreatheStepCntr == mBreatheStepNumb)
         {
             mBreatheStepCntr = 0;
             if (mBreatheBothDirection)
@@ -219,7 +219,7 @@ void PWMDevice::UpdateAction(void)
 
         if (mBreatheType == kBreatheType_Rising)
         {
-            if (mBreatheStepCntr == kBreatheStepNumb)
+            if (mBreatheStepCntr == mBreatheStepNumb)
             {
                 mLevel = mMaxLevel;
             }
@@ -234,7 +234,7 @@ void PWMDevice::UpdateAction(void)
         }
         else if (mBreatheType == kBreatheType_Falling)
         {
-            if (mBreatheStepCntr == kBreatheStepNumb)
+            if (mBreatheStepCntr == mBreatheStepNumb)
             {
                 mLevel = mMinLevel;
             }
@@ -249,7 +249,7 @@ void PWMDevice::UpdateAction(void)
         }
 
         Set(true);
-        StartBreatheTimer(mBreatheStepTimeMS);
+        StartBreatheTimer(kBreatheStepTimeMS);
     }
     // Update of Blink action
     else if (mBlinkOnTimeMS != 0 && mBlinkOffTimeMS != 0)
@@ -279,7 +279,7 @@ void PWMDevice::ClearAction(void)
     mBreatheBothDirection = false;
     mBreatheType = kBreatheType_Invalid;
     mBreatheStepLevel = 0;
-    mBreatheStepTimeMS = 0;
+    mBreatheStepNumb = 0;
     mBlinkOnTimeMS = 0;
     mBlinkOffTimeMS = 0;
     mLevel = mMaxLevel;
