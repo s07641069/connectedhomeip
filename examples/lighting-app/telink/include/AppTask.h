@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "AppEvent.h"
 #include "AppConfig.h"
+#include "AppEvent.h"
 #include "LEDWidget.h"
 #include "PWMDevice.h"
 #include <platform/CHIPDeviceLayer.h>

@@ -65,26 +65,26 @@ The following buttons are available on **tlsr9518adk80d** board:
 **Red** LED indicates current state of Thread network. It is able to be in
 following states:
 
-| State                       | Description |
+| State                       | Description                                                                  |
 | :-------------------------- | :--------------------------------------------------------------------------- |
-| Blinks with short pulses    | Device is not commissioned to Thread, Thread is disabled |
+| Blinks with short pulses    | Device is not commissioned to Thread, Thread is disabled                     |
 | Blinks with frequent pulses | Device is commissioned, Thread enabled. Device trying to JOIN thread network |
-| Blinks with wide pulses     | Device commissioned and joined to thread network as CHILD |
+| Blinks with wide pulses     | Device commissioned and joined to thread network as CHILD                    |
 
 #### Indicate identify of device
 
-**Green** LED used to identify the device. The LED starts blinking when the Identify command of
-the Identify cluster is received. The command's argument can be used to specify the the effect.
-It is able to be in following effects:
+**Green** LED used to identify the device. The LED starts blinking when the
+Identify command of the Identify cluster is received. The command's argument can
+be used to specify the the effect. It is able to be in following effects:
 
-| Effect                          | Description |
-| :------------------------------ | :--------------------------------------------------------------------------- |
-| Blinks (200 ms on/200 ms off)   | Blink (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK) |
-| Breathe (during 1000 ms)        | Breathe (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BREATHE) |
-| Blinks (50 ms on/950 ms off)    | Okay (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_OKAY) |
+| Effect                          | Description                                                          |
+| :------------------------------ | :------------------------------------------------------------------- |
+| Blinks (200 ms on/200 ms off)   | Blink (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BLINK)                   |
+| Breathe (during 1000 ms)        | Breathe (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_BREATHE)               |
+| Blinks (50 ms on/950 ms off)    | Okay (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_OKAY)                     |
 | Blinks (1000 ms on/1000 ms off) | Channel Change (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_CHANNEL_CHANGE) |
-| Blinks (950 ms on/50 ms off)    | Finish (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_FINISH_EFFECT) |
-| LED off                         | Stop (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT) |
+| Blinks (950 ms on/50 ms off)    | Finish (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_FINISH_EFFECT)          |
+| LED off                         | Stop (EMBER_ZCL_IDENTIFY_EFFECT_IDENTIFIER_STOP_EFFECT)              |
 
 ### CHIP tool commands
 

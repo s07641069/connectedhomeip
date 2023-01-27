@@ -54,7 +54,6 @@ public:
     void UpdateClusterState();
     static void IdentifyEffectHandler(EmberAfIdentifyEffectIdentifier aEffect);
 
-
 private:
     friend AppTask & GetAppTask(void);
 

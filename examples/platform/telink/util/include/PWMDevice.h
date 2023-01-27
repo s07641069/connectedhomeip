@@ -52,7 +52,7 @@ public:
         kBreatheType_Both,
     };
 
-    using PWMCallback_fn = void (*)(Action_t, int32_t);
+    using PWMCallback_fn      = void (*)(Action_t, int32_t);
     using PWMTimerCallback_fn = void (*)(k_timer *);
 
     CHIP_ERROR Init(const pwm_dt_spec * pwmDevice, uint8_t aMinLevel, uint8_t aMaxLevel, uint8_t aDefaultLevel = 0);
@@ -61,7 +61,8 @@ public:
     uint8_t GetLevel(void) const { return mLevel; }
     uint8_t GetMinLevel(void) const { return mMinLevel; }
     uint8_t GetMaxLevel(void) const { return mMaxLevel; }
-    void SetCallbacks(PWMCallback_fn aActionInitiated_CB, PWMCallback_fn aActionCompleted_CB , PWMTimerCallback_fn aActionBlinkStateUpdate_CB);
+    void SetCallbacks(PWMCallback_fn aActionInitiated_CB, PWMCallback_fn aActionCompleted_CB,
+                      PWMTimerCallback_fn aActionBlinkStateUpdate_CB);
     bool InitiateAction(Action_t aAction, int32_t aActor, uint8_t * value);
     void InitiateBlinkAction(uint32_t onTimeMS, uint32_t offTimeMS);
     void InitiateBreatheAction(BreatheType_t type, uint32_t cycleTimeMS);
