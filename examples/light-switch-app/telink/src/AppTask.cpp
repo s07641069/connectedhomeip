@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2022 Project CHIP Authors
+ *    Copyright (c) 2023 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -99,7 +99,7 @@ K_MSGQ_DEFINE(sAppEventQueue, sizeof(AppEvent), kAppEventQueueSize, alignof(AppE
 k_timer sFactoryResetTimer;
 uint8_t sFactoryResetCntr = 0;
 
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
 LEDWidget sStatusLED;
 #endif
 
@@ -148,7 +148,7 @@ CHIP_ERROR AppTask::Init(void)
     LOG_INF("SW Version: %u, %s", CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION, CHIP_DEVICE_CONFIG_DEVICE_SOFTWARE_VERSION_STRING);
 
     // Initialize status LED
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
     LEDWidget::InitGpio(LEDS_PORT);
     LEDWidget::SetStateUpdateCallback(LEDStateUpdateHandler);
     sStatusLED.Init(SYSTEM_STATE_LED);
@@ -415,7 +415,7 @@ void AppTask::StartBleAdvHandler(AppEvent * aEvent)
     }
 }
 
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
 void AppTask::UpdateLedStateEventHandler(AppEvent * aEvent)
 {
     if (aEvent->Type == AppEvent::kEventType_UpdateLedState)
@@ -459,7 +459,7 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
     {
     case DeviceEventType::kCHIPoBLEAdvertisingChange:
         sHaveBLEConnections = ConnectivityMgr().NumBLEConnections() != 0;
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
         UpdateStatusLED();
 #endif
         break;
@@ -467,7 +467,7 @@ void AppTask::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */
         sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
         sIsThreadEnabled     = ConnectivityMgr().IsThreadEnabled();
         sIsThreadAttached    = ConnectivityMgr().IsThreadAttached();
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
         UpdateStatusLED();
 #endif
         break;
@@ -555,7 +555,7 @@ void AppTask::FactoryResetTimerEventHandler(AppEvent * aEvent)
 
 void AppTask::InitButtons(void)
 {
-#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
     sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_1, FactoryResetButtonEventHandler);
     sSwitchButton.Configure(BUTTON_PORT, BUTTON_PIN_2, SwitchActionButtonEventHandler);
     sThreadStartButton.Configure(BUTTON_PORT, BUTTON_PIN_3, StartThreadButtonEventHandler);

@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2021 Project CHIP Authors
+ *    Copyright (c) 2023 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,7 +30,7 @@ LOG_MODULE_REGISTER(ButtonManager);
 
 ButtonManager ButtonManager::sInstance;
 
-#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
 static struct gpio_callback button_cb_data;
 void button_pressed(const struct device * dev, struct gpio_callback * cb, uint32_t pins);
 #endif
@@ -49,7 +49,7 @@ int Button::Init(void)
 {
     int ret = 0;
 
-#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
     ret = gpio_pin_configure(mPort, mInPin, GPIO_INPUT | GPIO_PULL_UP);
     if (ret < 0)
     {
@@ -178,7 +178,7 @@ void ButtonEntry(void * param1, void * param2, void * param3)
     }
 }
 
-#if CONFIG_TELINK_BUTTON_MANAGER_IRQ_MODE
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
 void button_pressed(const struct device * dev, struct gpio_callback * cb, uint32_t pins)
 {
     ButtonManager & sInstance = ButtonManagerInst();

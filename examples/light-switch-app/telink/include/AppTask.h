@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2022 Project CHIP Authors
+ *    Copyright (c) 2023 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,7 +19,7 @@
 #pragma once
 
 #include "AppEvent.h"
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
 #include "LEDWidget.h"
 #endif
 #include "PWMDevice.h"
@@ -67,7 +67,7 @@ private:
 
     void DispatchEvent(AppEvent * event);
 
-#if CONFIG_TELINK_ENABLE_APPLICATION_STATUS_LED
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
     static void UpdateLedStateEventHandler(AppEvent * aEvent);
     static void LEDStateUpdateHandler(LEDWidget * ledWidget);
     static void UpdateStatusLED();
