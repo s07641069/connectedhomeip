@@ -108,10 +108,10 @@ Button sSwitchButton;
 Button sThreadStartButton;
 Button sBleAdvStartButton;
 
-bool sIsThreadProvisioned       = false;
-bool sIsThreadEnabled           = false;
-bool sIsThreadAttached          = false;
-bool sHaveBLEConnections        = false;
+bool sIsThreadProvisioned = false;
+bool sIsThreadEnabled     = false;
+bool sIsThreadAttached    = false;
+bool sHaveBLEConnections  = false;
 
 chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
 

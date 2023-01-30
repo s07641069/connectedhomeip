@@ -39,10 +39,10 @@ void Button::Configure(const struct device * port, gpio_pin_t outPin, gpio_pin_t
 {
     __ASSERT(device_is_ready(port), "%s is not ready\n", port->name);
 
-    mPort         = port;
-    mOutPin       = outPin;
-    mInPin        = inPin;
-    mCallback     = callback;
+    mPort     = port;
+    mOutPin   = outPin;
+    mInPin    = inPin;
+    mCallback = callback;
 }
 
 int Button::Init(void)
