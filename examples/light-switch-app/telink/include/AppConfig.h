@@ -18,7 +18,7 @@
 
 #pragma once
 
-// ---- Lighting Example App Config ----
+// ---- Light Switch Example App Config ----
 
 // Buttons config
 #define BUTTON_PORT DEVICE_DT_GET(DT_NODELABEL(gpioc))
