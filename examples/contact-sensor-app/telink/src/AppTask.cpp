@@ -581,9 +581,9 @@ void AppTask::InitButtons(void)
     sToggleContactStateButton.Configure(BUTTON_PORT, BUTTON_PIN_2, ToggleContactStateButtonEventHandler);
     sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, StartBleAdvButtonEventHandler);
 #else
-    sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_1, true, FactoryResetButtonEventHandler);
-    sToggleContactStateButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_1, false, ToggleContactStateButtonEventHandler);
-    sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_2, false, StartBleAdvButtonEventHandler);
+    sFactoryResetButton.Configure(BUTTON_PORT, BUTTON_PIN_3, BUTTON_PIN_1, FactoryResetButtonEventHandler);
+    sToggleContactStateButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_1, ToggleContactStateButtonEventHandler);
+    sBleAdvStartButton.Configure(BUTTON_PORT, BUTTON_PIN_4, BUTTON_PIN_2, StartBleAdvButtonEventHandler);
 #endif
 
     ButtonManagerInst().AddButton(sFactoryResetButton);
