@@ -25,6 +25,10 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/zephyr.h>
 
+#ifdef CONFIG_PM
+#include <zephyr/pm/policy.h>
+#endif
+
 LOG_MODULE_DECLARE(app);
 
 constexpr uint32_t kBreatheStepTimeMS = 10;
@@ -53,6 +57,11 @@ CHIP_ERROR PWMDevice::Init(const pwm_dt_spec * pwmDevice, uint8_t aMinLevel, uin
 
     ClearAction();
     Set(false);
+
+#ifdef CONFIG_PM
+    mBlockPM = false;
+#endif
+
     return CHIP_NO_ERROR;
 }
 
@@ -144,6 +153,14 @@ void PWMDevice::UpdateLight(void)
 
 void PWMDevice::InitiateBlinkAction(uint32_t onTimeMS, uint32_t offTimeMS)
 {
+#ifdef CONFIG_PM
+    if (!mBlockPM)
+    {
+        pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+        mBlockPM = true;
+    }
+#endif
+
     ClearAction();
 
     if (onTimeMS != 0 && offTimeMS != 0)
@@ -162,6 +179,14 @@ void PWMDevice::InitiateBlinkAction(uint32_t onTimeMS, uint32_t offTimeMS)
 
 void PWMDevice::InitiateBreatheAction(BreatheType_t type, uint32_t cycleTimeMS)
 {
+#ifdef CONFIG_PM
+    if (!mBlockPM)
+    {
+        pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+        mBlockPM = true;
+    }
+#endif
+
     ClearAction();
 
     if (type != kBreatheType_Invalid && cycleTimeMS != 0)
@@ -198,6 +223,14 @@ void PWMDevice::StopAction(void)
 {
     ClearAction();
     Set(false);
+
+#ifdef CONFIG_PM
+    if (mBlockPM)
+    {
+        pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+        mBlockPM = false;
+    }
+#endif
 }
 
 void PWMDevice::UpdateAction(void)

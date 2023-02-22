@@ -83,6 +83,9 @@ private:
     uint32_t mBlinkOffTimeMS;
     k_timer mPwmLedTimer;
     const pwm_dt_spec * mPwmDevice;
+#ifdef CONFIG_PM
+    bool mBlockPM;
+#endif
 
     PWMCallback_fn mActionInitiated_CB;
     PWMCallback_fn mActionCompleted_CB;
