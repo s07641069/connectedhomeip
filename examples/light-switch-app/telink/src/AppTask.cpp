@@ -26,6 +26,7 @@
 #include "ThreadUtil.h"
 
 #include <DeviceInfoProviderImpl.h>
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <app/clusters/identify-server/identify-server.h>
 #include <app/server/OnboardingCodesUtil.h>
 #include <app/server/Server.h>
