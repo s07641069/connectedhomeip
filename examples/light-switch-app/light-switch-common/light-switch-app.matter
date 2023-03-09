@@ -870,8 +870,10 @@ server cluster PowerSource = 47 {
   readonly attribute nullable int8u batPercentRemaining = 12;
   readonly attribute nullable int32u batTimeRemaining = 13;
   readonly attribute BatChargeLevelEnum batChargeLevel = 14;
-  readonly attribute BatFaultEnum activeBatFaults[] = 18;
+  readonly attribute boolean batReplacementNeeded = 15;
+  readonly attribute BatReplaceabilityEnum batReplaceability = 16;
   readonly attribute BatChargeStateEnum batChargeState = 26;
+  readonly attribute boolean batFunctionalWhileCharging = 28;
   readonly attribute command_id generatedCommandList[] = 65528;
   readonly attribute command_id acceptedCommandList[] = 65529;
   readonly attribute event_id eventList[] = 65530;
@@ -2156,14 +2158,16 @@ endpoint 0 {
 
   server cluster PowerSource {
     ram      attribute status;
-    ram      attribute order;
-    ram      attribute description;
+    ram      attribute order default = 3;
+    ram      attribute description default = "B1";
     ram      attribute batVoltage;
     ram      attribute batPercentRemaining;
     ram      attribute batTimeRemaining;
     ram      attribute batChargeLevel;
-    callback attribute activeBatFaults;
+    ram      attribute batReplacementNeeded;
+    ram      attribute batReplaceability;
     ram      attribute batChargeState;
+    ram      attribute batFunctionalWhileCharging;
     ram      attribute featureMap default = 6;
     ram      attribute clusterRevision default = 1;
   }
@@ -2394,23 +2398,25 @@ endpoint 1 {
     callback attribute clusterRevision default = 1;
   }
 
+  server cluster Binding {
+    callback attribute binding;
+    ram      attribute featureMap;
+    ram      attribute clusterRevision default = 1;
+  }
+
   server cluster PowerSource {
     ram      attribute status;
-    ram      attribute order;
-    ram      attribute description;
+    ram      attribute order default = 2;
+    ram      attribute description default = "B2";
     ram      attribute batVoltage;
     ram      attribute batPercentRemaining;
     ram      attribute batTimeRemaining;
     ram      attribute batChargeLevel;
-    callback attribute activeBatFaults;
+    ram      attribute batReplacementNeeded;
+    ram      attribute batReplaceability;
     ram      attribute batChargeState;
+    ram      attribute batFunctionalWhileCharging;
     ram      attribute featureMap default = 6;
-    ram      attribute clusterRevision default = 1;
-  }
-
-  server cluster Binding {
-    callback attribute binding;
-    ram      attribute featureMap;
     ram      attribute clusterRevision default = 1;
   }
 }
