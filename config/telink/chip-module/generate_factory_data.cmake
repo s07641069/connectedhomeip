@@ -92,9 +92,9 @@ if(CONFIG_CHIP_FACTORY_DATA_USE_DEFAULT_CERTS)
     string(APPEND script_args "--pai\n")
 else()
     # generate PAI and DAC certs
-    string(APPEND script_args "--cert \"${CHIP_ROOT}/credentials/test/attestation/Chip-Test-PAA-NoVID-Cert.pem\"\n")
-    string(APPEND script_args "--key \"${CHIP_ROOT}/credentials/test/attestation/Chip-Test-PAA-NoVID-Key.pem\"\n")
-    string(APPEND script_args "-cd \"${CHIP_ROOT}/credentials/development/cd-certs/Chip-Test-CD-Cert.der\"\n")
+    string(APPEND script_args "--cert \"${CHIP_ROOT}/credentials/production/paa-root-certs/Telink-Matter-Development-PAA-01-Cert.pem\"\n")
+    string(APPEND script_args "--key \"${CHIP_ROOT}/credentials/production/paa-root-certs/Telink-Matter-Development-PAA-01-Key.pem\"\n")
+    string(APPEND script_args "-cd \"${CHIP_ROOT}/credentials/production/paa-root-certs/Telink-Matter-Development-CD-Cert.der\"\n")
     string(APPEND script_args "--paa\n")
 endif()
 
