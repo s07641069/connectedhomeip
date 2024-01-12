@@ -56,7 +56,9 @@ const int16_t initialMeasuredValue = 100;
 static Device gLight1("Light 1", "Office");
 static Device gLight2("Light 2", "Office");
 static Device gLight3("Light 3", "Kitchen");
-static Device gLight4("Light 4", "Kitchen");
+static Device gLight4("Light 4", "Office");
+static Device gLight5("Light 5", "Office");
+
 static DeviceTempSensor TempSensor1("TempSensor 1", "Office", minMeasuredValue, maxMeasuredValue, initialMeasuredValue);
 
 // (taken from src/app/zap-templates/zcl/data-model/chip/matter-devices.xml)
@@ -66,6 +68,8 @@ static DeviceTempSensor TempSensor1("TempSensor 1", "Office", minMeasuredValue, 
 #define DEVICE_TYPE_ROOT_NODE 0x0016
 #define DEVICE_TYPE_BRIDGE 0x000e
 #define DEVICE_TYPE_TEMP_SENSOR 0x0302
+// from src/app/zap-templates/zcl/data-model/chip/level-control-cluster.xml
+#define DEVICE_TYPE_LEVEL_CONTROL_LIGHT 0x0008
 // Device Version for dynamic endpoints:
 #define DEVICE_VERSION_DEFAULT 1
 
@@ -89,8 +93,14 @@ static DeviceTempSensor TempSensor1("TempSensor 1", "Office", minMeasuredValue, 
 // Declare On/Off cluster attributes
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(onOffAttrs)
 DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::OnOff::Id, BOOLEAN, 1, 0), /* on/off */
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT16U, 1, 0), /* on/off */
     DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
-    DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
+DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
+// Declare level control cluster attributes
+DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(levelControlAttrs)
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT16U, 1, 0), /* on/off */
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
+DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
 
 // Declare Descriptor cluster attributes
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(descriptorAttrs)
@@ -128,9 +138,23 @@ constexpr CommandId onOffIncomingCommands[] = {
     app::Clusters::OnOff::Commands::OnWithTimedOff::Id,
     kInvalidCommandId,
 };
+constexpr CommandId levelControlIncomingCommands[] = {
+    app::Clusters::LevelControl::Commands::MoveToLevel::Id,
+    app::Clusters::LevelControl::Commands::MoveToLevelWithOnOff::Id,
+    app::Clusters::LevelControl::Commands::MoveWithOnOff::Id,
+    kInvalidCommandId,
+};
 
 DECLARE_DYNAMIC_CLUSTER_LIST_BEGIN(bridgedLightClusters)
 DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER), onOffIncomingCommands, nullptr),
+    DECLARE_DYNAMIC_CLUSTER(Clusters::Descriptor::Id, descriptorAttrs, ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
+    DECLARE_DYNAMIC_CLUSTER(chip::app::Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs,
+                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr) DECLARE_DYNAMIC_CLUSTER_LIST_END;
+
+DECLARE_DYNAMIC_CLUSTER_LIST_BEGIN(bridgedLightLevelControlClusters)
+    DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER), onOffIncomingCommands, nullptr),
+    DECLARE_DYNAMIC_CLUSTER(Clusters::LevelControl::Id, levelControlAttrs, ZAP_CLUSTER_MASK(SERVER),
+                            levelControlIncomingCommands, nullptr),
     DECLARE_DYNAMIC_CLUSTER(Clusters::Descriptor::Id, descriptorAttrs, ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
     DECLARE_DYNAMIC_CLUSTER(chip::app::Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs,
                             ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr) DECLARE_DYNAMIC_CLUSTER_LIST_END;
@@ -158,14 +182,16 @@ DECLARE_DYNAMIC_CLUSTER(Clusters::TemperatureMeasurement::Id, tempSensorAttrs, Z
                             nullptr),
     DECLARE_DYNAMIC_CLUSTER_LIST_END;
 
-// Declare Bridged Light endpoint
+// Declare Bridged Temperature Sensor endpoint
 DECLARE_DYNAMIC_ENDPOINT(bridgedTempSensorEndpoint, bridgedTempSensorClusters);
 DataVersion gTempSensor1DataVersions[ArraySize(bridgedTempSensorClusters)];
 
 // Declare Bridged Light endpoint
 DECLARE_DYNAMIC_ENDPOINT(bridgedLightEndpoint, bridgedLightClusters);
+// Declare Bridged Level Control Light endpoint
+DECLARE_DYNAMIC_ENDPOINT(bridgedLightLevelControlEndpoint, bridgedLightLevelControlClusters);
 
-DataVersion gLight1DataVersions[ArraySize(bridgedLightClusters)];
+DataVersion gLight1DataVersions[ArraySize(bridgedLightLevelControlClusters)];
 DataVersion gLight2DataVersions[ArraySize(bridgedLightClusters)];
 DataVersion gLight3DataVersions[ArraySize(bridgedLightClusters)];
 DataVersion gLight4DataVersions[ArraySize(bridgedLightClusters)];
@@ -175,6 +201,11 @@ const EmberAfDeviceType gRootDeviceTypes[]          = { { DEVICE_TYPE_ROOT_NODE,
 const EmberAfDeviceType gAggregateNodeDeviceTypes[] = { { DEVICE_TYPE_BRIDGE, DEVICE_VERSION_DEFAULT } };
 
 const EmberAfDeviceType gBridgedOnOffDeviceTypes[] = { { DEVICE_TYPE_LO_ON_OFF_LIGHT, DEVICE_VERSION_DEFAULT },
+                                                       { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, DEVICE_VERSION_DEFAULT},
+                                                       { DEVICE_TYPE_BRIDGED_NODE, DEVICE_VERSION_DEFAULT } };
+const EmberAfDeviceType gBridgedLevelControlDeviceTypes[] = {
+                                                       { DEVICE_TYPE_LO_ON_OFF_LIGHT, DEVICE_VERSION_DEFAULT },
+                                                       { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, DEVICE_VERSION_DEFAULT},
                                                        { DEVICE_TYPE_BRIDGED_NODE, DEVICE_VERSION_DEFAULT } };
 
 const EmberAfDeviceType gBridgedTempSensorDeviceTypes[] = { { DEVICE_TYPE_TEMP_SENSOR, DEVICE_VERSION_DEFAULT },
@@ -451,7 +482,7 @@ void AppTask::InitServer(intptr_t context)
     emberAfSetDeviceTypeList(1, Span<const EmberAfDeviceType>(gAggregateNodeDeviceTypes));
 
     // Add lights 1..3 --> will be mapped to ZCL endpoints 3, 4, 5
-    AddDeviceEndpoint(&gLight1, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
+    AddDeviceEndpoint(&gLight1, &bridgedLightLevelControlEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
                       Span<DataVersion>(gLight1DataVersions), 1);
     AddDeviceEndpoint(&gLight2, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
                       Span<DataVersion>(gLight2DataVersions), 1);
