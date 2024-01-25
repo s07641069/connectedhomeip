@@ -24,7 +24,7 @@
 #include <lib/support/ZclString.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
-
+#define debug_msg(a, ...) printk("[ D ] %d %s(): " a, __LINE__, __func__, ##__VA_ARGS__)
 namespace {
 const struct pwm_dt_spec sPwmRgbSpecBlueLed = PWM_DT_SPEC_GET(DT_ALIAS(pwm_led0));
 } // namespace
@@ -47,6 +47,14 @@ static EndpointId gCurrentEndpointId;
 static EndpointId gFirstDynamicEndpointId;
 
 static Device * gDevices[CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT]; // number of dynamic endpoints count
+
+using namespace chip;
+using namespace chip::app;
+using namespace chip::Credentials;
+using namespace chip::Inet;
+using namespace chip::Transport;
+using namespace chip::DeviceLayer;
+using namespace chip::app::Clusters;
 
 const int16_t minMeasuredValue     = -27315;
 const int16_t maxMeasuredValue     = 32766;
@@ -80,6 +88,8 @@ static DeviceTempSensor TempSensor1("TempSensor 1", "Office", minMeasuredValue, 
 #define ZCL_BRIDGED_DEVICE_BASIC_INFORMATION_CLUSTER_REVISION (2u)
 #define ZCL_FIXED_LABEL_CLUSTER_REVISION (1u)
 #define ZCL_ON_OFF_CLUSTER_REVISION (4u)
+// Matter Application Cluster 1.6.1
+#define ZCL_LEVEL_CONTROL_CLUSTER_REVISION (5u)
 #define ZCL_TEMPERATURE_SENSOR_CLUSTER_REVISION (4u)
 #define ZCL_BRIDGED_DEVICE_BASIC_INFORMATION_FEATURE_MAP (0u)
 #define ZCL_TEMPERATURE_SENSOR_FEATURE_MAP (0u)
@@ -92,14 +102,24 @@ static DeviceTempSensor TempSensor1("TempSensor 1", "Office", minMeasuredValue, 
 
 // Declare On/Off cluster attributes
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(onOffAttrs)
-DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::OnOff::Id, BOOLEAN, 1, 0), /* on/off */
-    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT16U, 1, 0), /* on/off */
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::OnOff::Id, BOOLEAN, 1, 0), /* on/off */
+    // DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT16U, 1, 0), /* on/off */
     DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
 // Declare level control cluster attributes
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(levelControlAttrs)
-    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT16U, 1, 0), /* on/off */
-    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::CurrentLevel::Id, INT8U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::OnOffTransitionTime::Id, INT16U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::OnTransitionTime::Id, INT16U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::OffTransitionTime::Id, INT16U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::MinLevel::Id, INT8U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::MaxLevel::Id, INT8U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::OnLevel::Id, INT8U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::StartUpCurrentLevel::Id, INT8U, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::Options::Id, BITMAP8, 1, 0),
+    DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::ClusterRevision::Id, INT16U, ZCL_LEVEL_CONTROL_CLUSTER_REVISION, 0),
+    // DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::OnOff::Id, BOOLEAN, 1, 0), /* on/off */
+    // DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
 
 // Declare Descriptor cluster attributes
@@ -139,9 +159,13 @@ constexpr CommandId onOffIncomingCommands[] = {
     kInvalidCommandId,
 };
 constexpr CommandId levelControlIncomingCommands[] = {
+    app::Clusters::LevelControl::Commands::Move::Id,
+    app::Clusters::LevelControl::Commands::Step::Id,
+    app::Clusters::LevelControl::Commands::Stop::Id,
     app::Clusters::LevelControl::Commands::MoveToLevel::Id,
     app::Clusters::LevelControl::Commands::MoveToLevelWithOnOff::Id,
     app::Clusters::LevelControl::Commands::MoveWithOnOff::Id,
+    app::Clusters::LevelControl::Commands::StepWithOnOff::Id,
     kInvalidCommandId,
 };
 
@@ -149,15 +173,18 @@ DECLARE_DYNAMIC_CLUSTER_LIST_BEGIN(bridgedLightClusters)
 DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER), onOffIncomingCommands, nullptr),
     DECLARE_DYNAMIC_CLUSTER(Clusters::Descriptor::Id, descriptorAttrs, ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
     DECLARE_DYNAMIC_CLUSTER(chip::app::Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs,
-                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr) DECLARE_DYNAMIC_CLUSTER_LIST_END;
+                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
+DECLARE_DYNAMIC_CLUSTER_LIST_END;
 
+// ----------------------------Level Control Light-----------------------------------------------
 DECLARE_DYNAMIC_CLUSTER_LIST_BEGIN(bridgedLightLevelControlClusters)
     DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER), onOffIncomingCommands, nullptr),
     DECLARE_DYNAMIC_CLUSTER(Clusters::LevelControl::Id, levelControlAttrs, ZAP_CLUSTER_MASK(SERVER),
                             levelControlIncomingCommands, nullptr),
     DECLARE_DYNAMIC_CLUSTER(Clusters::Descriptor::Id, descriptorAttrs, ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
     DECLARE_DYNAMIC_CLUSTER(chip::app::Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs,
-                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr) DECLARE_DYNAMIC_CLUSTER_LIST_END;
+                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
+DECLARE_DYNAMIC_CLUSTER_LIST_END;
 
 // ----------------------------Temperature sensor-----------------------------------------------
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(tempSensorAttrs)
@@ -192,7 +219,7 @@ DECLARE_DYNAMIC_ENDPOINT(bridgedLightEndpoint, bridgedLightClusters);
 DECLARE_DYNAMIC_ENDPOINT(bridgedLightLevelControlEndpoint, bridgedLightLevelControlClusters);
 
 DataVersion gLight1DataVersions[ArraySize(bridgedLightLevelControlClusters)];
-DataVersion gLight2DataVersions[ArraySize(bridgedLightClusters)];
+DataVersion gLight2DataVersions[ArraySize(bridgedLightLevelControlClusters)];
 DataVersion gLight3DataVersions[ArraySize(bridgedLightClusters)];
 DataVersion gLight4DataVersions[ArraySize(bridgedLightClusters)];
 // DataVersion gThermostatDataVersions[ArraySize(thermostatAttrs)];
@@ -201,11 +228,11 @@ const EmberAfDeviceType gRootDeviceTypes[]          = { { DEVICE_TYPE_ROOT_NODE,
 const EmberAfDeviceType gAggregateNodeDeviceTypes[] = { { DEVICE_TYPE_BRIDGE, DEVICE_VERSION_DEFAULT } };
 
 const EmberAfDeviceType gBridgedOnOffDeviceTypes[] = { { DEVICE_TYPE_LO_ON_OFF_LIGHT, DEVICE_VERSION_DEFAULT },
-                                                       { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, DEVICE_VERSION_DEFAULT},
+                                                    //    { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, DEVICE_VERSION_DEFAULT},
                                                        { DEVICE_TYPE_BRIDGED_NODE, DEVICE_VERSION_DEFAULT } };
 const EmberAfDeviceType gBridgedLevelControlDeviceTypes[] = {
+                                                       { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, 5},
                                                        { DEVICE_TYPE_LO_ON_OFF_LIGHT, DEVICE_VERSION_DEFAULT },
-                                                       { DEVICE_TYPE_LEVEL_CONTROL_LIGHT, DEVICE_VERSION_DEFAULT},
                                                        { DEVICE_TYPE_BRIDGED_NODE, DEVICE_VERSION_DEFAULT } };
 
 const EmberAfDeviceType gBridgedTempSensorDeviceTypes[] = { { DEVICE_TYPE_TEMP_SENSOR, DEVICE_VERSION_DEFAULT },
@@ -288,16 +315,18 @@ EmberAfStatus HandleReadBridgedDeviceBasicAttribute(Device * dev, chip::Attribut
         uint32_t featureMap = ZCL_BRIDGED_DEVICE_BASIC_INFORMATION_FEATURE_MAP;
         memcpy(buffer, &featureMap, sizeof(featureMap));
     }
-    else if ((attributeId == ClusterRevision::Id) && (maxReadLength == 4))
+    else if ((attributeId == ClusterRevision::Id)/* && (maxReadLength == 4)*/)
     {
         uint16_t clusterRevision = ZCL_BRIDGED_DEVICE_BASIC_INFORMATION_CLUSTER_REVISION;
         memcpy(buffer, &clusterRevision, sizeof(clusterRevision));
     }
     else
     {
+        debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
         return EMBER_ZCL_STATUS_FAILURE;
     }
 
+    debug_msg("EMBER_ZCL_STATUS_SUCCESS \n");
     return EMBER_ZCL_STATUS_SUCCESS;
 }
 
@@ -316,9 +345,94 @@ EmberAfStatus HandleReadOnOffAttribute(Device * dev, chip::AttributeId attribute
     }
     else
     {
+        debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
         return EMBER_ZCL_STATUS_FAILURE;
     }
 
+    return EMBER_ZCL_STATUS_SUCCESS;
+}
+
+
+EmberAfStatus HandleReadLevelControlAttribute(Device * dev, chip::AttributeId attributeId, uint8_t * buffer, uint16_t maxReadLength)
+{
+    using namespace Clusters::LevelControl::Attributes;
+    ChipLogProgress(DeviceLayer, "HandleReadLevelControlAttribute: attrId=%" PRIu32 ", maxReadLength=%u", attributeId, maxReadLength);
+
+    if ((attributeId == CurrentLevel::Id)/* && (maxReadLength == 1)*/)
+    {
+        // *buffer = dev->GetLevel();
+        uint8_t currentValue = dev->GetLevel();
+        debug_msg("CurrentLevel::Id=[%u]\n", currentValue);
+        memcpy(buffer, &currentValue, sizeof(currentValue));
+        debug_msg("*buffer=[%d]\n", *buffer);
+    }
+    else if ((attributeId == ClusterRevision::Id) && (maxReadLength == 4))
+    {
+        debug_msg("ClusterRevision\n");
+        uint16_t clusterRevision = ZCL_ON_OFF_CLUSTER_REVISION;
+        memcpy(buffer, &clusterRevision, sizeof(clusterRevision));
+    }
+    else if ((attributeId == MinLevel::Id)/* && (maxReadLength == 2)*/)
+    {
+        debug_msg("MinLevel\n");
+        uint8_t MinLevel = 0;
+        memcpy(buffer, &MinLevel, sizeof(MinLevel));
+    }
+    else if ((attributeId == MaxLevel::Id)/* && (maxReadLength == 2)*/)
+    {
+        debug_msg("MaxLevel\n");
+        uint8_t MaxLevel = 254;
+        memcpy(buffer, &MaxLevel, sizeof(MaxLevel));
+    }
+    else if ((attributeId == OnLevel::Id)/* && (maxReadLength == 2)*/)
+    {
+        debug_msg("OnLevel\n");
+        uint8_t OnLevel = 0;
+        memcpy(buffer, &OnLevel, sizeof(OnLevel));
+    }
+    else if ((attributeId == OnOffTransitionTime::Id)/* && (maxReadLength == 1)*/)
+    {
+        debug_msg("OnOffTransitionTime\n");
+        uint8_t OnOffTransitionTime = 0;
+        memcpy(buffer, &OnOffTransitionTime, sizeof(OnOffTransitionTime));
+    }
+    else if ((attributeId == OnTransitionTime::Id)/* && (maxReadLength == 1)*/)
+    {
+        debug_msg("OnTransitionTime\n");
+        uint8_t OnTransitionTime = 0;
+        memcpy(buffer, &OnTransitionTime, sizeof(OnTransitionTime));
+    }
+    else if ((attributeId == OffTransitionTime::Id)/* && (maxReadLength == 1)*/)
+    {
+        debug_msg("OffTransitionTime\n");
+        uint8_t OffTransitionTime = 0;
+        memcpy(buffer, &OffTransitionTime, sizeof(OffTransitionTime));
+    }
+    else if ((attributeId == StartUpCurrentLevel::Id)/* && (maxReadLength == 1)*/)
+    {
+        debug_msg("StartUpCurrentLevel\n");
+        uint8_t StartUpCurrentLevel = 7;
+        memcpy(buffer, &StartUpCurrentLevel, sizeof(StartUpCurrentLevel));
+    }
+    else if ((attributeId == Options::Id)/* && (maxReadLength == 1)*/)
+    {
+        debug_msg("Options\n");
+        uint8_t Options = 1;
+        memcpy(buffer, &Options, sizeof(Options));
+    }
+    else if ((attributeId == ClusterRevision::Id)/* && (maxReadLength == 5)*/)
+    {
+        debug_msg("ClusterRevision\n");
+        uint8_t ClusterRevision = 5;
+        memcpy(buffer, &ClusterRevision, sizeof(ClusterRevision));
+    }
+
+    else
+    {
+        debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
+        return EMBER_ZCL_STATUS_FAILURE;
+    }
+    debug_msg("EMBER_ZCL_STATUS_SUCCESS \n");
     return EMBER_ZCL_STATUS_SUCCESS;
 }
 
@@ -331,6 +445,24 @@ EmberAfStatus HandleWriteOnOffAttribute(Device * dev, chip::AttributeId attribut
     return EMBER_ZCL_STATUS_SUCCESS;
 }
 
+EmberAfStatus HandleWriteLevelControlAttribute(Device * dev, chip::AttributeId attributeId, uint8_t * buffer)
+{
+    ChipLogProgress(DeviceLayer, "HandleWriteLevelControlAttribute: attrId=%" PRIu32, attributeId);
+
+    if ((attributeId != Clusters::LevelControl::Attributes::CurrentLevel::Id) && (!dev->IsReachable()))
+    {
+        debug_msg("CurrentLevel\n");
+        dev->SetLevel(*buffer);
+        return EMBER_ZCL_STATUS_SUCCESS;
+    }
+    debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
+    return EMBER_ZCL_STATUS_FAILURE;
+    // ReturnErrorCodeIf((attributeId != Clusters::LevelControl::Attributes::CurrentLevel::Id) || (!dev->IsReachable()), EMBER_ZCL_STATUS_FAILURE);
+    // dev->SetLevel(*buffer);
+    // debug_msg("buffer[%d]\n", *buffer);
+    // return EMBER_ZCL_STATUS_SUCCESS;
+}
+
 EmberAfStatus emberAfExternalAttributeReadCallback(EndpointId endpoint, ClusterId clusterId,
                                                    const EmberAfAttributeMetadata * attributeMetadata, uint8_t * buffer,
                                                    uint16_t maxReadLength)
@@ -338,6 +470,7 @@ EmberAfStatus emberAfExternalAttributeReadCallback(EndpointId endpoint, ClusterI
     using namespace Clusters;
 
     uint16_t endpointIndex = emberAfGetDynamicIndexFromEndpoint(endpoint);
+    debug_msg("endpointIndex[%d], clusterId[0x%x]  buffer[%d]\n", endpointIndex, clusterId, *buffer);
 
     if ((endpointIndex < CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT) && (gDevices[endpointIndex] != NULL))
     {
@@ -347,17 +480,22 @@ EmberAfStatus emberAfExternalAttributeReadCallback(EndpointId endpoint, ClusterI
         {
             return HandleReadBridgedDeviceBasicAttribute(dev, attributeMetadata->attributeId, buffer, maxReadLength);
         }
-        else if (clusterId == OnOff::Id)
+        else if (clusterId == LevelControl::Id)
+        {
+            return HandleReadLevelControlAttribute(dev, attributeMetadata->attributeId, buffer, maxReadLength);
+        }
+        else if (clusterId == OnOff::Id /* && endpointIndex != 0*/)
         {
             return HandleReadOnOffAttribute(dev, attributeMetadata->attributeId, buffer, maxReadLength);
         }
+
         else if (clusterId == TemperatureMeasurement::Id)
         {
             return HandleReadTempMeasurementAttribute(static_cast<DeviceTempSensor *>(dev), attributeMetadata->attributeId, buffer,
                                                       maxReadLength);
         }
     }
-
+    debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
     return EMBER_ZCL_STATUS_FAILURE;
 }
 
@@ -366,16 +504,25 @@ EmberAfStatus emberAfExternalAttributeWriteCallback(EndpointId endpoint, Cluster
 {
     uint16_t endpointIndex = emberAfGetDynamicIndexFromEndpoint(endpoint);
 
+    debug_msg("endpointIndex[%d], clusterId[0x%x],  buffer[%d]\n", endpointIndex, clusterId, *buffer);
     if (endpointIndex < CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT)
     {
         Device * dev = gDevices[endpointIndex];
 
+        // debug_msg("endpointIndex[%d],  buffer[%d]\n", endpointIndex, *buffer);
+        if ((dev->IsReachable()) && (clusterId == Clusters::LevelControl::Id))
+        {
+            debug_msg("\n");
+            return HandleWriteLevelControlAttribute(dev, attributeMetadata->attributeId, buffer);
+        }
         if ((dev->IsReachable()) && (clusterId == Clusters::OnOff::Id))
         {
+            debug_msg("\n");
             return HandleWriteOnOffAttribute(dev, attributeMetadata->attributeId, buffer);
         }
-    }
 
+    }
+    debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
     return EMBER_ZCL_STATUS_FAILURE;
 }
 
@@ -396,6 +543,7 @@ void ScheduleReportingCallback(Device * dev, ClusterId cluster, AttributeId attr
 
 void HandleDeviceStatusChanged(Device * dev, Device::Changed_t itemChangedMask)
 {
+    debug_msg("itemChangedMask[0x%x]\n", itemChangedMask);
     using namespace chip::app::Clusters;
     if (itemChangedMask & Device::kChanged_Reachable)
     {
@@ -404,7 +552,44 @@ void HandleDeviceStatusChanged(Device * dev, Device::Changed_t itemChangedMask)
 
     if (itemChangedMask & Device::kChanged_State)
     {
+        debug_msg("\n");
         ScheduleReportingCallback(dev, OnOff::Id, OnOff::Attributes::OnOff::Id);
+    }
+
+    if (itemChangedMask & Device::kChanged_Name)
+    {
+        ScheduleReportingCallback(dev, BridgedDeviceBasicInformation::Id, BridgedDeviceBasicInformation::Attributes::NodeLabel::Id);
+    }
+}
+
+void HandleLevelControlStatusChanged(Device * dev, Device::Changed_t itemChangedMask)
+{
+    debug_msg("itemChangedMask[0x%x]\n", itemChangedMask);
+    using namespace chip::app::Clusters;
+    if (itemChangedMask & Device::kChanged_Reachable)
+    {
+        ScheduleReportingCallback(dev, BridgedDeviceBasicInformation::Id, BridgedDeviceBasicInformation::Attributes::Reachable::Id);
+    }
+
+    // possibly uncomment to update set level
+
+        // kChanged_Reachable    = 0x01, 0001
+        // kChanged_State        = 0x02, 0010
+        // kChanged_CurrentLevel = 0x10, 1 0000
+        // kChanged_Location     = 0x04, 0100
+        // kChanged_Name         = 0x08, 1000
+
+    if (itemChangedMask & Device::kChanged_State)
+    {
+        debug_msg("kChanged_State \n");
+        ScheduleReportingCallback(dev, OnOff::Id, OnOff::Attributes::OnOff::Id);
+        // ScheduleReportingCallback(dev, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);
+    }
+
+    if (itemChangedMask & Device::kChanged_CurrentLevel)
+    {
+        debug_msg("kChanged_CurrentLevel \n");
+        ScheduleReportingCallback(dev, LevelControl::Id, LevelControl::Attributes::CurrentLevel::Id);
     }
 
     if (itemChangedMask & Device::kChanged_Name)
@@ -416,6 +601,7 @@ void HandleDeviceStatusChanged(Device * dev, Device::Changed_t itemChangedMask)
 bool emberAfActionsClusterInstantActionCallback(app::CommandHandler * commandObj, const app::ConcreteCommandPath & commandPath,
                                                 const Clusters::Actions::Commands::InstantAction::DecodableType & commandData)
 {
+    debug_msg("! ActionCallback ! \n");
     // No actions are implemented, just return status NotFound.
     commandObj->AddStatus(commandPath, Protocols::InteractionModel::Status::NotFound);
     return true;
@@ -454,8 +640,8 @@ CHIP_ERROR AppTask::Init(void)
     TempSensor1.SetReachable(true);
 
     // Whenever bridged device changes its state
-    gLight1.SetChangeCallback(&HandleDeviceStatusChanged);
-    gLight2.SetChangeCallback(&HandleDeviceStatusChanged);
+    gLight1.SetChangeCallback(&HandleLevelControlStatusChanged);
+    gLight2.SetChangeCallback(&HandleLevelControlStatusChanged);
     gLight3.SetChangeCallback(&HandleDeviceStatusChanged);
     gLight4.SetChangeCallback(&HandleDeviceStatusChanged);
     TempSensor1.SetChangeCallback(&HandleDeviceTempSensorStatusChanged);
@@ -484,7 +670,7 @@ void AppTask::InitServer(intptr_t context)
     // Add lights 1..3 --> will be mapped to ZCL endpoints 3, 4, 5
     AddDeviceEndpoint(&gLight1, &bridgedLightLevelControlEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
                       Span<DataVersion>(gLight1DataVersions), 1);
-    AddDeviceEndpoint(&gLight2, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
+    AddDeviceEndpoint(&gLight2, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
                       Span<DataVersion>(gLight2DataVersions), 1);
     AddDeviceEndpoint(&gLight3, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
                       Span<DataVersion>(gLight3DataVersions), 1);
@@ -551,6 +737,7 @@ EmberAfStatus HandleReadTempMeasurementAttribute(DeviceTempSensor * dev, chip::A
     }
     else
     {
+        debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
         return EMBER_ZCL_STATUS_FAILURE;
     }
 

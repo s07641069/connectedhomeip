@@ -37,11 +37,12 @@ public:
 
     enum Changed_t
     {
-        kChanged_Reachable = 0x01,
-        kChanged_State     = 0x02,
-        kChanged_Location  = 0x04,
-        kChanged_Name      = 0x08,
-        kChanged_Last      = kChanged_Name,
+        kChanged_Reachable    = 0x01,
+        kChanged_State        = 0x02,
+        kChanged_CurrentLevel = 0x10,
+        kChanged_Location     = 0x04,
+        kChanged_Name         = 0x08,
+        kChanged_Last         = kChanged_Name,
     } Changed;
 
     Device(const char * szDeviceName, const char * szLocation);
@@ -49,6 +50,8 @@ public:
     bool IsOn() const;
     bool IsReachable() const;
     void SetOnOff(bool aOn);
+    void SetLevel(uint8_t aLevel);
+    inline uint8_t GetLevel() { return mLevel; };
     void SetReachable(bool aReachable);
     void SetName(const char * szDeviceName);
     void SetLocation(const char * szLocation);
@@ -63,6 +66,7 @@ public:
 private:
     State_t mState;
     bool mReachable;
+    uint8_t mLevel;
     char mName[kDeviceNameSize];
     char mLocation[kDeviceLocationSize];
     chip::EndpointId mEndpointId;

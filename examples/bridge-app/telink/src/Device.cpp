@@ -21,6 +21,7 @@
 #include <lib/support/CHIPMemString.h>
 #include <platform/CHIPDeviceLayer.h>
 
+#define debug_msg(a, ...) printk("[ D ] %d %s(): " a, __LINE__, __func__, ##__VA_ARGS__)
 using namespace ::chip::Platform;
 
 Device::Device(const char * szDeviceName, const char * szLocation)
@@ -28,6 +29,7 @@ Device::Device(const char * szDeviceName, const char * szLocation)
     CopyString(mName, sizeof(mName), szDeviceName);
     CopyString(mLocation, sizeof(mLocation), szLocation);
     mState      = kState_Off;
+    mLevel      = 0;
     mReachable  = false;
     mEndpointId = 0;
     mChanged_CB = nullptr;
@@ -63,6 +65,27 @@ void Device::SetOnOff(bool aOn)
     if (changed && mChanged_CB)
     {
         mChanged_CB(this, kChanged_State);
+    }
+}
+
+void Device::SetLevel(uint8_t aLevel)
+{
+    debug_msg("aLevel[%d]\n", aLevel);
+    bool changed = false;
+
+    if (aLevel)
+    {
+        debug_msg("\n");
+        changed = (mLevel != aLevel);
+        mLevel  = aLevel;
+        ChipLogProgress(DeviceLayer, "Device[%s]: set Level [%d]", mName, aLevel);
+    }
+
+    if (changed && mChanged_CB)
+    {
+        debug_msg("\n");
+        mChanged_CB(this, kChanged_CurrentLevel);
+        debug_msg("\n");
     }
 }
 

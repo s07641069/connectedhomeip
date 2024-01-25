@@ -44,6 +44,8 @@
 #include <platform/CHIPDeviceLayer.h>
 #include <platform/PlatformManager.h>
 
+#define debug_msg(a, ...) printk("[ ZCL_D ONOFF] %d %s(): " a, __LINE__, __func__, ##__VA_ARGS__)
+
 using namespace chip;
 using namespace chip::app::Clusters;
 using namespace chip::app::Clusters::OnOff;
@@ -344,6 +346,7 @@ EmberAfStatus OnOffServer::setOnOffValue(chip::EndpointId endpoint, chip::Comman
     EmberAfStatus status;
     bool currentValue, newValue;
 
+    debug_msg("endpoint[0x%x] initiatedByLevelChange[%d]\n", endpoint, initiatedByLevelChange ? true : false);
     // read current on/off value
     status = Attributes::OnOff::Get(endpoint, &currentValue);
     if (status != EMBER_ZCL_STATUS_SUCCESS)
@@ -406,6 +409,7 @@ EmberAfStatus OnOffServer::setOnOffValue(chip::EndpointId endpoint, chip::Comman
         // ZCL stuff has not happened and we do it here
         if (!initiatedByLevelChange && LevelControlWithOnOffFeaturePresent(endpoint))
         {
+            debug_msg("!initiatedByLevelChange\n");
             emberAfOnOffClusterLevelControlEffectCallback(endpoint, newValue);
         }
 #endif
@@ -434,6 +438,7 @@ EmberAfStatus OnOffServer::setOnOffValue(chip::EndpointId endpoint, chip::Comman
         // ZCL stuff has not happened and we do it here
         if (!initiatedByLevelChange && LevelControlWithOnOffFeaturePresent(endpoint))
         {
+            debug_msg("!initiatedByLevelChange\n");
             emberAfOnOffClusterLevelControlEffectCallback(endpoint, newValue);
         }
         else
@@ -465,6 +470,7 @@ EmberAfStatus OnOffServer::setOnOffValue(chip::EndpointId endpoint, chip::Comman
 
     // The returned status is based solely on the On/Off cluster.  Errors in the
     // Level Control and/or Scenes cluster are ignored.
+    debug_msg("EMBER_ZCL_STATUS_SUCCESS\n");
     return EMBER_ZCL_STATUS_SUCCESS;
 }
 
