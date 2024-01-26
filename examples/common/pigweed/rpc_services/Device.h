@@ -222,6 +222,11 @@ public:
         return pw::Status::Unimplemented();
     }
 
+    virtual pw::Status TriggerDFU(const pw_protobuf_Empty & request, pw_protobuf_Empty & response)
+    {
+        return pw::Status::Unimplemented();
+    }
+
     virtual pw::Status TriggerOta(const pw_protobuf_Empty & request, pw_protobuf_Empty & response)
     {
 #if CHIP_DEVICE_CONFIG_ENABLE_OTA_REQUESTOR

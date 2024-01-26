@@ -25,7 +25,15 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/reboot.h>
 
+#include <zephyr/storage/flash_map.h>
+#include <zephyr/drivers/flash.h>
+
 #include <zephyr/kernel.h>
+
+#define DFU_TRIGGER_OFFSET 0x0800
+
+static const struct device *flash_device =
+	DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
 
 LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 
@@ -110,6 +118,22 @@ public:
         }
 
         k_timer_start(&reboot_timer, delay, K_FOREVER);
+        return pw::OkStatus();
+    }
+
+    pw::Status TriggerDFU(const pw_protobuf_Empty & request, pw_protobuf_Empty & response)
+    {
+        uint8_t key[] = {'d', 'f', 'u'};
+        int err = 0;
+
+            err = flash_write(flash_device, FIXED_PARTITION_OFFSET(vendor_partition)
+			+ DFU_TRIGGER_OFFSET, key, sizeof(key));
+
+            if (err != 0)
+            {
+                return pw::Status::Unavailable();
+            }
+            
         return pw::OkStatus();
     }
 };
