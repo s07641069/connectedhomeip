@@ -19,6 +19,7 @@
 #include "AppTask.h"
 #include "Device.h"
 
+#include <app-common/zap-generated/callback.h>
 #include <app-common/zap-generated/attributes/Accessors.h>
 #include <app/reporting/reporting.h>
 #include <lib/support/ZclString.h>
@@ -118,8 +119,6 @@ DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(levelControlAttrs)
     DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::StartUpCurrentLevel::Id, INT8U, 1, 0),
     DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::Options::Id, BITMAP8, 1, 0),
     DECLARE_DYNAMIC_ATTRIBUTE(Clusters::LevelControl::Attributes::ClusterRevision::Id, INT16U, ZCL_LEVEL_CONTROL_CLUSTER_REVISION, 0),
-    // DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::OnOff::Id, BOOLEAN, 1, 0), /* on/off */
-    // DECLARE_DYNAMIC_ATTRIBUTE(Clusters::OnOff::Attributes::ClusterRevision::Id, INT16U, ZCL_ON_OFF_CLUSTER_REVISION, 0),
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_END();
 
 // Declare Descriptor cluster attributes
@@ -159,13 +158,13 @@ constexpr CommandId onOffIncomingCommands[] = {
     kInvalidCommandId,
 };
 constexpr CommandId levelControlIncomingCommands[] = {
+    app::Clusters::LevelControl::Commands::MoveToLevel::Id,
     app::Clusters::LevelControl::Commands::Move::Id,
     app::Clusters::LevelControl::Commands::Step::Id,
     app::Clusters::LevelControl::Commands::Stop::Id,
-    app::Clusters::LevelControl::Commands::MoveToLevel::Id,
     app::Clusters::LevelControl::Commands::MoveToLevelWithOnOff::Id,
-    app::Clusters::LevelControl::Commands::MoveWithOnOff::Id,
     app::Clusters::LevelControl::Commands::StepWithOnOff::Id,
+    app::Clusters::LevelControl::Commands::MoveWithOnOff::Id,
     kInvalidCommandId,
 };
 
@@ -176,15 +175,22 @@ DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER
                             ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
 DECLARE_DYNAMIC_CLUSTER_LIST_END;
 
+const EmberAfGenericClusterFunction chipFuncArrayLevelControlServer[] = {
+    (EmberAfGenericClusterFunction) emberAfLevelControlClusterServerInitCallback,
+    (EmberAfGenericClusterFunction) MatterLevelControlClusterServerShutdownCallback,
+};
 // ----------------------------Level Control Light-----------------------------------------------
-DECLARE_DYNAMIC_CLUSTER_LIST_BEGIN(bridgedLightLevelControlClusters)
-    DECLARE_DYNAMIC_CLUSTER(Clusters::OnOff::Id, onOffAttrs, ZAP_CLUSTER_MASK(SERVER), onOffIncomingCommands, nullptr),
-    DECLARE_DYNAMIC_CLUSTER(Clusters::LevelControl::Id, levelControlAttrs, ZAP_CLUSTER_MASK(SERVER),
-                            levelControlIncomingCommands, nullptr),
-    DECLARE_DYNAMIC_CLUSTER(Clusters::Descriptor::Id, descriptorAttrs, ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
-    DECLARE_DYNAMIC_CLUSTER(chip::app::Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs,
-                            ZAP_CLUSTER_MASK(SERVER), nullptr, nullptr),
-DECLARE_DYNAMIC_CLUSTER_LIST_END;
+EmberAfCluster bridgedLightLevelControlClusters[] = {
+    { Clusters::OnOff::Id, onOffAttrs, ArraySize(onOffAttrs), 0,
+    ZAP_CLUSTER_MASK(SERVER), NULL, onOffIncomingCommands, nullptr },
+    { Clusters::LevelControl::Id, levelControlAttrs, ArraySize(levelControlAttrs), 0,
+    ZAP_CLUSTER_MASK(SERVER) | ZAP_CLUSTER_MASK(INIT_FUNCTION) | ZAP_CLUSTER_MASK(SHUTDOWN_FUNCTION),
+    chipFuncArrayLevelControlServer, levelControlIncomingCommands, nullptr },
+    { Clusters::Descriptor::Id, descriptorAttrs, ArraySize(descriptorAttrs), 0,
+    ZAP_CLUSTER_MASK(SERVER), NULL, nullptr, nullptr },
+    { Clusters::BridgedDeviceBasicInformation::Id, bridgedDeviceBasicAttrs, ArraySize(bridgedDeviceBasicAttrs), 0,
+    ZAP_CLUSTER_MASK(SERVER), NULL, nullptr, nullptr }
+};
 
 // ----------------------------Temperature sensor-----------------------------------------------
 DECLARE_DYNAMIC_ATTRIBUTE_LIST_BEGIN(tempSensorAttrs)
@@ -219,9 +225,9 @@ DECLARE_DYNAMIC_ENDPOINT(bridgedLightEndpoint, bridgedLightClusters);
 DECLARE_DYNAMIC_ENDPOINT(bridgedLightLevelControlEndpoint, bridgedLightLevelControlClusters);
 
 DataVersion gLight1DataVersions[ArraySize(bridgedLightLevelControlClusters)];
-DataVersion gLight2DataVersions[ArraySize(bridgedLightLevelControlClusters)];
+DataVersion gLight2DataVersions[ArraySize(bridgedLightClusters)];
 DataVersion gLight3DataVersions[ArraySize(bridgedLightClusters)];
-DataVersion gLight4DataVersions[ArraySize(bridgedLightClusters)];
+DataVersion gLight4DataVersions[ArraySize(bridgedLightLevelControlClusters)];
 // DataVersion gThermostatDataVersions[ArraySize(thermostatAttrs)];
 
 const EmberAfDeviceType gRootDeviceTypes[]          = { { DEVICE_TYPE_ROOT_NODE, DEVICE_VERSION_DEFAULT } };
@@ -411,7 +417,7 @@ EmberAfStatus HandleReadLevelControlAttribute(Device * dev, chip::AttributeId at
     else if ((attributeId == StartUpCurrentLevel::Id)/* && (maxReadLength == 1)*/)
     {
         debug_msg("StartUpCurrentLevel\n");
-        uint8_t StartUpCurrentLevel = 7;
+        uint8_t StartUpCurrentLevel = 0;
         memcpy(buffer, &StartUpCurrentLevel, sizeof(StartUpCurrentLevel));
     }
     else if ((attributeId == Options::Id)/* && (maxReadLength == 1)*/)
@@ -448,19 +454,10 @@ EmberAfStatus HandleWriteOnOffAttribute(Device * dev, chip::AttributeId attribut
 EmberAfStatus HandleWriteLevelControlAttribute(Device * dev, chip::AttributeId attributeId, uint8_t * buffer)
 {
     ChipLogProgress(DeviceLayer, "HandleWriteLevelControlAttribute: attrId=%" PRIu32, attributeId);
-
-    if ((attributeId != Clusters::LevelControl::Attributes::CurrentLevel::Id) && (!dev->IsReachable()))
-    {
-        debug_msg("CurrentLevel\n");
-        dev->SetLevel(*buffer);
-        return EMBER_ZCL_STATUS_SUCCESS;
-    }
-    debug_msg("EMBER_ZCL_STATUS_FAILURE \n");
-    return EMBER_ZCL_STATUS_FAILURE;
-    // ReturnErrorCodeIf((attributeId != Clusters::LevelControl::Attributes::CurrentLevel::Id) || (!dev->IsReachable()), EMBER_ZCL_STATUS_FAILURE);
-    // dev->SetLevel(*buffer);
-    // debug_msg("buffer[%d]\n", *buffer);
-    // return EMBER_ZCL_STATUS_SUCCESS;
+    debug_msg("reachable==%d, buffer[%d]\n", dev->IsReachable(), *buffer);
+    ReturnErrorCodeIf((attributeId != Clusters::LevelControl::Attributes::CurrentLevel::Id) || (!dev->IsReachable()), EMBER_ZCL_STATUS_FAILURE);
+    dev->SetLevel(*buffer);
+    return EMBER_ZCL_STATUS_SUCCESS;
 }
 
 EmberAfStatus emberAfExternalAttributeReadCallback(EndpointId endpoint, ClusterId clusterId,
@@ -508,8 +505,6 @@ EmberAfStatus emberAfExternalAttributeWriteCallback(EndpointId endpoint, Cluster
     if (endpointIndex < CHIP_DEVICE_CONFIG_DYNAMIC_ENDPOINT_COUNT)
     {
         Device * dev = gDevices[endpointIndex];
-
-        // debug_msg("endpointIndex[%d],  buffer[%d]\n", endpointIndex, *buffer);
         if ((dev->IsReachable()) && (clusterId == Clusters::LevelControl::Id))
         {
             debug_msg("\n");
@@ -641,9 +636,9 @@ CHIP_ERROR AppTask::Init(void)
 
     // Whenever bridged device changes its state
     gLight1.SetChangeCallback(&HandleLevelControlStatusChanged);
-    gLight2.SetChangeCallback(&HandleLevelControlStatusChanged);
+    gLight2.SetChangeCallback(&HandleDeviceStatusChanged);
     gLight3.SetChangeCallback(&HandleDeviceStatusChanged);
-    gLight4.SetChangeCallback(&HandleDeviceStatusChanged);
+    gLight4.SetChangeCallback(&HandleLevelControlStatusChanged);
     TempSensor1.SetChangeCallback(&HandleDeviceTempSensorStatusChanged);
 
     PlatformMgr().ScheduleWork(InitServer, reinterpret_cast<intptr_t>(nullptr));
@@ -670,7 +665,7 @@ void AppTask::InitServer(intptr_t context)
     // Add lights 1..3 --> will be mapped to ZCL endpoints 3, 4, 5
     AddDeviceEndpoint(&gLight1, &bridgedLightLevelControlEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
                       Span<DataVersion>(gLight1DataVersions), 1);
-    AddDeviceEndpoint(&gLight2, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
+    AddDeviceEndpoint(&gLight2, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
                       Span<DataVersion>(gLight2DataVersions), 1);
     AddDeviceEndpoint(&gLight3, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
                       Span<DataVersion>(gLight3DataVersions), 1);
@@ -679,7 +674,7 @@ void AppTask::InitServer(intptr_t context)
     RemoveDeviceEndpoint(&gLight2);
 
     // Add Light 4 -- > will be mapped to ZCL endpoint 6
-    AddDeviceEndpoint(&gLight4, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedOnOffDeviceTypes),
+    AddDeviceEndpoint(&gLight4, &bridgedLightEndpoint, Span<const EmberAfDeviceType>(gBridgedLevelControlDeviceTypes),
                       Span<DataVersion>(gLight4DataVersions), 1);
 
     // Re-add Light 2 -- > will be mapped to ZCL endpoint 7
