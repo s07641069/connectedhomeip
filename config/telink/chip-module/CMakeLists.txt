@@ -1,5 +1,5 @@
 #
-#   Copyright (c) 2022-2023 Project CHIP Authors
+#   Copyright (c) 2022-2024 Project CHIP Authors
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ include(${COMMON_CMAKE_SOURCE_DIR}/chip_gn_args.cmake)
 include(${COMMON_CMAKE_SOURCE_DIR}/chip_gn.cmake)
 
 # Prepare compiler flags
+
+matter_add_flags(-isystem${ZEPHYR_BASE}/../modules/crypto/mbedtls/include/)
 
 if (CONFIG_POSIX_API)
     matter_add_flags(-D_DEFAULT_SOURCE)
