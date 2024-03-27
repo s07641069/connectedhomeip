@@ -1,5 +1,5 @@
 #
-#   Copyright (c) 2023 Project CHIP Authors
+#   Copyright (c) 2023-2024 Project CHIP Authors
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -19,6 +19,10 @@
 # and safeguarded so that they only are applied when building Matter.
 
 if CHIP
+
+config CHIP_PROJECT_CONFIG
+	string "Project configuration file for Matter"
+    default "include/CHIPProjectConfig.h"
 
 config LOG
     default y
@@ -104,7 +108,10 @@ config GPIO
 # Bluetooth Low Energy configs
 
 config BT
+    default n if BOARD_TLSR9118BDK40D
     default y
+
+if BT
 
 config BT_PERIPHERAL
     default y
@@ -156,6 +163,8 @@ config B9X_BLE_CTRL_RF_POWER
 choice B9X_BLE_CTRL_MAC_TYPE
     default B9X_BLE_CTRL_MAC_TYPE_RANDOM_STATIC
 endchoice
+
+endif
 
 # Board retention config
 if BOARD_TLSR9528A_RETENTION || BOARD_TLSR9258A_RETENTION || BOARD_TLSR9518ADK80D_RETENTION
@@ -216,7 +225,13 @@ config SETTINGS_NVS_SECTOR_COUNT
 # Enable OpenThread
 
 config NET_L2_OPENTHREAD
+    default n if BOARD_TLSR9118BDK40D
     default y
+
+config CONFIG_CHIP_OPENTHREAD_CONFIG
+    string "Custom OpenThread configuration file"
+    depends on CONFIG_NET_L2_OPENTHREAD
+    default "../../platform/telink/project_include/OpenThreadConfig.h"
 
 choice CHIP_THREAD_DEVICE_ROLE
     prompt "Thread network device role"

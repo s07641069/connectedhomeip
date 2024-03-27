@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2021-2023 Project CHIP Authors
+ *    Copyright (c) 2021-2024 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -128,15 +128,19 @@ int main(void)
         LOG_ERR("StartEventLoopTask fail");
         goto exit;
     }
+
 #ifdef CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET
     FactoryResetOnBoot();
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
+
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     err = ThreadStackMgr().InitThreadStack();
     if (err != CHIP_NO_ERROR)
     {
         LOG_ERR("InitThreadStack fail");
         goto exit;
     }
+#endif /* CHIP_DEVICE_CONFIG_ENABLE_THREAD */
 
 #if defined(CONFIG_CHIP_THREAD_DEVICE_ROLE_ROUTER)
     err = ConnectivityMgr().SetThreadDeviceType(ConnectivityManager::kThreadDeviceType_Router);

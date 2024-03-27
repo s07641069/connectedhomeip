@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2021 Project CHIP Authors
+ *    Copyright (c) 2021-2024 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,8 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
 #include "ThreadUtil.h"
 
@@ -51,3 +53,5 @@ void StartDefaultThreadNetwork(void)
 
     chip::app::DnssdServer::Instance().StartServer();
 }
+
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD

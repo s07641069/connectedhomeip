@@ -1,6 +1,6 @@
 /*
  *
- *    Copyright (c) 2022-2023 Project CHIP Authors
+ *    Copyright (c) 2022-2024 Project CHIP Authors
  *    All rights reserved.
  *
  *    Licensed under the Apache License, Version 2.0 (the "License");
@@ -164,6 +164,7 @@ class AppFabricTableDelegate : public FabricTable::Delegate
 class PlatformMgrDelegate : public DeviceLayer::PlatformManagerDelegate
 {
     // Disable openthread before reset to prevent writing to NVS
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     void OnShutDown() override
     {
         if (ThreadStackManagerImpl().IsThreadEnabled())
@@ -171,6 +172,7 @@ class PlatformMgrDelegate : public DeviceLayer::PlatformManagerDelegate
             ThreadStackManagerImpl().Finalize();
         }
     }
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 };
 
 #if CONFIG_CHIP_LIB_SHELL
@@ -545,7 +547,7 @@ void AppTaskCommon::FactoryResetTimerEventHandler(AppEvent * aEvent)
     LOG_INF("Factory Reset Trigger Counter is cleared");
 }
 
-#if !CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+#if !CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE && CHIP_DEVICE_CONFIG_ENABLE_THREAD
 void AppTaskCommon::StartThreadButtonEventHandler(void)
 {
     AppEvent event;
