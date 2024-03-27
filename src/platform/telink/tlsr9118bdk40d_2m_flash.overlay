@@ -1,5 +1,5 @@
 &flash {
-	reg = <0x80000000 0x200000>;
+	reg = <0x80000000 0x300000>;
 
 	partitions {
 		/delete-node/ partition@0;
@@ -26,6 +26,10 @@
 		slot1_partition: partition@114000 {
 			label = "image-1";
 			reg = <0x114000 0xec000>;
+		};
+		reserved_partition: partition@200000 {
+			label = "vendor-data";
+			reg = <0x200000 0x100000>;
 		};
 	};
 };
