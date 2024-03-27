@@ -215,7 +215,7 @@ CHIP_ERROR AppTaskCommon::StartApp(void)
 
     AppEvent event = {};
 
-#if !CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
+#if APP_USE_THREAD_START_BUTTON
     StartThreadButtonEventHandler();
 #endif
 

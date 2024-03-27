@@ -17,4 +17,8 @@
 
 #pragma once
 
+#include "AppConfig.h"
+
+#if APP_USE_THREAD_START_BUTTON
 void StartDefaultThreadNetwork(void);
+#endif // APP_USE_THREAD_START_BUTTON
