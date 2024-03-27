@@ -151,6 +151,18 @@ jobs:
             - name: clean out build output
               run: rm -rf ./out
 
+            - name: Build example Telink (W91) Lighting App
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tlsr9118bdk40d-light' build"
+                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+                    telink tlsr9118bdk40d lighting-app \
+                    out/telink-tlsr9118bdk40d-light/zephyr/zephyr.elf \
+                    /tmp/bloat_reports/
+
+            - name: clean out build output
+              run: rm -rf ./out
+
             - name: Build example Telink (B92) Lock App with DFU
               run: |
                   ./scripts/run_in_build_env.sh \

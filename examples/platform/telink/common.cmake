@@ -98,3 +98,7 @@ endif()
 if(NOT CONF_FILE)
   set(CONF_FILE ${USB_CONF_OVERLAY_FILE} ${MARS_CONF_OVERLAY_FILE} prj.conf)
 endif()
+
+# Load NCS/Zephyr build system
+list(APPEND ZEPHYR_EXTRA_MODULES ${CHIP_ROOT}/config/telink/chip-module)
+find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})

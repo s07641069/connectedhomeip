@@ -20,19 +20,11 @@ get_filename_component(CHIP_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/connect
 get_filename_component(TELINK_COMMON ${CHIP_ROOT}/examples/platform/telink REALPATH)
 get_filename_component(GEN_DIR ${CHIP_ROOT}/zzz_generated/ REALPATH)
 
-list(APPEND CMAKE_MODULE_PATH ${TELINK_COMMON})
-include(common)
-
-# Load NCS/Zephyr build system
-list(APPEND ZEPHYR_EXTRA_MODULES ${CHIP_ROOT}/config/telink/chip-module)
-find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
-
-project(chip-telink-contact-sensor-example)
-
+include(${TELINK_COMMON}/common.cmake)
 include(${CHIP_ROOT}/config/telink/app/enable-gnu-std.cmake)
 include(${CHIP_ROOT}/src/app/chip_data_model.cmake)
 
-target_compile_options(app PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>)
+project(chip-telink-contact-sensor-example)
 
 target_include_directories(app PRIVATE
                            include

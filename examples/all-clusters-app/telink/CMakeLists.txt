@@ -22,19 +22,11 @@ get_filename_component(GEN_DIR ${CHIP_ROOT}/zzz_generated/ REALPATH)
 get_filename_component(ALL_CLUSTERS_COMMON_DIR ${CHIP_ROOT}/examples/all-clusters-app/all-clusters-common REALPATH)
 get_filename_component(ENERGY_MANAGEMENT_COMMON_DIR ${CHIP_ROOT}/examples/energy-management-app/energy-management-common/ REALPATH)
 
-list(APPEND CMAKE_MODULE_PATH ${TELINK_COMMON})
-include(common)
-
-# Load NCS/Zephyr build system
-list(APPEND ZEPHYR_EXTRA_MODULES ${CHIP_ROOT}/config/telink/chip-module)
-find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
-
-project(chip-telink-all-clusters-app-example)
-
+include(${TELINK_COMMON}/common.cmake)
 include(${CHIP_ROOT}/config/telink/app/enable-gnu-std.cmake)
 include(${CHIP_ROOT}/src/app/chip_data_model.cmake)
 
-target_compile_options(app PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fpermissive>)
+project(chip-telink-all-clusters-app-example)
 
 target_include_directories(app PRIVATE
                            include

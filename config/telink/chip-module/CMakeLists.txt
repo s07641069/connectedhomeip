@@ -155,8 +155,7 @@ set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS chip)
 # Define 'chip-ota-image' target for building CHIP OTA image
 # ==============================================================================
 
-list(APPEND CMAKE_MODULE_PATH ${TELINK_COMMON})
-include(common)
+include(${TELINK_COMMON}/common.cmake)
 
 set(BLOCK_SIZE "1024")
 
