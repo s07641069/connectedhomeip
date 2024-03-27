@@ -70,8 +70,8 @@ k_timer sFactoryResetTimer;
 uint8_t sFactoryResetCntr = 0;
 
 bool sIsCommissioningFailed = false;
-bool sIsThreadProvisioned   = false;
-bool sIsThreadEnabled       = false;
+bool sIsNetworkProvisioned  = false;
+bool sIsNetworkEnabled      = false;
 bool sIsThreadAttached      = false;
 bool sHaveBLEConnections    = false;
 
@@ -303,12 +303,15 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
     // between the main and the CHIP threads.
     PlatformMgr().AddEventHandler(ChipEventHandler, 0);
 
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
     err = chip::Server::GetInstance().GetFabricTable().AddFabricDelegate(new AppFabricTableDelegate);
     if (err != CHIP_NO_ERROR)
     {
         LOG_ERR("AppFabricTableDelegate fail");
         return err;
     }
+#endif
 
     return CHIP_NO_ERROR;
 }
@@ -409,7 +412,7 @@ void AppTaskCommon::LinkButtons(ButtonManager & buttonManager)
 
 void AppTaskCommon::UpdateStatusLED()
 {
-    if (sIsThreadProvisioned && sIsThreadEnabled)
+    if (sIsNetworkProvisioned && sIsNetworkEnabled)
     {
         if (sIsThreadAttached)
         {
@@ -625,12 +628,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
 #endif
         break;
-    case DeviceEventType::kThreadStateChange:
-        sIsThreadProvisioned = ConnectivityMgr().IsThreadProvisioned();
-        sIsThreadEnabled     = ConnectivityMgr().IsThreadEnabled();
-        sIsThreadAttached    = ConnectivityMgr().IsThreadAttached();
-        UpdateStatusLED();
-        break;
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
         InitBasicOTARequestor();
@@ -642,6 +640,25 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #endif /* CONFIG_BOOTLOADER_MCUBOOT */
 #if CONFIG_CHIP_OTA_REQUESTOR
         }
+#endif
+        break;
+    case DeviceEventType::kThreadStateChange:
+        sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
+        sIsNetworkEnabled     = ConnectivityMgr().IsThreadEnabled();
+        sIsThreadAttached     = ConnectivityMgr().IsThreadAttached();
+#elif CHIP_DEVICE_CONFIG_ENABLE_WIFI
+    case DeviceEventType::kWiFiConnectivityChange:
+        sIsNetworkProvisioned = ConnectivityMgr().IsWiFiStationProvisioned();
+        sIsNetworkEnabled     = ConnectivityMgr().IsWiFiStationEnabled();
+#if CONFIG_CHIP_OTA_REQUESTOR
+        if (event->WiFiConnectivityChange.Result == kConnectivity_Established)
+        {
+            InitBasicOTARequestor();
+        }
+#endif
+#endif /* CHIP_DEVICE_CONFIG_ENABLE_THREAD */
+#if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
+        UpdateStatusLED();
 #endif
         break;
     default:

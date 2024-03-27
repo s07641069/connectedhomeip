@@ -214,9 +214,12 @@ CHIP_ERROR Server::Init(const ServerInitParams & initParams)
 #endif
     SuccessOrExit(err);
 
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
     err = mSessions.Init(&DeviceLayer::SystemLayer(), &mTransports, &mMessageCounterManager, mDeviceStorage, &GetFabricTable(),
                          *mSessionKeystore);
     SuccessOrExit(err);
+#endif
 
     err = mFabricDelegate.Init(this);
     SuccessOrExit(err);
@@ -239,6 +242,8 @@ CHIP_ERROR Server::Init(const ServerInitParams & initParams)
     chip::Dnssd::Resolver::Instance().Init(DeviceLayer::UDPEndPointManager());
 
 #if CHIP_CONFIG_ENABLE_SERVER_IM_EVENT
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
     // Initialize event logging subsystem
     err = sGlobalEventIdCounter.Init(mDeviceStorage, DefaultStorageKeyAllocator::IMEventNumber(),
                                      CHIP_DEVICE_CONFIG_EVENT_ID_COUNTER_EPOCH);
@@ -255,6 +260,7 @@ CHIP_ERROR Server::Init(const ServerInitParams & initParams)
                                                        &logStorageResources[0], &sGlobalEventIdCounter,
                                                        std::chrono::duration_cast<System::Clock::Milliseconds64>(mInitTimestamp));
     }
+#endif
 #endif // CHIP_CONFIG_ENABLE_SERVER_IM_EVENT
 
     // This initializes clusters, so should come after lower level initialization.
@@ -325,9 +331,12 @@ CHIP_ERROR Server::Init(const ServerInitParams & initParams)
     err = mCASESessionManager.Init(&DeviceLayer::SystemLayer(), caseSessionManagerConfig);
     SuccessOrExit(err);
 
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
     err = mCASEServer.ListenForSessionEstablishment(&mExchangeMgr, &mSessions, &mFabrics, mSessionResumptionStorage,
                                                     &mCertificateValidityPolicy, mGroupsProvider);
     SuccessOrExit(err);
+#endif
 
     err = chip::app::InteractionModelEngine::GetInstance()->Init(&mExchangeMgr, &GetFabricTable(), mReportScheduler,
                                                                  &mCASESessionManager, mSubscriptionResumptionStorage);

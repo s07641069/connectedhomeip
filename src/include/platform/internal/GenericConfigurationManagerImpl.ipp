@@ -265,7 +265,10 @@ CHIP_ERROR GenericConfigurationManagerImpl<ConfigClass>::Init()
     if (GetUniqueId(uniqueId, sizeof(uniqueId)) != CHIP_NO_ERROR)
     {
         ReturnErrorOnFailure(GenerateUniqueId(uniqueId, sizeof(uniqueId)));
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
         ReturnErrorOnFailure(StoreUniqueId(uniqueId, strlen(uniqueId)));
+#endif
     }
 
     return err;

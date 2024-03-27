@@ -72,8 +72,11 @@ CHIP_ERROR ConfigurationManagerImpl::Init()
     else
     {
         // The first boot after factory reset of the Node.
+// TODO: Enable when W91 flash driver will be ready 
+#ifndef CONFIG_BOARD_TLSR9118BDK40D
         err = StoreRebootCount(1);
         SuccessOrExit(err);
+#endif
     }
 
     err = CHIP_NO_ERROR;

@@ -233,8 +233,6 @@ config CHIP_OPENTHREAD_CONFIG
     string "Custom OpenThread configuration file"
     default "../../platform/telink/project_include/OpenThreadConfig.h"
 
-endif
-
 choice CHIP_THREAD_DEVICE_ROLE
     prompt "Thread network device role"
     default CHIP_THREAD_DEVICE_ROLE_ROUTER
@@ -273,6 +271,8 @@ config OPENTHREAD_DEFAULT_TX_POWER
     default 3 if PM
     default 9
 
+endif # NET_L2_OPENTHREAD
+
 config NET_TX_STACK_SIZE
     default 554 if PM
 
@@ -297,7 +297,50 @@ config NET_CONFIG_INIT_TIMEOUT
 config CHIP_WIFI
 	bool "Enable Telink Wi-Fi support"
 	default y if BOARD_TLSR9118BDK40D
+	select WIFI_W91
 	select WIFI
+	select NET_STATISTICS
+    select NET_L2_ETHERNET
+	select NET_IPV6_ND # enable Neighbor Discovery to handle Router Advertisements
+	select NET_IPV6_NBR_CACHE
+	select NET_STATISTICS_USER_API
+
+if CHIP_WIFI
+
+config CHIP_WIFI_CONNECTION_RECOVERY_MINIMUM_INTERVAL
+	int "Define the minimum connection recovery time interval in milliseconds"
+	depends on CHIP_WIFI
+	default 500
+	help
+	  Specifies the minimum connection recovery interval (in milliseconds).
+
+config CHIP_WIFI_CONNECTION_RECOVERY_MAXIMUM_INTERVAL
+	int "Define the maximum connection recovery time interval in milliseconds"
+	depends on CHIP_WIFI
+	default 3600000 # 1 hour
+	help
+	  Specifies the maximum connection recovery interval (in milliseconds).
+
+config CHIP_WIFI_CONNECTION_RECOVERY_MAX_RETRIES_NUMBER
+	int "Define the maximum amount of connection recovery occurrences"
+	depends on CHIP_WIFI
+	default 0
+	help
+	  Specifies the maximum number of connection recovery attempts.
+	  If set to 0, no limitation is applied and attempts
+	  to recover the connection are performed indefinitely.
+
+config CHIP_WIFI_CONNECTION_RECOVERY_JITTER
+	int "Define the connection recovery jitter in milliseconds"
+	depends on CHIP_WIFI
+	default 2000
+	help
+	  Specifies the maximum connection recovery jitter interval (in milliseconds).
+	  Once the wait time reaches the current maximum value (defined by CHIP_WIFI_CONNECTION_RECOVERY_MAXIMUM_INTERVAL),
+	  a random jitter interval is added to it to avoid periodicity. The random jitter is selected
+	  within range [-JITTER; +JITTER].
+
+endif # CHIP_WIFI
 
 
 # mbedTLS tweaks
