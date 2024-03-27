@@ -37,7 +37,7 @@
 #define MBEDTLS_X509_CREATE_C
 #define MBEDTLS_X509_CSR_WRITE_C
 
-// TODO: remove ifndef when crypto will be fully implemented for w91
+// TODO: remove ifndef when crypto will be implemented for w91
 #ifndef CONFIG_BOARD_TLSR9118BDK40D
 #define MBEDTLS_AES_ALT
 #define MBEDTLS_ECP_ALT

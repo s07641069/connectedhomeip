@@ -1,0 +1,5 @@
+/ {
+	aliases {
+		system-state-led = &led_red;
+	};
+};

@@ -46,7 +46,6 @@ include(${COMMON_CMAKE_SOURCE_DIR}/chip_gn_args.cmake)
 include(${COMMON_CMAKE_SOURCE_DIR}/chip_gn.cmake)
 
 # Prepare compiler flags
-
 matter_add_flags(-isystem${ZEPHYR_BASE}/../modules/crypto/mbedtls/include/)
 
 if (CONFIG_POSIX_API)
