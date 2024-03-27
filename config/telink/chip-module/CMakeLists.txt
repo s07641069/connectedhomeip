@@ -158,12 +158,6 @@ else()
   message(STATUS "Flash memory size is set to: 2mb (default)")
 endif()
 
-if(SOC_SERIES_RISCV_TELINK_W91)
-    set(SOC_SERIES_RISCV_TELINK "w91")
-else()
-    set(SOC_SERIES_RISCV_TELINK "b9x")
-endif()
-
 if(${TLNK_USB_DONGLE} MATCHES y)
   if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_usb_boot.overlay")
     set(USB_BOOT_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_usb_boot.overlay")
