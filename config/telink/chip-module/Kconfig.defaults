@@ -21,7 +21,7 @@
 if CHIP
 
 config CHIP_PROJECT_CONFIG
-	string "Project configuration file for Matter"
+    string "Project configuration file for Matter"
     default "include/CHIPProjectConfig.h"
 
 config LOG
@@ -228,10 +228,13 @@ config NET_L2_OPENTHREAD
     default n if BOARD_TLSR9118BDK40D
     default y
 
-config CONFIG_CHIP_OPENTHREAD_CONFIG
+if NET_L2_OPENTHREAD
+
+config CHIP_OPENTHREAD_CONFIG
     string "Custom OpenThread configuration file"
-    depends on CONFIG_NET_L2_OPENTHREAD
     default "../../platform/telink/project_include/OpenThreadConfig.h"
+
+endif
 
 choice CHIP_THREAD_DEVICE_ROLE
     prompt "Thread network device role"
