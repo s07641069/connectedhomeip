@@ -155,52 +155,8 @@ set_property(GLOBAL APPEND PROPERTY ZEPHYR_INTERFACE_LIBS chip)
 # Define 'chip-ota-image' target for building CHIP OTA image
 # ==============================================================================
 
-string(REPLACE "_retention" "" BASE_BOARD ${BOARD})
-
-if(FLASH_SIZE)
-  message(STATUS "Flash memory size is set to: " ${FLASH_SIZE} "b")
-else()
-  set(FLASH_SIZE "2m")
-  message(STATUS "Flash memory size is set to: 2mb (default)")
-endif()
-
-if(${TLNK_USB_DONGLE} MATCHES y)
-  if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_usb_boot.overlay")
-    set(USB_BOOT_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_usb_boot.overlay")
-  else()
-    unset(USB_BOOT_DTC_OVERLAY_FILE)
-  endif()
-else()
-  unset(USB_BOOT_DTC_OVERLAY_FILE)
-endif()
-
-if(${TLNK_MARS_BOARD} MATCHES y)
-  if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_mars_boot.overlay")
-    set(MARS_BOOT_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_mars_boot.overlay")
-  else()
-    unset(MARS_BOOT_DTC_OVERLAY_FILE)
-  endif()
-else()
-  unset(MARS_CONF_OVERLAY_FILE)
-endif()
-
-if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}.overlay")
-    set(GLOBAL_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}.overlay")
-else()
-    unset(GLOBAL_DTC_OVERLAY_FILE)
-endif()
-
-if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_${FLASH_SIZE}_flash.overlay")
-    set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_${FLASH_SIZE}_flash.overlay")
-else()
-    set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/tlsr9518adk80d_2m_flash.overlay")
-endif()
-
-if(EXISTS "${CHIP_ROOT}/config/telink/app/bootloader.conf")
-    set(GLOBAL_BOOTLOADER_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader.conf")
-else()
-    unset(GLOBAL_BOOTLOADER_CONF_OVERLAY_FILE)
-endif()
+list(APPEND CMAKE_MODULE_PATH ${TELINK_COMMON})
+include(common)
 
 set(BLOCK_SIZE "1024")
 
@@ -213,7 +169,7 @@ if (CONFIG_BOOTLOADER_MCUBOOT)
     add_custom_target(build_mcuboot ALL
         COMMAND
         west build -b ${BASE_BOARD} -d build_mcuboot ${ZEPHYR_BASE}/../bootloader/mcuboot/boot/zephyr
-            -- -DOVERLAY_CONFIG=${GLOBAL_BOOTLOADER_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
+            -- -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
         COMMAND
         cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
     )

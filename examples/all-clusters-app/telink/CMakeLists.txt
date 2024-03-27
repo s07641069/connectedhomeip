@@ -13,6 +13,7 @@
 #    See the License for the specific language governing permissions and
 #    limitations under the License.
 #
+
 cmake_minimum_required(VERSION 3.13.1)
 
 get_filename_component(CHIP_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/connectedhomeip REALPATH)
@@ -21,41 +22,8 @@ get_filename_component(GEN_DIR ${CHIP_ROOT}/zzz_generated/ REALPATH)
 get_filename_component(ALL_CLUSTERS_COMMON_DIR ${CHIP_ROOT}/examples/all-clusters-app/all-clusters-common REALPATH)
 get_filename_component(ENERGY_MANAGEMENT_COMMON_DIR ${CHIP_ROOT}/examples/energy-management-app/energy-management-common/ REALPATH)
 
-if(FLASH_SIZE)
-  message(STATUS "Flash memory size is set to: " ${FLASH_SIZE} "b")
-else()
-  set(FLASH_SIZE "2m")
-  message(STATUS "Flash memory size is set to: 2mb (default)")
-endif()
-
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD}.overlay")
-  set(LOCAL_DTC_OVERLAY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/boards/${BOARD}.overlay")
-else()
-  unset(LOCAL_DTC_OVERLAY_FILE)
-endif()
-
-if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BOARD}.overlay")
-  set(GLOBAL_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BOARD}.overlay")
-else()
-  unset(GLOBAL_DTC_OVERLAY_FILE)
-endif()
-
-if(EXISTS "${CHIP_ROOT}/src/platform/telink/${BOARD}_${FLASH_SIZE}_flash.overlay")
-  set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BOARD}_${FLASH_SIZE}_flash.overlay")
-else()
-  set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/tlsr9518adk80d_2m_flash.overlay")
-endif()
-
-if(DTC_OVERLAY_FILE)
-  set(DTC_OVERLAY_FILE
-    "${DTC_OVERLAY_FILE} ${GLOBAL_DTC_OVERLAY_FILE} ${FLASH_DTC_OVERLAY_FILE} ${LOCAL_DTC_OVERLAY_FILE}"
-    CACHE STRING "" FORCE
-  )
-else()
-  set(DTC_OVERLAY_FILE ${GLOBAL_DTC_OVERLAY_FILE} ${FLASH_DTC_OVERLAY_FILE} ${LOCAL_DTC_OVERLAY_FILE})
-endif()
-
-set(CONF_FILE prj.conf)
+list(APPEND CMAKE_MODULE_PATH ${TELINK_COMMON})
+include(common)
 
 # Load NCS/Zephyr build system
 list(APPEND ZEPHYR_EXTRA_MODULES ${CHIP_ROOT}/config/telink/chip-module)
