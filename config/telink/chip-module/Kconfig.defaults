@@ -225,8 +225,7 @@ config SETTINGS_NVS_SECTOR_COUNT
 # Enable OpenThread
 
 config NET_L2_OPENTHREAD
-    default n if BOARD_TLSR9118BDK40D
-    default y
+    default y if !WIFI
 
 if NET_L2_OPENTHREAD
 
@@ -293,6 +292,13 @@ config NET_MAX_CONTEXTS
 
 config NET_CONFIG_INIT_TIMEOUT
     default 0
+
+
+config CHIP_WIFI
+	bool "Enable Telink Wi-Fi support"
+	default y if BOARD_TLSR9118BDK40D
+	select WIFI
+
 
 # mbedTLS tweaks
 config MBEDTLS_USER_CONFIG_ENABLE
