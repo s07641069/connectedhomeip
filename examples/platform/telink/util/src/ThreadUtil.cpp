@@ -18,7 +18,7 @@
 
 #include "ThreadUtil.h"
 
-#if APP_USE_THREAD_START_BUTTON
+#if !CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE && CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
 #include <platform/CHIPDeviceLayer.h>
 
@@ -54,4 +54,4 @@ void StartDefaultThreadNetwork(void)
     chip::app::DnssdServer::Instance().StartServer();
 }
 
-#endif // APP_USE_THREAD_START_BUTTON
+#endif
