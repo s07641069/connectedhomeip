@@ -271,6 +271,9 @@ config OPENTHREAD_DEFAULT_TX_POWER
     default 3 if PM
     default 9
 
+config IEEE802154_2015
+    default y
+
 endif # NET_L2_OPENTHREAD
 
 config NET_TX_STACK_SIZE
