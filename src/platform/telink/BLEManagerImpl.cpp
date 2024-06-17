@@ -45,11 +45,6 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/util.h>
 
-#if CHIP_DEVICE_CONFIG_ENABLE_WIFI
-#include <platform/Zephyr/InetUtils.h>
-#include <platform/telink/wifi/TelinkWiFiDriver.h>
-#endif
-
 // TODO: need common mac_init solution for B9X & W91
 #ifndef CONFIG_BOARD_TLSR9118BDK40D
 extern "C" {
