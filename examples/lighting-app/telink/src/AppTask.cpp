@@ -23,6 +23,7 @@
 #include "PWMManager.h"
 
 #include <app-common/zap-generated/attributes/Accessors.h>
+#include <app/DeferredAttributePersistenceProvider.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 
@@ -37,6 +38,17 @@ RgbColor_t sLedRgb;
 } // namespace
 
 AppTask AppTask::sAppTask;
+
+// Define a custom attribute persister which makes actual write of the CurrentLevel attribute value
+// to the non-volatile storage only when it has remained constant for 5 seconds. This is to reduce
+// the flash wearout when the attribute changes frequently as a result of MoveToLevel command.
+// DeferredAttribute object describes a deferred attribute, but also holds a buffer with a value to
+// be written, so it must live so long as the DeferredAttributePersistenceProvider object.
+DeferredAttribute gCurrentLevelPersister(ConcreteAttributePath(kExampleEndpointId, Clusters::LevelControl::Id,
+                                                               Clusters::LevelControl::Attributes::CurrentLevel::Id));
+DeferredAttributePersistenceProvider gDeferredAttributePersister(Server::GetInstance().GetDefaultAttributePersister(),
+                                                                 Span<DeferredAttribute>(&gCurrentLevelPersister, 1),
+                                                                 System::Clock::Milliseconds32(5000));
 
 bool AppTask::IsTurnedOn() const
 {
@@ -58,6 +70,8 @@ CHIP_ERROR AppTask::Init(void)
 {
     SetExampleButtonCallbacks(LightingActionEventHandler);
     InitCommonParts();
+
+    app::SetAttributePersistenceProvider(&gDeferredAttributePersister);
 
     Protocols::InteractionModel::Status status;
 
