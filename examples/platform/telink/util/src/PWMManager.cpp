@@ -173,31 +173,31 @@ bool Ws2812Strip::linkHW()
 
 void Ws2812Strip::setPwmHW(size_t pwm, bool state)
 {
-    LOG_INF("PWM %u turn %s", pwm, state ? "on" : "off");
+    LOG_DBG("PWM %u turn %s", pwm, state ? "on" : "off");
     if (!ws2812_led_set(&led_strip, pwm, state ? WS2812_LED_ON : WS2812_LED_OFF))
     {
-        LOG_WRN("WS2812 LED set pwm %u failed!", pwm);
+        LOG_DBG("WS2812 LED set pwm %u failed!", pwm);
     }
 }
 
 void Ws2812Strip::setPwmHW(size_t pwm, uint32_t permille)
 {
-    LOG_INF("PWM %u set %u", pwm, permille);
+    LOG_DBG("PWM %u set %u", pwm, permille);
     if (!ws2812_led_set(&led_strip, pwm, WS2812_LED_FIXED, permille))
     {
-        LOG_WRN("WS2812 LED set pwm %u to %u permille failed!", pwm, permille);
+        LOG_DBG("WS2812 LED set pwm %u to %u permille failed!", pwm, permille);
     }
 }
 
 void Ws2812Strip::setPwmHWBlink(size_t pwm, size_t onMs, size_t offMs)
 {
-    LOG_WRN("WS2812 LED setPwmHWBlink not supported");
+    LOG_DBG("WS2812 LED setPwmHWBlink not supported");
 }
 
 void Ws2812Strip::setPwmHWBreath(size_t pwm, size_t breathMs)
 {
 
-    LOG_WRN("WS2812 LED setPwmHWBreath not supported");
+    LOG_DBG("WS2812 LED setPwmHWBreath not supported");
 }
 
 #else
@@ -233,7 +233,7 @@ void PwmPool::setPwmHW(size_t pwm, bool state)
 {
     if (!pwm_pool_set(&pwm_pool, pwm, state ? PWM_ON : PWM_OFF))
     {
-        LOG_WRN("PWM pool set pwm %u failed!", pwm);
+        LOG_DBG("PWM pool set pwm %u failed!", pwm);
     }
 }
 
@@ -241,7 +241,7 @@ void PwmPool::setPwmHW(size_t pwm, uint32_t permille)
 {
     if (!pwm_pool_set(&pwm_pool, pwm, PWM_FIXED, permille))
     {
-        LOG_WRN("PWM pool set pwm %u to %u permille failed!", pwm, permille);
+        LOG_DBG("PWM pool set pwm %u to %u permille failed!", pwm, permille);
     }
 }
 
@@ -249,7 +249,7 @@ void PwmPool::setPwmHWBlink(size_t pwm, size_t onMs, size_t offMs)
 {
     if (!pwm_pool_set(&pwm_pool, pwm, PWM_BLINK, K_MSEC(onMs), K_MSEC(offMs)))
     {
-        LOG_WRN("PWM pool set pwm %u blink to (%u-%u)mS failed!", pwm, onMs, offMs);
+        LOG_DBG("PWM pool set pwm %u blink to (%u-%u)mS failed!", pwm, onMs, offMs);
     }
 }
 
@@ -257,7 +257,7 @@ void PwmPool::setPwmHWBreath(size_t pwm, size_t breathMs)
 {
     if (!pwm_pool_set(&pwm_pool, pwm, PWM_BREATH, K_MSEC(breathMs)))
     {
-        LOG_WRN("PWM pool set pwm %u breath to %umS failed!", pwm, breathMs);
+        LOG_DBG("PWM pool set pwm %u breath to %umS failed!", pwm, breathMs);
     }
 }
 
