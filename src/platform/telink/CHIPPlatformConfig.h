@@ -104,7 +104,7 @@
 
 #ifdef CONFIG_CHIP_LOG_SIZE_OPTIMIZATION
 // Disable some of the too detailed log modules to save flash
-#define CHIP_CONFIG_LOG_MODULE_ExchangeManager_DETAIL 0
+#define CHIP_CONFIG_LOG_MODULE_ExchangeManager_PROGRESS 0
 #define CHIP_CONFIG_LOG_MODULE_Crypto_DETAIL 0
 #define CHIP_CONFIG_LOG_MODULE_Crypto_PROGRESS 0
 #define CHIP_CONFIG_LOG_MODULE_BDX_DETAIL 0
