@@ -26,7 +26,6 @@
 
 #if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
 
-#include <platform/NetworkCommissioning.h>
 #include <platform/Zephyr/BLEAdvertisingArbiter.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -38,8 +37,6 @@ namespace DeviceLayer {
 namespace Internal {
 
 using namespace chip::Ble;
-
-class InternalScanCallback;
 
 /**
  * Concrete implementation of the BLEManager singleton object for the Zephyr platforms.
@@ -107,7 +104,6 @@ private:
 #if CHIP_ENABLE_ADDITIONAL_DATA_ADVERTISING
     PacketBufferHandle c3CharDataBufferHandle;
 #endif
-    bool mBLERadioInitialized;
 
     void DriveBLEState(void);
     CHIP_ERROR PrepareAdvertisingRequest(void);
@@ -118,9 +114,6 @@ private:
     CHIP_ERROR HandleRXCharWrite(const ChipDeviceEvent * event);
     CHIP_ERROR HandleTXCharCCCDWrite(const ChipDeviceEvent * event);
     CHIP_ERROR HandleTXCharComplete(const ChipDeviceEvent * event);
-
-    InternalScanCallback * mInternalScanCallback;
-
 #if CHIP_ENABLE_ADDITIONAL_DATA_ADVERTISING
     CHIP_ERROR PrepareC3CharData(void);
 #endif
@@ -153,22 +146,6 @@ public:
 #if CHIP_ENABLE_ADDITIONAL_DATA_ADVERTISING
     static ssize_t HandleC3Read(struct bt_conn * conn, const struct bt_gatt_attr * attr, void * buf, uint16_t len, uint16_t offset);
 #endif
-
-    CHIP_ERROR StartAdvertisingProcess(void);
-};
-
-class InternalScanCallback : public DeviceLayer::NetworkCommissioning::ThreadDriver::ScanCallback
-{
-public:
-    explicit InternalScanCallback(BLEManagerImpl * aBLEManagerImpl) { mBLEManagerImpl = aBLEManagerImpl; }
-    void OnFinished(NetworkCommissioning::Status err, CharSpan debugText,
-                    NetworkCommissioning::ThreadScanResponseIterator * networks)
-    {
-        mBLEManagerImpl->StartAdvertisingProcess();
-    };
-
-private:
-    BLEManagerImpl * mBLEManagerImpl;
 };
 
 /**

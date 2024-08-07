@@ -39,7 +39,6 @@ ThreadStackManagerImpl ThreadStackManagerImpl::sInstance;
 
 CHIP_ERROR ThreadStackManagerImpl::_InitThreadStack()
 {
-    mRadioBlocked               = false;
     otInstance * const instance = openthread_get_default_instance();
 
     ReturnErrorOnFailure(GenericThreadStackManagerImpl_OpenThread<ThreadStackManagerImpl>::DoInit(instance));
@@ -78,30 +77,6 @@ void ThreadStackManagerImpl::_NotifySrpClearAllComplete()
     k_sem_give(&mSrpClearAllSemaphore);
 }
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
-
-CHIP_ERROR ThreadStackManagerImpl::_StartThreadScan(NetworkCommissioning::ThreadDriver::ScanCallback * callback)
-{
-    mpScanCallback = callback;
-
-    /* On Telink platform it's not possible to rise Thread network when its used by BLE,
-       so Thread networks scanning performed before start BLE and also available after switch into Thread */
-    if (mRadioBlocked)
-    {
-        if (mpScanCallback != nullptr)
-        {
-            DeviceLayer::SystemLayer().ScheduleLambda([this]() {
-                mpScanCallback->OnFinished(NetworkCommissioning::Status::kSuccess, CharSpan(), &mScanResponseIter);
-                mpScanCallback = nullptr;
-            });
-        }
-    }
-    else
-    {
-        return Internal::GenericThreadStackManagerImpl_OpenThread<ThreadStackManagerImpl>::_StartThreadScan(mpScanCallback);
-    }
-
-    return CHIP_NO_ERROR;
-}
 
 void ThreadStackManagerImpl::Finalize(void)
 {

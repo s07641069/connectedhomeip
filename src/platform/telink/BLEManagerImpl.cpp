@@ -143,9 +143,7 @@ BLEManagerImpl BLEManagerImpl::sInstance;
 
 CHIP_ERROR BLEManagerImpl::_Init(void)
 {
-    mBLERadioInitialized  = false;
     mconId                = NULL;
-    mInternalScanCallback = new InternalScanCallback(this);
 
     mServiceMode = ConnectivityManager::kCHIPoBLEServiceMode_Enabled;
     mFlags.ClearAll().Set(Flags::kAdvertisingEnabled, CHIP_DEVICE_CONFIG_CHIPOBLE_ENABLE_ADVERTISING_AUTOSTART);
@@ -155,8 +153,12 @@ CHIP_ERROR BLEManagerImpl::_Init(void)
     memset(mSubscribedConns, 0, sizeof(mSubscribedConns));
 
     ReturnErrorOnFailure(InitBLEMACAddress());
-    // int err = bt_enable(NULL); // Can't init BLE stack here due to abscense of non-cuncurrent mode
-    // VerifyOrReturnError(err == 0, MapErrorZephyr(err));
+    int err = bt_enable(NULL);
+    VerifyOrReturnError(err == 0, MapErrorZephyr(err));
+
+#if defined(CONFIG_PM) && !defined(CONFIG_CHIP_ENABLE_PM_DURING_BLE)
+        pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
+#endif
 
     memset(&mConnCallbacks, 0, sizeof(mConnCallbacks));
     mConnCallbacks.connected    = HandleConnect;
@@ -174,11 +176,7 @@ CHIP_ERROR BLEManagerImpl::_Init(void)
 
 void BLEManagerImpl::_Shutdown()
 {
-    if (mBLERadioInitialized)
-    {
-        bt_disable();
-        mBLERadioInitialized = false;
-    }
+    bt_disable();
 }
 
 void BLEManagerImpl::DriveBLEState(intptr_t arg)
@@ -284,41 +282,7 @@ inline CHIP_ERROR BLEManagerImpl::PrepareAdvertisingRequest(void)
 
 CHIP_ERROR BLEManagerImpl::StartAdvertising(void)
 {
-    CHIP_ERROR err = CHIP_NO_ERROR;
-
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    if (!mBLERadioInitialized)
-    {
-        ThreadStackMgrImpl().StartThreadScan(mInternalScanCallback);
-    }
-    else
-#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    {
-        err = StartAdvertisingProcess();
-    }
-
-    return err;
-}
-
-CHIP_ERROR BLEManagerImpl::StartAdvertisingProcess(void)
-{
     int err;
-
-    if (!mBLERadioInitialized)
-    {
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-        ThreadStackMgrImpl().SetRadioBlocked(true);
-#endif
-
-        // Init BLE
-        err = bt_enable(NULL);
-        VerifyOrReturnError(err == 0, MapErrorZephyr(err));
-
-        mBLERadioInitialized = true;
-#if defined(CONFIG_PM) && !defined(CONFIG_CHIP_ENABLE_PM_DURING_BLE)
-        pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
-#endif
-    }
 
     // Prepare advertising request
     ReturnErrorOnFailure(PrepareAdvertisingRequest());

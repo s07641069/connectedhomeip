@@ -59,7 +59,6 @@ class ThreadStackManagerImpl final : public ThreadStackManager,
 public:
     // ===== Methods that implement the ThreadStackManager abstract interface.
     CHIP_ERROR _InitThreadStack();
-    void SetRadioBlocked(bool state) { mRadioBlocked = state; }
     void Finalize(void);
 
 protected:
@@ -77,7 +76,6 @@ protected:
     // ===== Methods that override the GenericThreadStackManagerImpl_OpenThread abstract interface.
 
     void _ProcessThreadActivity() {}
-    CHIP_ERROR _StartThreadScan(NetworkCommissioning::ThreadDriver::ScanCallback * callback);
 
     //} // namespace Internal
 
@@ -89,14 +87,9 @@ private:
 
     static ThreadStackManagerImpl sInstance;
 
-    // ===== Private members for use by this class only.
-    bool mRadioBlocked;
-
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
     k_sem mSrpClearAllSemaphore;
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
-
-    NetworkCommissioning::ThreadDriver::ScanCallback * mpScanCallback;
 };
 
 /**
