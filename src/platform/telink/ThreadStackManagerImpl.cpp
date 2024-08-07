@@ -40,7 +40,6 @@ ThreadStackManagerImpl ThreadStackManagerImpl::sInstance;
 CHIP_ERROR ThreadStackManagerImpl::_InitThreadStack()
 {
     mRadioBlocked               = false;
-    mReadyToAttach              = false;
     otInstance * const instance = openthread_get_default_instance();
 
     ReturnErrorOnFailure(GenericThreadStackManagerImpl_OpenThread<ThreadStackManagerImpl>::DoInit(instance));
@@ -79,31 +78,6 @@ void ThreadStackManagerImpl::_NotifySrpClearAllComplete()
     k_sem_give(&mSrpClearAllSemaphore);
 }
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
-
-CHIP_ERROR
-ThreadStackManagerImpl::_AttachToThreadNetwork(const Thread::OperationalDataset & dataset,
-                                               NetworkCommissioning::Internal::WirelessDriver::ConnectCallback * callback)
-{
-    CHIP_ERROR result = CHIP_NO_ERROR;
-
-    if (mRadioBlocked)
-    {
-        /* On Telink platform it's not possible to rise Thread network when its used by BLE,
-           so just mark that it's provisioned and rise Thread after BLE disconnect */
-        result = SetThreadProvision(dataset.AsByteSpan());
-        if (result == CHIP_NO_ERROR)
-        {
-            mReadyToAttach = true;
-            callback->OnResult(NetworkCommissioning::Status::kSuccess, CharSpan(), 0);
-        }
-    }
-    else
-    {
-        result =
-            Internal::GenericThreadStackManagerImpl_OpenThread<ThreadStackManagerImpl>::_AttachToThreadNetwork(dataset, callback);
-    }
-    return result;
-}
 
 CHIP_ERROR ThreadStackManagerImpl::_StartThreadScan(NetworkCommissioning::ThreadDriver::ScanCallback * callback)
 {

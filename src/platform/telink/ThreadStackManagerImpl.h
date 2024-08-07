@@ -60,7 +60,6 @@ public:
     // ===== Methods that implement the ThreadStackManager abstract interface.
     CHIP_ERROR _InitThreadStack();
     void SetRadioBlocked(bool state) { mRadioBlocked = state; }
-    bool IsReadyToAttach(void) const { return mReadyToAttach; }
     void Finalize(void);
 
 protected:
@@ -78,8 +77,6 @@ protected:
     // ===== Methods that override the GenericThreadStackManagerImpl_OpenThread abstract interface.
 
     void _ProcessThreadActivity() {}
-    CHIP_ERROR _AttachToThreadNetwork(const Thread::OperationalDataset & dataset,
-                                      NetworkCommissioning::Internal::WirelessDriver::ConnectCallback * callback);
     CHIP_ERROR _StartThreadScan(NetworkCommissioning::ThreadDriver::ScanCallback * callback);
 
     //} // namespace Internal
@@ -94,7 +91,6 @@ private:
 
     // ===== Private members for use by this class only.
     bool mRadioBlocked;
-    bool mReadyToAttach;
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
     k_sem mSrpClearAllSemaphore;

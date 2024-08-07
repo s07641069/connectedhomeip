@@ -287,13 +287,7 @@ CHIP_ERROR BLEManagerImpl::StartAdvertising(void)
     CHIP_ERROR err = CHIP_NO_ERROR;
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    if (ConnectivityMgr().IsThreadProvisioned())
-    {
-        ChipLogProgress(DeviceLayer, "Device provisioned, can't StartAdvertising");
-
-        err = CHIP_ERROR_INCORRECT_STATE;
-    }
-    else if (!mBLERadioInitialized)
+    if (!mBLERadioInitialized)
     {
         ThreadStackMgrImpl().StartThreadScan(mInternalScanCallback);
     }
@@ -313,8 +307,6 @@ CHIP_ERROR BLEManagerImpl::StartAdvertisingProcess(void)
     if (!mBLERadioInitialized)
     {
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-        // Deinit Thread
-        ThreadStackMgrImpl().SetThreadEnabled(false);
         ThreadStackMgrImpl().SetRadioBlocked(true);
 #endif
 
@@ -385,15 +377,6 @@ CHIP_ERROR BLEManagerImpl::StartAdvertisingProcess(void)
 
 CHIP_ERROR BLEManagerImpl::StopAdvertising(void)
 {
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    if (ConnectivityMgr().IsThreadProvisioned())
-    {
-        ChipLogProgress(DeviceLayer, "Device provisioned, StopAdvertising done");
-
-        return CHIP_ERROR_INCORRECT_STATE;
-    }
-#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
-
     ReturnErrorOnFailure(System::MapErrorZephyr(bt_le_adv_stop()));
 
     // Transition to the not Advertising state...
@@ -663,20 +646,6 @@ void BLEManagerImpl::_OnPlatformEvent(const ChipDeviceEvent * event)
         err = HandleTXCharComplete(event);
         break;
 
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-    case DeviceEventType::kThreadStateChange:
-        err = HandleThreadStateChange(event);
-        break;
-
-    case DeviceEventType::kCHIPoBLEConnectionClosed:
-        err = HandleBleConnectionClosed(event);
-        break;
-
-    case DeviceEventType::kOperationalNetworkEnabled:
-        err = HandleOperationalNetworkEnabled(event);
-        break;
-#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
-
     default:
         break;
     }
@@ -899,68 +868,6 @@ ssize_t BLEManagerImpl::HandleC3Read(struct bt_conn * conId, const struct bt_gat
                              sInstance.c3CharDataBufferHandle->DataLength());
 }
 #endif
-
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
-CHIP_ERROR BLEManagerImpl::HandleOperationalNetworkEnabled(const ChipDeviceEvent * event)
-{
-    ChipLogDetail(DeviceLayer, "HandleOperationalNetworkEnabled");
-
-    int error = bt_conn_disconnect(BLEMgrImpl().mconId, BT_HCI_ERR_LOCALHOST_TERM_CONN);
-    if (error)
-    {
-        ChipLogError(DeviceLayer, "Close BLEConn err: %d", error);
-    }
-
-    return MapErrorZephyr(error);
-}
-
-CHIP_ERROR BLEManagerImpl::HandleThreadStateChange(const ChipDeviceEvent * event)
-{
-    CHIP_ERROR error = CHIP_NO_ERROR;
-
-    ChipLogDetail(DeviceLayer, "HandleThreadStateChange");
-
-    if (event->Type == DeviceEventType::kThreadStateChange && event->ThreadStateChange.RoleChanged)
-    {
-        ChipDeviceEvent attachEvent;
-        attachEvent.Type                            = DeviceEventType::kThreadConnectivityChange;
-        attachEvent.ThreadConnectivityChange.Result = kConnectivity_Established;
-
-        error = PlatformMgr().PostEvent(&attachEvent);
-        VerifyOrExit(error == CHIP_NO_ERROR, ChipLogError(DeviceLayer, "PostEvent err: %" CHIP_ERROR_FORMAT, error.Format()));
-    }
-
-exit:
-    return error;
-}
-
-CHIP_ERROR BLEManagerImpl::HandleBleConnectionClosed(const ChipDeviceEvent * event)
-{
-    if (ThreadStackMgrImpl().IsReadyToAttach())
-    {
-        SwitchToIeee802154();
-    }
-
-    return CHIP_NO_ERROR;
-}
-
-void BLEManagerImpl::SwitchToIeee802154(void)
-{
-    ChipLogProgress(DeviceLayer, "Switch context from BLE to Thread");
-
-    // Deinit BLE
-    bt_disable();
-    mBLERadioInitialized = false;
-
-#if defined(CONFIG_PM) && !defined(CONFIG_CHIP_ENABLE_PM_DURING_BLE)
-    pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
-#endif
-
-    // Init Thread
-    ThreadStackMgrImpl().SetRadioBlocked(false);
-    ThreadStackMgrImpl().SetThreadEnabled(true);
-}
-#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
 } // namespace Internal
 } // namespace DeviceLayer
