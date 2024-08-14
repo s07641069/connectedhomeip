@@ -483,8 +483,46 @@ def generate_partition(args, out_dirs):
         raise ValueError("generated CBOR file exceeds declared maximum partition size! {} > {}".format(len(cbor_data), args.size))
     ih = IntelHex()
     ih.putsz(args.offset, cbor_data)
-    ih.write_hex_file(os.sep.join([out_dirs['output'], 'factory_data.hex']), True)
-    ih.tobinfile(os.sep.join([out_dirs['output'], 'factory_data.bin']))
+    # ih.write_hex_file(os.sep.join([out_dirs['output'], 'factory_data.hex']), True)
+    # ih.tobinfile(os.sep.join([out_dirs['output'], 'factory_data.bin']))
+
+    output_dir = out_dirs['output']
+    hex_file_path = os.path.join(output_dir, 'factory_data.hex')
+    bin_file_path = os.path.join(output_dir, 'factory_data.bin')
+    ih.write_hex_file(hex_file_path, True)
+    ih.tobinfile(bin_file_path)
+
+    with open(os.sep.join([out_dirs['output'], 'pin_disc.csv']), 'r') as csvf:
+        pin_disc_dict = csv.DictReader(csvf)
+        row = pin_disc_dict.__next__()
+
+        # Extract Discriminator, PID, and VID
+        discriminator = int(row['Discriminator'])
+        pid = args.product_id
+        vid = args.vendor_id
+
+        logger.info("Discriminator = {}".format(discriminator))
+        logger.info("PID = 0x{:X}".format(pid))
+        logger.info("VID = 0x{:X}".format(vid))
+
+        # Convert Discriminator, PID, and VID to bytes
+        discriminator_bytes = discriminator.to_bytes(2, byteorder='little')
+        pid_bytes = pid.to_bytes(2, byteorder='little')
+        vid_bytes = vid.to_bytes(2, byteorder='little')
+
+        # Read the existing binary data
+        with open(bin_file_path, 'rb') as bin_file:
+            bin_data = bin_file.read()
+
+        # Prepend the hex data to the binary data
+        extended_data = discriminator_bytes + pid_bytes + vid_bytes + bin_data
+
+        # Write the combined data to a new file
+        ext_bin_file_path = os.path.join(output_dir, 'factory_data_ext.bin')
+        with open(ext_bin_file_path, 'wb') as ext_bin_file:
+            ext_bin_file.write(extended_data)
+
+        logger.info(f"Extended binary data written to {ext_bin_file_path}")
 
 
 def generate_json_summary(args, out_dirs, pai_certs, dacs_cert, serial_num: str):
