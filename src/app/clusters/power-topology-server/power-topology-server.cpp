@@ -63,6 +63,8 @@ bool Instance::SupportsOptAttr(OptionalAttributes aOptionalAttrs) const
 // AttributeAccessInterface
 CHIP_ERROR Instance::Read(const ConcreteReadAttributePath & aPath, AttributeValueEncoder & aEncoder)
 {
+    ChipLogProgress(DataManagement, "XXX UTCSH-429 LOG -> PowerTopologyAttrRead: AttrId= 0x%x", aPath.mAttributeId);
+
     switch (aPath.mAttributeId)
     {
     case FeatureMap::Id:

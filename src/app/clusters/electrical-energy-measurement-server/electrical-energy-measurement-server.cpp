@@ -59,6 +59,8 @@ CHIP_ERROR ElectricalEnergyMeasurementAttrAccess::Read(const app::ConcreteReadAt
 
     MeasurementData * data = MeasurementDataForEndpoint(aPath.mEndpointId);
 
+    ChipLogProgress(DataManagement, "XXX UTCSH-429 LOG -> ElectricalEnergyMeasurementAttrRead: AttrId= 0x%x", aPath.mAttributeId);
+
     switch (aPath.mAttributeId)
     {
     case FeatureMap::Id:

@@ -19,6 +19,7 @@ cmake_minimum_required(VERSION 3.13.1)
 get_filename_component(CHIP_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/third_party/connectedhomeip REALPATH)
 get_filename_component(TELINK_COMMON ${CHIP_ROOT}/examples/platform/telink REALPATH)
 get_filename_component(GEN_DIR ${CHIP_ROOT}/zzz_generated/ REALPATH)
+get_filename_component(ENERGY_MANAGEMENT_COMMON_DIR ${CHIP_ROOT}/examples/energy-management-app/energy-management-common/ REALPATH)
 
 include(${TELINK_COMMON}/common.cmake)
 include(${CHIP_ROOT}/config/telink/app/enable-gnu-std.cmake)
@@ -33,11 +34,16 @@ target_include_directories(app PRIVATE
                            ${TELINK_COMMON}/common/include
                            ${TELINK_COMMON}/util/include
                            ${TELINK_COMMON}/app/include
-                           ${TELINK_COMMON}/zephyr_ext)
+                           ${TELINK_COMMON}/zephyr_ext
+                           ${ENERGY_MANAGEMENT_COMMON_DIR}/energy-reporting/include)
 
 target_sources(app PRIVATE
                src/AppTask.cpp
                src/ZclCallbacks.cpp
+               src/electrical-energy-measurement.cpp
+               src/electrical-power-measurement.cpp
+               src/power-topology.cpp
+               ${ENERGY_MANAGEMENT_COMMON_DIR}/energy-reporting/src/ElectricalPowerMeasurementDelegate.cpp
                ${TELINK_COMMON}/common/src/mainCommon.cpp
                ${TELINK_COMMON}/common/src/AppTaskCommon.cpp
                ${TELINK_COMMON}/util/src/LEDManager.cpp

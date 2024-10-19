@@ -39,6 +39,7 @@ chip::Protocols::InteractionModel::Status __attribute__((weak))
 emberAfExternalAttributeReadCallback(EndpointId endpoint, ClusterId clusterId, const EmberAfAttributeMetadata * attributeMetadata,
                                      uint8_t * buffer, uint16_t maxReadLength)
 {
+    ChipLogError(DataManagement, "XXX UTCSH-429 LOG -> set external Attribute Read Callback failure");
     return chip::Protocols::InteractionModel::Status::Failure;
 }
 
