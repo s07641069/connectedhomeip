@@ -27,6 +27,8 @@
 
 LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 
+uint8_t dac_key_decrypt[32] = { 0 };
+
 static inline bool uint16_decode(zcbor_state_t * states, uint16_t * value)
 {
     uint32_t u32;
@@ -125,14 +127,18 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->rd_uid);
         }
+#if 0
         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
         }
+#endif
+#if 0
         else if (strncmp("dac_key", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_priv_key);
         }
+#endif
         else if (strncmp("pai_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->pai_cert);
@@ -184,4 +190,42 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
     }
 
     return res && zcbor_list_map_end_force_decode(states);
+}
+
+#include "aes.h"
+
+bool LoadDACCertandKey(uint8_t * buffer, struct FactoryData * factoryData)
+{
+    size_t dac_priv_key_len;
+    uint8_t chip_id[16] = { 0 };
+    dac_priv_key_len    = buffer[0];
+    dac_priv_key_len |= (uint16_t) buffer[1] << 8;
+    factoryData->dac_priv_key.len = dac_priv_key_len;
+    if (!factoryData->dac_priv_key.len)
+    {
+        return false;
+    }
+    if (efuse_get_chip_id(chip_id))
+    {
+        aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
+        aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
+        factoryData->dac_priv_key.data = dac_key_decrypt;
+    }
+    else
+    {
+        printf("prikey decrypt fail");
+        return false;
+    }
+
+    size_t dac_cert_len;
+    dac_cert_len = buffer[100];
+    dac_cert_len |= (uint16_t) buffer[101] << 8;
+    factoryData->dac_cert.len = dac_cert_len;
+    if (!factoryData->dac_cert.len)
+    {
+        return false;
+    }
+    factoryData->dac_cert.data = buffer + 102;
+
+    return true;
 }
