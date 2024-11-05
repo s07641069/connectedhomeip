@@ -249,6 +249,9 @@ config MCUBOOT_SIGNATURE_KEY_FILE
     default "bootloader/mcuboot/root-ec-p256.pem" if BOARD_TLSR9118BDK40D || BOARD_TLSR9118BDK40D_V1
     depends on BOOTLOADER_MCUBOOT
 
+config SECURE_PROGRAMMING
+    default n
+
 # In current config/zephyr/Kconfig
 # next deprecated values are selected
 # warning: Deprecated symbol CPLUSPLUS is enabled.

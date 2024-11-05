@@ -26,9 +26,9 @@
 #define MAX_FACTORY_DATA_NESTING_LEVEL 3
 
 LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
-
-uint8_t dac_key_decrypt[32] = { 0 };
-
+#if CONFIG_SECURE_PROGRAMMING
+static uint8_t dac_key_decrypt[32] = { 0 };
+#endif
 static inline bool uint16_decode(zcbor_state_t * states, uint16_t * value)
 {
     uint32_t u32;
@@ -127,13 +127,11 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->rd_uid);
         }
-#if 0
+#if CONFIG_SECURE_PROGRAMMING
         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
         }
-#endif
-#if 0
         else if (strncmp("dac_key", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_priv_key);
@@ -192,9 +190,10 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
     return res && zcbor_list_map_end_force_decode(states);
 }
 
+#if CONFIG_SECURE_PROGRAMMING
 #include "aes.h"
 
-bool LoadDACCertandKey(uint8_t * buffer, struct FactoryData * factoryData)
+bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
 {
     size_t dac_priv_key_len;
     uint8_t chip_id[16] = { 0 };
@@ -213,7 +212,7 @@ bool LoadDACCertandKey(uint8_t * buffer, struct FactoryData * factoryData)
     }
     else
     {
-        printf("prikey decrypt fail");
+        LOG_ERR("Private key decryption failed.");
         return false;
     }
 
@@ -229,3 +228,4 @@ bool LoadDACCertandKey(uint8_t * buffer, struct FactoryData * factoryData)
 
     return true;
 }
+#endif
