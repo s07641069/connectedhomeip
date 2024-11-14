@@ -31,7 +31,7 @@ namespace chip {
 namespace DeviceLayer {
 
 __attribute__((section(".bss"))) static uint8_t mFactoryDataBuffer[FIXED_PARTITION_SIZE(factory_partition)];
-#if CONFIG_SECURE_PROGRAMMING
+#if CHIP_DEVICE_SECURE_PROGRAMMING
 __attribute__((section(".bss"))) static uint8_t mDACDataBuffer[FIXED_PARTITION_SIZE(dac_keypair_partition)];
 #endif
 
@@ -71,7 +71,7 @@ struct ExternalFlashFactoryData
         return CHIP_NO_ERROR;
     }
 
-#if CONFIG_SECURE_PROGRAMMING
+#if CHIP_DEVICE_SECURE_PROGRAMMING
     CHIP_ERROR GetDACDataPartition(uint8_t *& data, size_t & dataSize)
     {
         int ret = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition), mDACDataBuffer,

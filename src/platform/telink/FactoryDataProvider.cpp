@@ -68,7 +68,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
 {
     uint8_t * factoryData = nullptr;
     size_t factoryDataSize;
-#if CONFIG_SECURE_PROGRAMMING
+#if CHIP_DEVICE_SECURE_PROGRAMMING
     uint8_t * dacData = nullptr;
     size_t dacDataSize;
 #endif
@@ -105,7 +105,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
         return error;
     }
 
-#if CONFIG_SECURE_PROGRAMMING
+#if CHIP_DEVICE_SECURE_PROGRAMMING
     error = mFlashFactoryData.GetDACDataPartition(dacData, dacDataSize);
 
     if (error != CHIP_NO_ERROR)
@@ -123,7 +123,8 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
 
     // Release the memory of mFactoryDataBuffer after complete parse
     free(ptr);
-#if CONFIG_SECURE_PROGRAMMING
+
+#if CHIP_DEVICE_SECURE_PROGRAMMING
     if (!LoadDACCertAndKey(dacData, &mFactoryData))
     {
         ChipLogError(DeviceLayer, "Failed to inject dac data");
