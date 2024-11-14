@@ -25,6 +25,10 @@
 extern "C" {
 #endif
 
+#ifndef CONFIG_SECURE_PROGRAMMING
+#define CONFIG_SECURE_PROGRAMMING 0
+#endif
+
 struct FactoryDataString
 {
     void * data;
