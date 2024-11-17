@@ -198,11 +198,13 @@ if (CONFIG_CHIP_OTA_IMAGE_BUILD)
         )
     endif()
 
-    chip_ota_image(chip-ota-image
-        INPUT_FILES ${PROJECT_BINARY_DIR}/${CONFIG_SIGNED_OTA_IMAGE_FILE_NAME}
-        OUTPUT_FILE ${PROJECT_BINARY_DIR}/${CONFIG_CHIP_OTA_IMAGE_FILE_NAME}
-    )
-    add_dependencies(chip-ota-image process_binaries)
+    if (NOT CONFIG_BOOTLOADER_EXTERNAL_SIGNING)
+        chip_ota_image(chip-ota-image
+            INPUT_FILES ${PROJECT_BINARY_DIR}/${CONFIG_SIGNED_OTA_IMAGE_FILE_NAME}
+            OUTPUT_FILE ${PROJECT_BINARY_DIR}/${CONFIG_CHIP_OTA_IMAGE_FILE_NAME}
+        )
+        add_dependencies(chip-ota-image process_binaries)
+    endif()
 endif()
 
 # ==============================================================================

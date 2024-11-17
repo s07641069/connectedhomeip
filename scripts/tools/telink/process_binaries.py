@@ -132,33 +132,34 @@ if build_conf.getboolean('CONFIG_SOC_SERIES_RISCV_TELINK_W91'):
             raise RuntimeError(f"Error signing the image: {e}")
 
 # Merge MCUBoot binary if configured
-if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
-    merge_binaries('mcuboot.bin', 'zephyr.signed.bin', 'merged.bin', build_conf['CONFIG_FLASH_LOAD_OFFSET'])
-    if build_conf.getboolean('CONFIG_COMPRESS_LZMA'):
-        compress_lzma_firmware('zephyr.signed.bin', 'zephyr.signed.lzma.bin')
+if not build_conf.getboolean('CONFIG_BOOTLOADER_EXTERNAL_SIGNING'):
+    if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
+        merge_binaries('mcuboot.bin', 'zephyr.signed.bin', 'merged.bin', build_conf['CONFIG_FLASH_LOAD_OFFSET'])
+        if build_conf.getboolean('CONFIG_COMPRESS_LZMA'):
+            compress_lzma_firmware('zephyr.signed.bin', 'zephyr.signed.lzma.bin')
 
-        sign_command = [
-            'python3',
-            os.path.join(ZEPHYR_BASE, '../bootloader/mcuboot/scripts/imgtool.py'),
-            'sign',
-            '--version', '0.0.0+0',
-            '--align', '1',
-            '--header-size', str(build_conf['CONFIG_ROM_START_OFFSET']),
-            '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
-            '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
-            '--pad-header',
-            'zephyr.signed.lzma.bin',
-            build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME']
-        ]
+            sign_command = [
+                'python3',
+                os.path.join(ZEPHYR_BASE, '../bootloader/mcuboot/scripts/imgtool.py'),
+                'sign',
+                '--version', '0.0.0+0',
+                '--align', '1',
+                '--header-size', str(build_conf['CONFIG_ROM_START_OFFSET']),
+                '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
+                '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
+                '--pad-header',
+                'zephyr.signed.lzma.bin',
+                build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME']
+            ]
 
-        try:
-            subprocess.run(sign_command, check=True)
-        except subprocess.CalledProcessError as e:
-            raise RuntimeError(f"Error signing the image: {e}")
+            try:
+                subprocess.run(sign_command, check=True)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"Error signing the image: {e}")
 
-    if build_conf.getboolean('CONFIG_TELINK_OTA_BUTTON_TEST'):
-        merge_binaries('merged.bin', build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME'],
-                       'merged.bin', build_conf['CONFIG_TELINK_OTA_PARTITION_ADDR'])
+        if build_conf.getboolean('CONFIG_TELINK_OTA_BUTTON_TEST'):
+            merge_binaries('merged.bin', build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME'],
+                        'merged.bin', build_conf['CONFIG_TELINK_OTA_PARTITION_ADDR'])
 
 # Merge Factory Data binary if configured
 if build_conf.getboolean('CONFIG_CHIP_FACTORY_DATA_MERGE_WITH_FIRMWARE'):
