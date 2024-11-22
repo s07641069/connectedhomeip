@@ -127,7 +127,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->rd_uid);
         }
-#if CHIP_DEVICE_SECURE_PROGRAMMING
+#if !CHIP_DEVICE_SECURE_PROGRAMMING
         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
