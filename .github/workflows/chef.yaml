@@ -112,7 +112,7 @@ jobs:
                 platform: telink
             - name: Update Zephyr to specific revision (for developers purpose)
               shell: bash
-              run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py 5e96b617c7013d7e69d665169b75790f6eb23b15"
+              run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py f54781b9ce54b2ce580d714f14054d756bfdc309"
             - name: CI Examples Telink
               shell: bash
               run: |
