@@ -118,11 +118,11 @@ config NET_PKT_TX_COUNT
     default 8
 
 config NET_BUF_RX_COUNT
-    default 16 if PM
+    default 4 if PM
     default 32
 
 config NET_BUF_TX_COUNT
-    default 16 if PM
+    default 4 if PM
     default 32
 
 config GPIO
