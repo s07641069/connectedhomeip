@@ -82,8 +82,9 @@ config SYSTEM_WORKQUEUE_STACK_SIZE
 config HEAP_MEM_POOL_SIZE
     default 256
 
+# need to enlarge to 21000 , to pass TC_RR_1.1
 config COMMON_LIBC_MALLOC_ARENA_SIZE
-    default 20716 if SOC_RISCV_TELINK_TL321X || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default 21000 if SOC_RISCV_TELINK_TL321X || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
     default 12288
 
 config NET_IPV6_MLD
@@ -256,9 +257,20 @@ config TELINK_SOC_REBOOT_ON_FAULT
 config NVS_LOOKUP_CACHE
     default y
 
+# the nvs lookup cache size should be 2048 ,or the TC_RR1.0 will fail .
 config NVS_LOOKUP_CACHE_SIZE
-    default 400  if SOC_RISCV_TELINK_TL321X
-    default 2048 if !PM
+    default 2048  if SOC_RISCV_TELINK_TL321X
+    default 2048  if !PM
+    default 2048
+
+config NVS_RAM_OPTIMIZATION
+    bool
+    default y if PM || SOC_RISCV_TELINK_TL321X
+    default n 
+
+# test on newest based code, need to enlarge to 512 which can pass TC_RR_1.1
+config NVS_LOOKUP_CACHE_ARRAY_SIZE
+    default 512 if PM || SOC_RISCV_TELINK_TL321X
 
 # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
 # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
