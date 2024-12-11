@@ -34,7 +34,7 @@ choice LOG_MODE
 endchoice
 
 choice MATTER_LOG_LEVEL_CHOICE
-    default MATTER_LOG_LEVEL_WRN if SOC_RISCV_TELINK_TL321X
+    default MATTER_LOG_LEVEL_DBG if SOC_RISCV_TELINK_TL321X
     default MATTER_LOG_LEVEL_DBG
 endchoice
 
@@ -223,7 +223,7 @@ endif
 if BOARD_TL3218X_RETENTION
 
 config SOC_SERIES_RISCV_TELINK_TLX_NON_RETENTION_RAM_CODE
-    default y if PM
+    default n if PM
 
 config TELINK_TLX_MATTER_RETENTION_LAYOUT
     default y if PM
