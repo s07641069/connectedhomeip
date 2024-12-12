@@ -204,7 +204,8 @@ endif # BT
 
 if BOARD_TLSR9528A_RETENTION || BOARD_TLSR9518ADK80D_RETENTION
 config SOC_SERIES_RISCV_TELINK_B9X_NON_RETENTION_RAM_CODE
-    default y if PM
+    default y if (PM && BOARD_TLSR9518ADK80D_RETENTION)
+    default n if (PM && BOARD_TLSR9528A_RETENTION)
 
 config TELINK_B9X_MATTER_RETENTION_LAYOUT
     default y if PM
@@ -317,15 +318,31 @@ config CHIP_ENABLE_ICD_SUPPORT
 config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
     bool "Skip initial CSMA-CA backoff when sending data requests"
     depends on CHIP_ENABLE_ICD_SUPPORT
+    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
     default n
     help
       Skip the first CSMA backoff period when sending data requests over IEEE 802.15.4.
 
+config ZEPHYR_NETBUFFER_OPTIMIZATION
+	bool "Place net buffer in DLM instead of ILM"
+	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+	default n
+	help
+	  This option enables storing the net buffer in DLM rather than ILM.
+
 config IEEE802154_TLX_OPTIMIZATION
     bool "Optimize 802.15.4 RF performance for TLX SoCs"
+    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION
     default n
     help
       Improve RF performance in IEEE 802.15.4 communication on TLX SoCs.
+
+config IEEE802154_B9X_OPTIMIZATION
+	bool "optimize the rf performance for b9x"
+	default y if BOARD_TLSR9528A_RETENTION
+	default n
+	help
+	  optimize the rf performance for b9x.
 
 config OPENTHREAD_THREAD_STACK_SIZE
     default 2400 if PM || SOC_RISCV_TELINK_TL321X
