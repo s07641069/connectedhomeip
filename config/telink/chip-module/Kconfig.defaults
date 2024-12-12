@@ -314,6 +314,13 @@ endchoice
 config CHIP_ENABLE_ICD_SUPPORT
     default y if CHIP_THREAD_DEVICE_ROLE_SLEEPY_END_DEVICE
 
+
+config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+    bool "Skip the first backoff during sending data request"
+    depends on CHIP_ENABLE_ICD_SUPPORT
+    default n if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default n
+
 config OPENTHREAD_THREAD_STACK_SIZE
     default 2400 if PM || SOC_RISCV_TELINK_TL321X
 
