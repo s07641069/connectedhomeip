@@ -60,6 +60,14 @@ CHIP_ERROR AppTask::Init(void)
     SetExampleButtonCallbacks(LightingActionEventHandler);
     InitCommonParts();
 
+    if(sBoot_zb){
+        /* Switch from the touch link, need to restore previous values */ 
+        sfixture_on = user_para.onoff;
+        sBrightness = user_para.lightness;
+        sAppTask.UpdateClusterState();
+       printk("Matter: Updated ZB On/Off state and brightness.\n");
+    }
+
     Protocols::InteractionModel::Status status;
 
     app::DataModel::Nullable<uint8_t> brightness;

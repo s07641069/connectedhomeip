@@ -51,6 +51,10 @@
 #include <zephyr/fs/nvs.h>
 #include <zephyr/settings/settings.h>
 
+uint8_t sBoot_zb = 0;
+user_para_t user_para;
+uint8_t para_lightness = 0;
+
 using namespace chip::app;
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
@@ -59,6 +63,9 @@ namespace {
 constexpr int kFactoryResetCalcTimeout = 3000;
 constexpr int kFactoryResetTriggerCntr = 3;
 constexpr int kAppEventQueueSize       = 10;
+const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+constexpr int kDnssTimeout = 60000;
+k_timer sDnssTimer;
 
 constexpr uint32_t kIdentifyBlinkRateMs         = 200;
 constexpr uint32_t kIdentifyOkayOnRateMs        = 50;
@@ -127,6 +134,12 @@ public:
 AppCallbacks sCallbacks;
 } // namespace
 
+void FactoryResetExtHandler(void)
+{
+    // Erase the user parameters partition to reset mode settings
+    flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+}
+
 class AppFabricTableDelegate : public FabricTable::Delegate
 {
     void OnFabricRemoved(const FabricTable & fabricTable, FabricIndex fabricIndex)
@@ -160,6 +173,10 @@ class AppFabricTableDelegate : public FabricTable::Delegate
                 {
                     ChipLogError(DeviceLayer, "Storage clearance failed: %d", status);
                 }
+
+                printk("Erasing user parameters and resetting to Zigbee mode");
+                FactoryResetExtHandler();
+                chip::Server::GetInstance().ScheduleFactoryReset();
             }
         }
     }
@@ -207,8 +224,36 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
+void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
+{
+    if (!timer){
+        return;
+    }
+    /*If initialization of Dnss takes longer than 60 seconds, the device will reboot and revert to Zigbee mode*/
+    printk("Matter: DnssTimer expired.\r\n");
+    sys_reboot(0);
+}
+
 CHIP_ERROR AppTaskCommon::StartApp(void)
 {
+     /* Proc ota boot flag , and erase flag */
+    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
+    /* Boot from Zigbee , need to clean the user parameters sector first and set a flag */
+    if (user_para.val == USER_ZB_SW_VAL){
+        sBoot_zb = 1;
+        /* Ensure lightness is at least 2 to avoid display error on HomePod Mini */
+        if(user_para.lightness < 2){
+            user_para.lightness = 2;
+        }
+        /* Pass the value to the init part to avoid gaps in pwm_pool init */
+        if(user_para.onoff){
+            para_lightness = user_para.lightness;
+        }
+        k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
+        k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
+        printk("Matter: start timer to protect Dnss initialized %x \r\n",*(int *)(&user_para));
+    }
+
     CHIP_ERROR err = GetAppTask().Init();
 
     if (err != CHIP_NO_ERROR)
@@ -590,6 +635,8 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         k_timer_stop(&sFactoryResetTimer);
         sFactoryResetCntr = 0;
 
+        printk("Factory reset triggered by button, resetting to Zigbee mode");
+        FactoryResetExtHandler();
         chip::Server::GetInstance().ScheduleFactoryReset();
     }
 }
@@ -747,6 +794,25 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
 #endif
         break;
+
+     case DeviceEventType::kCommissioningComplete: 
+     {
+        uint8_t val = USER_MATTER_PAIR_VAL;
+        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+        printk("Commissioning complete, set Matter commissionined flag");
+     }
+        break;
+    case DeviceEventType::kFailSafeTimerExpired:
+    /* Reset to Zigbee mode if commissioning fails */
+        if (sBoot_zb){
+            printk("FailSafeTimer expired, Matter commissioning failed, rebooting to Zigbee mode.\r\n");
+            sys_reboot(0);
+        }else{
+            printk("FailSafeTimer expired, Matter commissioning failed.\r\n");
+        }
+        break;
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
@@ -760,6 +826,10 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_CHIP_OTA_REQUESTOR
         }
 #endif
+        if(sBoot_zb){
+            k_timer_stop(&sDnssTimer);
+            printk("Dnss Timer stopped, Matter commissioning kDnssdInitialized.\r\n");
+        }
         break;
     case DeviceEventType::kThreadStateChange:
         sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
