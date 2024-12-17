@@ -47,6 +47,9 @@
 
 extern "C" {
 extern __attribute__((noinline)) void telink_bt_blc_mac_init(uint8_t * bt_mac);
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+extern char packetBufferBLEFlag;
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 }
 
 #if defined(CONFIG_PM) && !defined(CONFIG_CHIP_ENABLE_PM_DURING_BLE)
@@ -951,7 +954,9 @@ void BLEManagerImpl::SwitchToIeee802154(void)
     // Deinit BLE
     bt_disable();
     mBLERadioInitialized = false;
-
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+    packetBufferBLEFlag = 1;
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 #if defined(CONFIG_PM) && !defined(CONFIG_CHIP_ENABLE_PM_DURING_BLE)
     pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_IDLE, PM_ALL_SUBSTATES);
 #endif

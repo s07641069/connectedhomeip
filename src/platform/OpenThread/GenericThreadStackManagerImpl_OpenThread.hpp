@@ -65,6 +65,11 @@ extern "C" void otSysProcessDrivers(otInstance * aInstance);
 #if CHIP_DEVICE_CONFIG_THREAD_ENABLE_CLI
 extern "C" void otAppCliInit(otInstance * aInstance);
 #endif
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+extern "C" {
+extern char packetBufferThreadFlag;
+}
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 
 namespace chip {
 namespace DeviceLayer {
@@ -371,6 +376,13 @@ bool GenericThreadStackManagerImpl_OpenThread<ImplClass>::_IsThreadAttached()
     Impl()->LockThreadStack();
     curRole = otThreadGetDeviceRole(mOTInst);
     Impl()->UnlockThreadStack();
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+    if((curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED))
+    {
+        if(packetBufferThreadFlag==0)
+            packetBufferThreadFlag = 1;
+    }
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 
     return (curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED);
 }

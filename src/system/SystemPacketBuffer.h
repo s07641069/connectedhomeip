@@ -385,6 +385,10 @@ private:
     static BufferPoolElement sBufferPool[CHIP_SYSTEM_CONFIG_PACKETBUFFER_POOL_SIZE];
     static PacketBuffer * sFreeList;
     static PacketBuffer * BuildFreeList();
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+    static BufferPoolElement * sFreeRetentionList;
+    static PacketBuffer * BuildRetentionFreeList();
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 #endif // CHIP_SYSTEM_PACKETBUFFER_FROM_CHIP_POOL || defined(DOXYGEN)
 
 #if CHIP_SYSTEM_PACKETBUFFER_HAS_CHECK

@@ -84,7 +84,7 @@ config HEAP_MEM_POOL_SIZE
 
 # need to enlarge to 21000 , to pass TC_RR_1.1
 config COMMON_LIBC_MALLOC_ARENA_SIZE
-    default 21000 if SOC_RISCV_TELINK_TL321X || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default 12288 if SOC_RISCV_TELINK_TL321X || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
     default 12288
 
 config NET_IPV6_MLD
@@ -327,6 +327,16 @@ config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
     bool "Skip the first backoff during sending data request"
     depends on CHIP_ENABLE_ICD_SUPPORT
     default n if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default n
+
+config ZEPHYR_NETBUFFER_OPTIMIZATION
+    bool "move the net buffer from iram to dram"
+    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default n
+
+config CHIP_PACKETBUFFER_OPTIMIZATION
+    bool "move the packet buffer from iram to dram"
+    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
     default n
 
 config OPENTHREAD_THREAD_STACK_SIZE

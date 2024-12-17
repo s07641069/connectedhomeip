@@ -43,6 +43,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <utility>
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+extern "C"
+{
+    char packetBufferBLEFlag=0;
+    char packetBufferThreadFlag=0;
+    extern unsigned int _RAMCODE_BLE_VMA_START;
+    extern unsigned int _RAMCODE_BLE_LMA_START;
+
+}
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
+
 
 #if CHIP_SYSTEM_CONFIG_USE_LWIP
 #include <lwip/mem.h>
@@ -66,7 +77,12 @@ namespace System {
 // Pool allocation for PacketBuffer objects.
 //
 
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+PacketBuffer::BufferPoolElement * PacketBuffer::sFreeRetentionList;
+__attribute__((section(".bss"))) PacketBuffer::BufferPoolElement PacketBuffer::sBufferPool[CHIP_SYSTEM_CONFIG_PACKETBUFFER_POOL_SIZE];
+#else /* !CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 PacketBuffer::BufferPoolElement PacketBuffer::sBufferPool[CHIP_SYSTEM_CONFIG_PACKETBUFFER_POOL_SIZE];
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 
 PacketBuffer * PacketBuffer::sFreeList = PacketBuffer::BuildFreeList();
 
@@ -103,6 +119,27 @@ PacketBuffer * PacketBuffer::BuildFreeList()
 
     return static_cast<PacketBuffer *>(lHead);
 }
+
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+PacketBuffer * PacketBuffer::BuildRetentionFreeList()
+{
+    pbuf * lHead = nullptr;
+
+    for (int i = 0; i < CHIP_SYSTEM_CONFIG_PACKETBUFFER_POOL_SIZE; i++)
+    {
+        pbuf * lCursor = &sFreeRetentionList[i].Header;
+        lCursor->next  = lHead;
+        lCursor->ref   = 0;
+        lHead          = lCursor;
+    }
+
+#if !CHIP_SYSTEM_CONFIG_NO_LOCKING
+    Mutex::Init(sBufferPoolMutex);
+#endif // !CHIP_SYSTEM_CONFIG_NO_LOCKING
+
+    return static_cast<PacketBuffer *>(lHead);
+}
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
 
 #elif CHIP_SYSTEM_PACKETBUFFER_FROM_CHIP_HEAP
 //
@@ -510,6 +547,21 @@ void PacketBuffer::AddRef()
 
 PacketBufferHandle PacketBufferHandle::New(size_t aAvailableSize, uint16_t aReservedSize)
 {
+#if defined(CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION) && CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION
+    if(packetBufferBLEFlag==1)
+    {
+        packetBufferBLEFlag = 0;
+        packetBufferThreadFlag = 2;
+        PacketBuffer::sFreeRetentionList = (PacketBuffer::BufferPoolElement *)&_RAMCODE_BLE_VMA_START;
+        PacketBuffer::sFreeList = PacketBuffer::BuildRetentionFreeList();
+    }
+    else if(packetBufferThreadFlag==1)
+    {
+        packetBufferThreadFlag = 2;
+        PacketBuffer::sFreeRetentionList = (PacketBuffer::BufferPoolElement *)&_RAMCODE_BLE_VMA_START;
+        PacketBuffer::sFreeList = PacketBuffer::BuildRetentionFreeList(); 
+    }
+#endif  /* CONFIG_CHIP_PACKETBUFFER_OPTIMIZATION */
     // Sanity check for kStructureSize to ensure that it matches the PacketBuffer size.
     static_assert(PacketBuffer::kStructureSize == sizeof(PacketBuffer), "PacketBuffer size mismatch");
     // Setting a static upper bound on kStructureSize to ensure the summation of all the sizes does not overflow.
