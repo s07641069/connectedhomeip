@@ -34,7 +34,7 @@ choice LOG_MODE
 endchoice
 
 choice MATTER_LOG_LEVEL_CHOICE
-    default MATTER_LOG_LEVEL_WRN if SOC_RISCV_TELINK_TL321X
+    default MATTER_LOG_LEVEL_DBG if SOC_RISCV_TELINK_TL321X
     default MATTER_LOG_LEVEL_DBG
 endchoice
 
@@ -259,6 +259,21 @@ config NVS_LOOKUP_CACHE
 config NVS_LOOKUP_CACHE_SIZE
     default 400  if SOC_RISCV_TELINK_TL321X
     default 2048 if !PM
+
+config COMPRESS_LZMA
+    depends on CHIP_OTA_REQUESTOR
+    default y if SOC_RISCV_TELINK_TL321X
+    default n
+
+config DUAL_MODE_SWTICH
+    bool "Control the dual mode switch part"
+    default y if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
+    default n
+
+config I2C_LED
+    bool "Control the i2 led slave use raw address"
+    default n if I2C
+    default n
 
 # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
 # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
