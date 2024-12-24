@@ -17,7 +17,7 @@
 		};
 		slot1_partition: partition@134000 {
 			label = "image-1";
-			reg = <0x134000 0xb2000>;// the slot1 is use LZMA to save binsize . (920k + 248k)*60% = 712k, zb nvs will locate here
+			reg = <0x134000 0xb2000>;// the slot1 is use LZMA to save binsize . (920k + 248k)*60% = 712k, zb nvs will locate here, also will locate 104k para for zb
 		};
 		storage_partition: partition@1e6000 {
 			label = "storage";

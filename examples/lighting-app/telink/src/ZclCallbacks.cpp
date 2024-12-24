@@ -33,6 +33,9 @@ using namespace chip::app::Clusters;
 void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
                                        uint8_t * value)
 {
+#if CONFIG_CUTOMER_MODE
+
+#else
     static HsvColor_t hsv;
     static XyColor_t xy;
     ClusterId clusterId     = attributePath.mClusterId;
@@ -116,4 +119,5 @@ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & 
             ChipLogDetail(Zcl, "Ignore ColorControl attribute (%u) that is not currently processed!", attributeId);
         }
     }
+#endif
 }
