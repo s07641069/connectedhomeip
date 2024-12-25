@@ -77,6 +77,7 @@ constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
 
 #if CONFIG_DUAL_MODE_SWTICH
 const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
 constexpr int kDnssTimeout           = 60000;
 k_timer sDnssTimer;
 #endif
@@ -146,7 +147,7 @@ void FactoryResetExtHandler(void)
     // Erase the user parameters partition to reset mode settings
     flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
     // Need to erase zb nvs part in factory mode
-    flash_erase(flash_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+    flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
 }
 #endif
 
@@ -240,7 +241,6 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 void SwitchBackToZigbee()
 {
     uint8_t switch_flag = USER_MATTER_BACK_ZB;
-    // flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
     flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
     sys_reboot(0);
 }
@@ -852,6 +852,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
             }
         }
 #endif
+        sBoot_zb = 0;
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
         printk("Commissioning complete, set Matter commissionined flag");

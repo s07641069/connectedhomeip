@@ -166,7 +166,7 @@ config BT_GATT_CACHING
 
 config BT_RX_STACK_SIZE
     default 1352 if BT_B9X
-    default 1010 if BT_TLX
+    default 1352 if BT_TLX
     default 2048 if BT_W91
 
 config BT_HCI_TX_STACK_SIZE
@@ -267,7 +267,7 @@ config COMPRESS_LZMA
 
 config CUSTOMER_MODE
     bool "Disable application code and add demo code"
-    default n if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
+    default y if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
     default n
 
 config DUAL_MODE_SWTICH
