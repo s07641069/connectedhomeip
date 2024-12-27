@@ -184,6 +184,7 @@ protected:
     void SetExampleButtonCallbacks(EventHandler aAction_CB);
     EventHandler ExampleActionEventHandler;
 
+    static void OtaEventsHandler(const chip::DeviceLayer::ChipDeviceEvent * event);
     static void ChipEventHandler(const chip::DeviceLayer::ChipDeviceEvent * event, intptr_t arg);
 
     static void UpdateStatusLED(void);
