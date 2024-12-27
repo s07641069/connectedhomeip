@@ -292,6 +292,10 @@ config STORAGE_OTA_STATUS
     bool "Store ota status base on analog register"
     default n
 
+config EXPOSE_CHIP_ID_VIA_BLE
+    bool "Get CHIP ID via ble"
+    default n
+
 # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
 # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
 config SETTINGS_NVS_SECTOR_SIZE_MULT

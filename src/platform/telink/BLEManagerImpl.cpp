@@ -76,6 +76,10 @@ const bt_uuid_128 UUID128_CHIPoBLEChar_TX =
 const bt_uuid_128 UUID128_CHIPoBLEChar_C3 =
     BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0x63, 0x64);
 #endif
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+const bt_uuid_128 UUID128_CHIPoBLEChar_ChipID =
+    BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0xA1, 0x01);
+#endif
 
 bt_uuid_16 UUID16_CHIPoBLEService = BT_UUID_INIT_16(0xFFF6);
 
@@ -99,6 +103,12 @@ bt_gatt_attr sChipoBleAttributes[] = {
                                BT_GATT_CHRC_READ,
                                BT_GATT_PERM_READ,
                                BLEManagerImpl::HandleC3Read, nullptr, nullptr),
+#endif
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+        BT_GATT_CHARACTERISTIC(&UUID128_CHIPoBLEChar_ChipID.uuid,
+                               BT_GATT_CHRC_READ,
+                               BT_GATT_PERM_READ,
+                               BLEManagerImpl::HandleChipIDRead, nullptr, nullptr),
 #endif
 };
 
@@ -897,6 +907,19 @@ ssize_t BLEManagerImpl::HandleC3Read(struct bt_conn * conId, const struct bt_gat
 
     return bt_gatt_attr_read(conId, attr, buf, len, offset, sInstance.c3CharDataBufferHandle->Start(),
                              sInstance.c3CharDataBufferHandle->DataLength());
+}
+#endif
+
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+#include <zephyr/drivers/hwinfo.h>
+ssize_t BLEManagerImpl::HandleChipIDRead(struct bt_conn * conId, const struct bt_gatt_attr * attr, void * buf, uint16_t len,
+                                         uint16_t offset)
+{
+    ChipLogDetail(DeviceLayer, "Read request received for CHIPoBLE Chip ID (ConnId 0x%02x)", bt_conn_index(conId));
+
+    uint8_t chip_id_value[16] = { 0 };
+    efuse_get_chip_id(chip_id_value);
+    return bt_gatt_attr_read(conId, attr, buf, len, offset, chip_id_value, sizeof(chip_id_value));
 }
 #endif
 
