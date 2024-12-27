@@ -23,6 +23,8 @@
 #include "LEDManager.h"
 #include "PWMManager.h"
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 
@@ -59,7 +61,14 @@ void AppTask::PowerOnFactoryReset(void)
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
 #if CONFIG_CUSTOMER_MODE
-void i2c_demo_proc()
+
+/**
+ * @brief A demo for use I2C to transfer data.
+ *
+ * @see It must manually set 'CONFIG_I2C=y'
+ * in prj.conf when you need to use i2c module.
+ */
+void i2c_demo_proc(void)
 {
     const uint8_t tx_buf[23] = { 0xc0, 0x63, 0x3f, 0x63, 0x63, 0x63, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00,
                                  0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2b, 0x06, 0xbe };
@@ -84,6 +93,91 @@ void i2c_demo_proc()
     printk("i2c demo stop ,finish transfer\n");
 }
 
+/**
+ * @brief A demo for use ADC to sampling VBAT.
+ *
+ * @see It must manually set 'CONFIG_ADC=y'
+ * in prj.conf when you need to use adc module.
+ */
+
+/* Data of ADC io-channels specified in devicetree. */
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
+
+void adc_demo_proc(void)
+{
+    static const struct adc_dt_spec adc_channels[] = { DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA) };
+
+    /* Define ADC data structure. */
+    uint16_t buf;
+    struct adc_sequence sequence = {
+        .buffer = &buf,
+        /* buffer size in bytes, not number of samples */
+        .buffer_size = sizeof(buf),
+    };
+
+    int err = 0;
+
+    /* Configure channels individually prior to sampling. */
+    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
+    {
+        if (!device_is_ready(adc_channels[i].dev))
+        {
+            printf("ADC controller device %s not ready\n", adc_channels[i].dev->name);
+            return;
+        }
+        err = adc_channel_setup_dt(&adc_channels[i]);
+        if (err < 0)
+        {
+            printf("Could not setup channel #%d (%d)\n", i, err);
+            return;
+        }
+    }
+
+    /* ADC sampling. */
+    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
+    {
+        printf("- %s, channel %d: ", adc_channels[i].dev->name, adc_channels[i].channel_id);
+        (void) adc_sequence_init_dt(&adc_channels[i], &sequence);
+        err = adc_read(adc_channels[i].dev, &sequence);
+        if (err < 0)
+        {
+            printf("Could not read (%d)\n", err);
+            continue;
+        }
+
+        int32_t val_mv = 0;
+
+        /*
+         * If using differential mode, the 16 bit value
+         * in the ADC sample buffer should be a signed 2's
+         * complement value.
+         */
+        if (adc_channels[i].channel_cfg.differential)
+        {
+            val_mv = (int32_t) ((int16_t) buf);
+        }
+        else
+        {
+            val_mv = (int32_t) buf;
+        }
+        printf("%" PRId32, val_mv);
+
+        /* conversion to mV may not be supported, skip if not */
+        err = adc_raw_to_millivolts_dt(&adc_channels[i], &val_mv);
+        if (err < 0)
+        {
+            printf(" (value in mV not available)\n");
+        }
+        else
+        {
+            printf(" = %" PRId32 " mV\n", val_mv);
+        }
+    }
+}
+
+/**
+ * @brief A demo for add cluster info.
+ */
 void AppTask::Init_cluster_info(void)
 {
     printk("%%%%%%Set_cluster_info!!!!%%%%%%\n");
