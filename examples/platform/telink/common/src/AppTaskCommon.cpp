@@ -142,6 +142,130 @@ public:
 AppCallbacks sCallbacks;
 } // namespace
 
+#if CONFIG_STARTUP_OPTIMIZATE
+volatile bool uart_init_flag           = false;
+const struct device * cluster_para_dev = USER_CLUSTER_PARTITION_DEVICE;
+
+uint32_t cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
+#define CLUSTER_PARA_LEN (sizeof(cluster_startup_para))
+#define USER_CLUSTER_PARTITION_END (USER_CLUSTER_PARTITION_OFFSET + USER_CLUSTER_PARTITION_SIZE)
+
+void set_debug_flag(bool flag)
+{
+    uart_init_flag = flag;
+}
+
+volatile bool read_debug_flag(void)
+{
+    return uart_init_flag;
+}
+
+void clear_cluster_para(void)
+{
+    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+    cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
+}
+
+void init_cluster_partition(void)
+{
+    uint32_t i, cur_addr;
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    for (i = 0;; i++)
+    {
+        cur_addr = USER_CLUSTER_PARTITION_OFFSET + i * CLUSTER_PARA_LEN;
+        if (cur_addr >= USER_CLUSTER_PARTITION_END)
+        {
+            clear_cluster_para();
+            if (uart_init_flag)
+            {
+                printk("Cluster partition is full, clear it and redirect address:0x%x\n", cluster_para_addr);
+            }
+            break;
+        }
+
+        flash_read(cluster_para_dev, cur_addr, &t_cmp, CLUSTER_PARA_LEN);
+        if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff
+        {
+            cluster_para_addr = cur_addr;
+            if (uart_init_flag)
+            {
+                printk("Init cluster partition:0x%x\n", cluster_para_addr);
+            }
+            return;
+        }
+    }
+}
+
+int store_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        if (uart_init_flag)
+        {
+            printk("[ERROR] The data that needs to be stored is NULL\n");
+        }
+        return -1;
+    }
+    if (cluster_para_addr >= (USER_CLUSTER_PARTITION_END - CLUSTER_PARA_LEN))
+    {
+        clear_cluster_para();
+    }
+
+    flash_write(cluster_para_dev, cluster_para_addr, data, CLUSTER_PARA_LEN);
+    cluster_para_addr += CLUSTER_PARA_LEN;
+    return 0;
+}
+
+int read_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        if (uart_init_flag)
+        {
+            printk("[ERROR] The data to be read is NULL\n");
+        }
+        return -1;
+    }
+    if (cluster_para_addr >= USER_CLUSTER_PARTITION_END)
+    {
+        clear_cluster_para();
+        if (uart_init_flag)
+        {
+            printk("[ERROR] The read address exceeds partition, clear it and redirect address:0x%x\n", cluster_para_addr);
+        }
+        return -1;
+    }
+    if ((cluster_para_addr - CLUSTER_PARA_LEN) < USER_CLUSTER_PARTITION_OFFSET)
+    {
+        if (uart_init_flag)
+        {
+            printk("[ERROR] The cluster parition all NULL\n");
+        }
+        return -1;
+    }
+
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    flash_read(cluster_para_dev, (cluster_para_addr - CLUSTER_PARA_LEN), &t_cmp, CLUSTER_PARA_LEN);
+    if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff, error
+    {
+        clear_cluster_para();
+        if (uart_init_flag)
+        {
+            printk("[ERROR] The previous data was not successfully written\n");
+        }
+        return -1;
+    }
+    memcpy(data, &t_cmp, CLUSTER_PARA_LEN);
+    return 0;
+}
+#endif // CONFIG_STARTUP_OPTIMIZATE
+
 #if CONFIG_DUAL_MODE_SWTICH
 void FactoryResetExtHandler(void)
 {
@@ -149,6 +273,10 @@ void FactoryResetExtHandler(void)
     flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
     // Need to erase zb nvs part in factory mode
     flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+#if CONFIG_STARTUP_OPTIMIZATE
+    // Need to erase cluster para parition
+    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+#endif // CONFIG_STARTUP_OPTIMIZATE
 }
 #endif
 
@@ -940,6 +1068,18 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         sBoot_zb = 0;
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+#if CONFIG_STARTUP_OPTIMIZATE
+        cluster_startup_para cluster_para;
+        cluster_para.onoff = light_para.onoff;
+        cluster_para.level = light_para.level;
+        if (store_cluster_para(&cluster_para) != 0)
+        {
+            if (uart_init_flag)
+            {
+                printk("[Commissioning] Fail store startup cluster para\n");
+            }
+        }
+#endif // CONFIG_STARTUP_OPTIMIZATE
         printk("Commissioning complete, set Matter commissionined flag");
     }
     break;

@@ -50,8 +50,8 @@
 &pwm0 {
 	/* On board RGB LEDs */
 	pinctrl-ch0 = <&pwm_ch0_pe7_default>;
-	pinctrl-ch2 = <&pwm_ch1_pd1_default>;
-	pinctrl-ch1 = <&pwm_ch2_pd0_default>;
+	pinctrl-ch1 = <&pwm_ch1_pd1_default>;
+	pinctrl-ch2 = <&pwm_ch2_pd0_default>;
 };
 
 &pinctrl {

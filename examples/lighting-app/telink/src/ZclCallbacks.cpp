@@ -30,6 +30,47 @@ LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 using namespace chip;
 using namespace chip::app::Clusters;
 
+#if CONFIG_STARTUP_OPTIMIZATE
+#include "AppTaskCommon.h"
+
+static uint8_t latest_level = 0;
+#define CLUTER_SOTRE_TIMEOUT 500
+#define TRANSTION_TIMER_INIT_FLAG 0x55
+#define TRANSTION_TIMER_DEINIT_FLAG 0x00
+
+struct k_timer LevelChangeTimer;
+static int timer_period   = CLUTER_SOTRE_TIMEOUT;
+static uint8_t init_timer = TRANSTION_TIMER_INIT_FLAG;
+
+static void LevelTimeoutCallback(struct k_timer * timer)
+{
+    if (!timer)
+    {
+        return;
+    }
+
+    cluster_startup_para cluster_para;
+    if (read_cluster_para(&cluster_para) != 0)
+    {
+        if (uart_init_flag)
+        {
+            printk("[LevelTimeoutCallback] Fail read startup cluster para\n");
+        }
+    }
+    if (cluster_para.level != latest_level)
+    {
+        cluster_para.level = latest_level;
+        if (store_cluster_para(&cluster_para) != 0)
+        {
+            if (uart_init_flag)
+            {
+                printk("[LevelTimeoutCallback] Fail store startup cluster para\n");
+            }
+        }
+    }
+}
+#endif // CONFIG_STARTUP_OPTIMIZATE
+
 void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
                                        uint8_t * value)
 {
@@ -39,6 +80,43 @@ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & 
     AttributeId attributeId = attributePath.mAttributeId;
     ChipLogProgress(Zcl, "========MatterPostAttributeChangeCallback:clusterId=0x%x,AttributeId=0x%x,value=0x%x", clusterId,
                     attributeId, *value);
+
+#if CONFIG_STARTUP_OPTIMIZATE
+    if (init_timer == TRANSTION_TIMER_INIT_FLAG)
+    {
+        k_timer_init(&LevelChangeTimer, &LevelTimeoutCallback, nullptr);
+        init_timer = TRANSTION_TIMER_DEINIT_FLAG;
+    }
+
+    if (clusterId == OnOff::Id && attributeId == OnOff::Attributes::OnOff::Id)
+    {
+        cluster_startup_para cluster_para;
+        if (read_cluster_para(&cluster_para) != 0)
+        {
+            if (uart_init_flag)
+            {
+                printk("[clusterId:OnOff] Fail read startup cluster para\n");
+            }
+        }
+        if (cluster_para.onoff != *value)
+        {
+            cluster_para.onoff = *value;
+            if (store_cluster_para(&cluster_para) != 0)
+            {
+                if (uart_init_flag)
+                {
+                    printk("[clusterId:OnOff] Fail store startup cluster para\n");
+                }
+            }
+        }
+    }
+    else if (clusterId == LevelControl::Id && attributeId == LevelControl::Attributes::CurrentLevel::Id)
+    {
+        latest_level = *value;
+        k_timer_stop(&LevelChangeTimer);
+        k_timer_start(&LevelChangeTimer, K_MSEC(timer_period), K_NO_WAIT);
+    }
+#endif // CONFIG_STARTUP_OPTIMIZATE
 
 #else
     static HsvColor_t hsv;
