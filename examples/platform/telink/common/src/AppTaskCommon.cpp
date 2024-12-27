@@ -337,6 +337,28 @@ void AppTaskCommon::PrintFirmwareInfo(void)
     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
 #endif
 }
+
+#if CONFIG_BUTTON_FACTORY_RESET
+/**
+ * @brief A demo for control factory reset base on button.
+ *
+ * @see It must set 'CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE=y'
+ * in prj.conf if you need to use independent button to control
+ * factory reset. Otherwise, the matrix key will be used by default.
+ */
+void AppTaskCommon::ButtonFactoryReset(void)
+{
+    ButtonManager & buttonManager = ButtonManager::getInstance();
+    buttonManager.addCallback(AppTaskCommon::FactoryResetButtonEventHandler, 0, true);
+
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+    buttonManager.linkBackend(ButtonPool::getInstance());
+#else
+    buttonManager.linkBackend(ButtonMatrix::getInstance());
+#endif // CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+}
+#endif // CONFIG_BUTTON_FACTORY_RESET
+
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;

@@ -175,6 +175,10 @@ protected:
     static void TestOTAHandler(AppEvent * aEvent);
 #endif
 
+#if CONFIG_BUTTON_FACTORY_RESET
+    static void ButtonFactoryReset(void);
+#endif // CONFIG_BUTTON_FACTORY_RESET
+
     static void ExampleActionButtonEventHandler(void);
 
     void SetExampleButtonCallbacks(EventHandler aAction_CB);
