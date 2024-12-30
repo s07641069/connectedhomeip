@@ -34,9 +34,10 @@
 	pwm_pool {
 		compatible = "pwm-leds";
 		out {
-			pwms = <&pwm0 2 PWM_MSEC(20) PWM_POLARITY_NORMAL>,
-					<&pwm0 0 PWM_MSEC(20) PWM_POLARITY_NORMAL>,
-					<&pwm0 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
+			pwms = <&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
+					<&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
+					<&pwm0 1 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
+					<&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
 		};
 	};
 };
@@ -59,4 +60,3 @@
 		pinmux = <B9x_PINMUX_SET(B9x_PORT_D, B9x_PIN_0, B92_FUNC_PWM2)>;
 	};
 };
-
