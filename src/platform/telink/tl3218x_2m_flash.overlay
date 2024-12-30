@@ -9,30 +9,72 @@
 
 		boot_partition: partition@0 {
 			label = "mcuboot";
-			reg = <0x00000000 0xf000>;
+			// The bootloader is optimized to fit within 72 KB (0x12000).
+			// 4 KB (0x1000) are reserved for user data or future expansion.
+			reg = <0x00000000 0x12000>;
 		};
-		slot0_partition: partition@f000 {
+		slot0_partition: partition@12000 {
 			label = "image-0";
-			reg = <0xf000 0xf1000>;
+			// Starting at 0x12000, this partition reserves 912 KB for Matter,
+			// and an additional 248 KB for Zigbee, totaling 0x122000 in size.
+			reg = <0x12000 0x122000>;
 		};
-		factory_partition: partition@100000 {
-			label = "factory-data";
-			reg = <0x100000 0x800>;
-		};
-		factory_rfu_partition: partition@100800 {
-			label = "factory-data-rfu";
-			reg = <0x100800 0x800>;
-		};
-		storage_partition: partition@101000 {
-			label = "storage";
-			reg = <0x101000 0xc000>;
-		};
-		slot1_partition: partition@10d000 {
+		slot1_partition: partition@134000 {
 			label = "image-1";
-			reg = <0x10d000 0xf1000>;
+			// Uses LZMA compression to reduce binary size.
+			// The combined space (920 KB + 248 KB) is reduced to ~60% (~712 KB).
+			// Zigbee NVS data will also reside here.
+			reg = <0x134000 0xb2000>;
 		};
+		storage_partition: partition@1e6000 {
+			label = "storage";
+			// NVS storage for Matter.
+			reg = <0x1e6000 0xb000>;
+		};
+		user_token_partition: partition@1f1000 {
+ 			label = "user-token";
+			// Stores token information. If unused, this partition can be removed.
+			reg = <0x1f1000 0x1000>;
+ 		};
+		user_para_partition: partition@1f2000 {
+ 			label = "user-para";
+			// Stores mode information and key data.
+			reg = <0x1f2000 0x1000>;
+ 		};
+		user_cluster_partition: partition@1f3000 {
+ 			label = "user-cluster";
+			//user_cluster: reserve 4k for user storage cluster para. proc transition part
+			reg = <0x1f3000 0x1000>;
+ 		};
+		stack_extend_partition: partition@1f4000 {
+ 			label = "stack_extend";
+			//reserved for matter stack extend proc，reserve 16k for extend.
+			reg = <0x1f4000 0x4000>;
+ 		};
+		secure_partition: partition@1f8000 {
+ 			label = "secure";
+			// Secure area reserved for secure boot.
+			// If not in use, it may be repurposed.
+			reg = <0x1f8000 0x1000>;
+ 		};
+		factory_partition: partition@1f9000 {
+			label = "factory-data";
+			// factory data
+			reg = <0x1f9000 0x1000>;
+		};
+		dac_keypair_partition: partition@1f9800 {
+			label = "dac-keypair";
+			// Stores DAC certificate and key pair (2 KB).
+			reg = <0x1f9800 0x800>;
+		};
+		user_rfu_partition: partition@1fa000 {
+ 			label = "user_rfu";
+			// Reserves 16 KB for user-specific extensions.
+			reg = <0x1fa000 0x4000>;
+ 		};
 		vendor_partition: partition@1fe000 {
 			label = "vendor-data";
+			// Holds MAC, ADC, or other vendor-specific data (8 KB).
 			reg = <0x1fe000 0x2000>;
 		};
 	};

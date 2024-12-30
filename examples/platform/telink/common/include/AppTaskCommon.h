@@ -37,6 +37,34 @@
 
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 
+#if CONFIG_DUAL_MODE_SWTICH
+#include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
+#include <zephyr/sys/reboot.h>
+
+#define USER_INIT_VAL 0xff
+#define USER_ZB_SW_VAL 0xaa
+#define USER_MATTER_PAIR_VAL 0x55
+#define USER_PARA_MAC_OFFSET 0x100
+#define USER_PARTITION user_para_partition
+#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
+#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
+#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
+
+typedef struct
+{
+    uint8_t val;
+    uint8_t rfu;
+    uint8_t onoff;
+    uint8_t lightness;
+} user_para_t;
+
+extern user_para_t user_para;
+extern uint8_t para_lightness;
+extern uint8_t sBoot_zb;
+#endif
+
 #include <cstdint>
 
 using namespace ::chip;
@@ -100,6 +128,7 @@ protected:
     virtual void LinkButtons(ButtonManager & buttonManager);
 
     static void FactoryResetTimerTimeoutCallback(k_timer * timer);
+    static void DnssTimerTimeoutCallback(k_timer * timer);
     static void FactoryResetTimerEventHandler(AppEvent * aEvent);
     static void FactoryResetButtonEventHandler(void);
     static void FactoryResetHandler(AppEvent * aEvent);
