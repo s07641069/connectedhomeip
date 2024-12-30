@@ -43,9 +43,25 @@
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 
+#if CONFIG_SOC_RISCV_TELINK_B92
+
+#define ZB_NVS_PARTITION zigbee_partition
+#define ZB_NVS_PARTITION_DEVICE FIXED_PARTITION_DEVICE(ZB_NVS_PARTITION)
+#define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
+#define ZB_NVS_SEC_SIZE FIXED_PARTITION_SIZE(ZB_NVS_PARTITION)
+
+#elif CONFIG_SOC_RISCV_TELINK_TL321X
+#define ZB_NVS_PARTITION slot1_partition
+#define ZB_NVS_PARTITION_DEVICE FIXED_PARTITION_DEVICE(ZB_NVS_PARTITION)
+#define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
+/* zb para locate in the slot1 , and it will cost 104k size in slot1 */
+#define ZB_NVS_SEC_SIZE (104 * 1024)
+#endif
+
 #define USER_INIT_VAL 0xff
 #define USER_ZB_SW_VAL 0xaa
 #define USER_MATTER_PAIR_VAL 0x55
+#define USER_MATTER_BACK_ZB 0xa0 // only commisiion fail will back to zb
 #define USER_PARA_MAC_OFFSET 0x100
 #define USER_PARTITION user_para_partition
 #define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
@@ -55,11 +71,24 @@
 typedef struct
 {
     uint8_t val;
-    uint8_t rfu;
-    uint8_t onoff;
-    uint8_t lightness;
+    uint8_t on_net;
 } user_para_t;
 
+typedef struct
+{
+    uint8_t onoff;
+    uint8_t level;
+    uint16_t color_temp_mireds;
+    uint16_t currentx;
+    uint16_t currenty;
+    uint16_t enhanced_current_hue;
+    uint16_t onoff_transition;
+    uint8_t cur_hue;
+    uint8_t cur_saturation;
+    uint8_t color_mode;
+} light_para_t;
+
+extern light_para_t light_para;
 extern user_para_t user_para;
 extern uint8_t para_lightness;
 extern uint8_t sBoot_zb;

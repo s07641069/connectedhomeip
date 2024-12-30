@@ -22,6 +22,9 @@
 #include "ColorFormat.h"
 #include "LEDManager.h"
 #include "PWMManager.h"
+#include <zephyr/device.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/kernel.h>
 
 #include <app-common/zap-generated/attributes/Accessors.h>
 
@@ -55,22 +58,92 @@ void AppTask::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
+#if CONFIG_CUSTOMER_MODE
+void i2c_demo_proc()
+{
+    const uint8_t tx_buf[23] = { 0xc0, 0x63, 0x3f, 0x63, 0x63, 0x63, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00,
+                                 0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2b, 0x06, 0xbe };
+    /* add the i2c module here */
+    printk("i2c demo start \n.");
+    uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_FAST) | I2C_MODE_CONTROLLER;
+    /* get i2c device */
+    int rc;
+    const struct i2c_dt_spec i2c = I2C_DT_SPEC_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(ledcontrol_i2c));
+    if (!device_is_ready(i2c.bus))
+    {
+        printf("Device %s is not ready\n", i2c.bus->name);
+        return;
+    }
+    rc = i2c_configure(i2c.bus, i2c_cfg);
+    if (rc != 0)
+    {
+        printf("Failed to configure i2c device\n");
+        return;
+    }
+    i2c_write(i2c.bus, tx_buf + 1, sizeof(tx_buf) - 1, tx_buf[0]);
+    printk("i2c demo stop ,finish transfer\n");
+}
+
+void AppTask::Init_cluster_info(void)
+{
+    printk("%%%%%%Set_cluster_info!!!!%%%%%%\n");
+    light_para_t * p_para = &light_para;
+    Protocols::InteractionModel::Status status;
+    printk("%%%%%%Set_cluster_info:p_para->onoff:%d!!!!%%%%%%\n", p_para->onoff);
+    status = Clusters::OnOff::Attributes::OnOff::Set(1, p_para->onoff);
+    // Set brightness value
+    printk("%%%%%%Set_cluster_info:p_para->level:%d!!!!%%%%%%\n", p_para->level);
+    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kExampleEndpointId, p_para->level);
+    // Set ColorMode value
+    /*
+    printk("%%%%%%Set_cluster_info:p_para->color_mode:%d!!!!%%%%%%\n",p_para->color_mode);
+    status = Clusters::ColorControl::Attributes::ColorMode::Set(1, p_para->color_mode);
+    */
+    // Set ColorTemperatureMireds value
+    status = Clusters::ColorControl::Attributes::ColorTemperatureMireds::Set(1, p_para->color_temp_mireds);
+
+    // Set CurrentX value
+    status = Clusters::ColorControl::Attributes::CurrentX::Set(1, p_para->currentx);
+
+    // Set CurrentY value
+    status = Clusters::ColorControl::Attributes::CurrentY::Set(1, p_para->currenty);
+
+    // Set EnhancedCurrentHue value
+    status = Clusters::ColorControl::Attributes::EnhancedCurrentHue::Set(1, p_para->enhanced_current_hue);
+
+    // Set CurrentHue value
+    status = Clusters::ColorControl::Attributes::CurrentHue::Set(1, p_para->cur_hue);
+
+    // Set CurrentSaturation value
+    status = Clusters::ColorControl::Attributes::CurrentSaturation::Set(1, p_para->cur_saturation);
+
+    // Set OnOffTransitionTime value
+    status = Clusters::LevelControl::Attributes::OnOffTransitionTime::Set(1, p_para->onoff_transition);
+}
+#endif
+
 CHIP_ERROR AppTask::Init(void)
 {
     SetExampleButtonCallbacks(LightingActionEventHandler);
     InitCommonParts();
 
-#if CONFIG_DUAL_MODE_SWTICH
-    if (sBoot_zb)
+#if CONFIG_CUSTOMER_MODE
+    if (user_para.val == USER_ZB_SW_VAL)
     {
         /* Switching from TouchLink (Zigbee) to Matter. Restore previous states. */
-        sfixture_on = user_para.onoff;
-        sBrightness = user_para.lightness;
-        sAppTask.UpdateClusterState();
-        printk("Matter: Restored Zigbee On/Off and brightness states.\n");
     }
-#endif
+    else if (user_para.val == USER_MATTER_PAIR_VAL)
+    {
+        /* start from matter , add cluster info demo here*/
+        Init_cluster_info();
+    }
+    else
+    {
+        /* start from matter , but without zigbee fw*/
+    }
+    /* if need , can call i2c_demo_proc here to see light works or not*/
 
+#else
     Protocols::InteractionModel::Status status;
 
     app::DataModel::Nullable<uint8_t> brightness;
@@ -91,7 +164,7 @@ CHIP_ERROR AppTask::Init(void)
         // Set actual state to stored before reboot
         SetInitiateAction(storedValue ? ON_ACTION : OFF_ACTION, static_cast<int32_t>(AppEvent::kEventType_DeviceAction), nullptr);
     }
-
+#endif
     return CHIP_NO_ERROR;
 }
 
