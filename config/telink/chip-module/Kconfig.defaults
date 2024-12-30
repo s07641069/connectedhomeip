@@ -84,7 +84,7 @@ config HEAP_MEM_POOL_SIZE
 
 # need to enlarge to 21000 , to pass TC_RR_1.1
 config COMMON_LIBC_MALLOC_ARENA_SIZE
-    default 21000 if SOC_RISCV_TELINK_TL321X || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+    default 14336 if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
     default 12288
 
 config NET_IPV6_MLD
@@ -324,10 +324,24 @@ config CHIP_ENABLE_ICD_SUPPORT
 
 
 config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
-    bool "Skip the first backoff during sending data request"
-    depends on CHIP_ENABLE_ICD_SUPPORT
-    default n if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
-    default n
+	bool "Skip the first backoff during sending data request"
+	depends on CHIP_ENABLE_ICD_SUPPORT
+	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+	default n
+
+config ZEPHYR_NETBUFFER_OPTIMIZATION
+	bool "Move the net buffer from iram to dram"
+	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+	default n
+	help
+	  This option enables the net buffer from iram to dram.
+
+config IEEE802154_TLX_OPTIMIZATION
+	bool "optimize the rf performance for tlx"
+	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION
+	default n
+	help
+	  optimize the rf performance for tlx.
 
 config OPENTHREAD_THREAD_STACK_SIZE
     default 2400 if PM || SOC_RISCV_TELINK_TL321X
