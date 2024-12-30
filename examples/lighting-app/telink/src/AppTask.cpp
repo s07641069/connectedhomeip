@@ -60,6 +60,17 @@ CHIP_ERROR AppTask::Init(void)
     SetExampleButtonCallbacks(LightingActionEventHandler);
     InitCommonParts();
 
+#if CONFIG_DUAL_MODE_SWTICH
+    if (sBoot_zb)
+    {
+        /* Switching from TouchLink (Zigbee) to Matter. Restore previous states. */
+        sfixture_on = user_para.onoff;
+        sBrightness = user_para.lightness;
+        sAppTask.UpdateClusterState();
+        printk("Matter: Restored Zigbee On/Off and brightness states.\n");
+    }
+#endif
+
     Protocols::InteractionModel::Status status;
 
     app::DataModel::Nullable<uint8_t> brightness;
