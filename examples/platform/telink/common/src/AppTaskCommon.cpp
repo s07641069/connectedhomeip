@@ -50,6 +50,12 @@
 #include <zephyr/fs/nvs.h>
 #include <zephyr/settings/settings.h>
 
+#if CONFIG_DUAL_MODE_SWTICH
+uint8_t sBoot_zb = 0;
+user_para_t user_para;
+uint8_t para_lightness = 0;
+#endif
+
 using namespace chip::app;
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
@@ -66,6 +72,12 @@ constexpr uint32_t kIdentifyFinishOnRateMs      = 950;
 constexpr uint32_t kIdentifyFinishOffRateMs     = 50;
 constexpr uint32_t kIdentifyChannelChangeRateMs = 1000;
 constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
+
+#if CONFIG_DUAL_MODE_SWTICH
+const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+constexpr int kDnssTimeout           = 60000;
+static k_timer sDnssTimer;
+#endif
 
 #if APP_SET_NETWORK_COMM_ENDPOINT_SEC
 constexpr EndpointId kNetworkCommissioningEndpointSecondary = 0xFFFE;
@@ -126,6 +138,14 @@ public:
 AppCallbacks sCallbacks;
 } // namespace
 
+#if CONFIG_DUAL_MODE_SWTICH
+void FactoryResetExtHandler(void)
+{
+    // Erase the user parameters partition to reset mode settings
+    flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+}
+#endif
+
 class AppFabricTableDelegate : public FabricTable::Delegate
 {
     void OnFabricRemoved(const FabricTable & fabricTable, FabricIndex fabricIndex)
@@ -159,6 +179,11 @@ class AppFabricTableDelegate : public FabricTable::Delegate
                 {
                     ChipLogError(DeviceLayer, "Storage clearance failed: %d", status);
                 }
+#if CONFIG_DUAL_MODE_SWTICH
+                printk("Erasing user parameters and resetting to Zigbee mode");
+                FactoryResetExtHandler();
+                chip::Server::GetInstance().ScheduleFactoryReset();
+#endif
             }
         }
     }
@@ -206,8 +231,54 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
+#if CONFIG_DUAL_MODE_SWTICH
+void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
+{
+    if (!timer)
+    {
+        return;
+    }
+    /*
+     * If Dnss initialization takes longer than 60 seconds,
+     * the device will reboot and revert to Zigbee mode.
+     */
+    printk("Matter: DnssTimer expired. Rebooting...\n");
+    sys_reboot(0);
+}
+#endif
+
 CHIP_ERROR AppTaskCommon::StartApp(void)
 {
+
+#if CONFIG_DUAL_MODE_SWTICH
+    /*
+     * If the device boots from Zigbee, set a flag and adjust user parameters.
+     * Then start a timer to ensure Dnss initialization completes within
+     * a given timeframe.
+     */
+    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
+    if (user_para.val == USER_ZB_SW_VAL)
+    {
+        sBoot_zb = 1;
+        /* Ensure brightness is at least 2 to avoid display issues on HomePod Mini */
+        if (user_para.lightness < 2)
+        {
+            user_para.lightness = 2;
+        }
+        /*
+         * Pass the brightness value to the initialization code
+         * to avoid gaps in PWM pool initialization.
+         */
+        if (user_para.onoff)
+        {
+            para_lightness = user_para.lightness;
+        }
+        k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
+        k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
+        printk("Matter: Started DNS protection timer. user_para=%x\n", *(int *) (&user_para));
+    }
+#endif
+
     CHIP_ERROR err = GetAppTask().Init();
 
     if (err != CHIP_NO_ERROR)
@@ -588,6 +659,10 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         k_timer_stop(&sFactoryResetTimer);
         sFactoryResetCntr = 0;
 
+#if CONFIG_DUAL_MODE_SWTICH
+        printk("Factory reset triggered by button; reverting to Zigbee mode\n");
+        FactoryResetExtHandler();
+#endif
         chip::Server::GetInstance().ScheduleFactoryReset();
     }
 }
@@ -745,6 +820,28 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
 #endif
         break;
+#if CONFIG_DUAL_MODE_SWTICH
+    case DeviceEventType::kCommissioningComplete: {
+        uint8_t val = USER_MATTER_PAIR_VAL;
+        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+        printk("Commissioning complete; Matter commissioned flag set.\n");
+    }
+    break;
+    case DeviceEventType::kFailSafeTimerExpired:
+        /* Reset to Zigbee mode if commissioning fails */
+        if (sBoot_zb)
+        {
+            printk("FailSafeTimer expired; Matter commissioning failed. Rebooting to Zigbee mode...\n");
+            sys_reboot(0);
+        }
+        else
+        {
+            printk("FailSafeTimer expired; Matter commissioning failed.\n");
+        }
+        break;
+#endif
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
@@ -756,6 +853,14 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
             OtaConfirmNewImage();
 #endif /* CONFIG_BOOTLOADER_MCUBOOT */
 #if CONFIG_CHIP_OTA_REQUESTOR
+        }
+#endif
+
+#if CONFIG_DUAL_MODE_SWTICH
+        if (sBoot_zb)
+        {
+            k_timer_stop(&sDnssTimer);
+            printk("DnssTimer stopped; DNS-SD has been initialized.\n");
         }
 #endif
         break;
