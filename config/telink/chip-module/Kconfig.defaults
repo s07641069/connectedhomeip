@@ -286,6 +286,14 @@ config I2C_LED
     default n
     select I2C
 
+config USER_TOKEN
+    bool "Generate the user token image"
+    default n
+
+config STARTUP_OPTIMIZATION
+    bool "Optimize startup speed"
+    default n
+
 # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
 # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
 config SETTINGS_NVS_SECTOR_SIZE_MULT
