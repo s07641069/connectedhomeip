@@ -45,18 +45,18 @@
 &pwm0 {
 	/* On board RGB LEDs */
 	pinctrl-ch0 = <&pwm_ch0_pb1_default>;
-	pinctrl-ch2 = <&pwm_ch1_pb2_default>;
-	pinctrl-ch1 = <&pwm_ch2_pb0_default>;
+	pinctrl-ch1 = <&pwm_ch1_pb0_default>;
+	pinctrl-ch2 = <&pwm_ch2_pb2_default>;
 };
 
 &pinctrl {
 	pwm_ch0_pb1_default: pwm_ch0_pb1_default {
 		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_1, TL321X_FUNC_PWM0)>;
 	};
-	pwm_ch1_pb2_default: pwm_ch1_pb2_default {
-		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_2, TL321X_FUNC_PWM1)>;
+	pwm_ch1_pb0_default: pwm_ch1_pb0_default {
+		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_0, TL321X_FUNC_PWM1)>;
 	};
-	pwm_ch2_pb0_default: pwm_ch2_pb0_default {
-		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_0, TL321X_FUNC_PWM2)>;
+	pwm_ch2_pb2_default: pwm_ch2_pb2_default {
+		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_2, TL321X_FUNC_PWM2)>;
 	};
 };
