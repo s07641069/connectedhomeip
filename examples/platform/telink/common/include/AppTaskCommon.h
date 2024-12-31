@@ -94,6 +94,28 @@ extern uint8_t para_lightness;
 extern uint8_t sBoot_zb;
 #endif
 
+#if CONFIG_STARTUP_OPTIMIZATION
+#define USER_CLUSTER_PARTITION user_cluster_partition
+#define USER_CLUSTER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_CLUSTER_PARTITION)
+#define USER_CLUSTER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_CLUSTER_PARTITION)
+#define USER_CLUSTER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_CLUSTER_PARTITION)
+
+typedef struct
+{
+    uint8_t onoff;
+    uint8_t level;
+    uint8_t rfu[30];
+} cluster_startup_para;
+
+extern volatile bool uart_init_flag;
+
+void set_debug_flag(bool flag);
+volatile bool read_debug_flag(void);
+void init_cluster_partition(void);
+int store_cluster_para(cluster_startup_para * data);
+int read_cluster_para(cluster_startup_para * data);
+#endif // CONFIG_STARTUP_OPTIMIZATION
+
 #include <cstdint>
 
 using namespace ::chip;

@@ -142,8 +142,130 @@ void matter_nvs_raw_demo(void)
 
 #endif
 
+#if CONFIG_STARTUP_OPTIMIZATION
+#include "AppTaskCommon.h"
+#include <PWMManager.h>
+#include <pwm.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/drivers/pwm.h>
+#include <zephyr/storage/flash_map.h>
+#include <zephyr_pwm_pool.h>
+
+struct k_timer PwmChangeTimer;
+static PWM_POOL_DEFINE(pwm_pool);
+struct pwm_pool_data * pwm_data             = &pwm_pool;
+static const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+
+/**
+ * @brief Parameters which is used to PWM gradual change
+ *
+ * @see The follow are just a basic configuration,
+ * and it is only open the blue light. Users can make
+ * modifications according to actual situation.
+ *
+ * @param PWM_CHANGE_TOTAL_TIME_MS Total duration time of gradual change
+ * @param PWM_CHANGE_PRE_STEP_MS The interval for PWM gradual change
+ *
+ */
+#define ENUM_BLUE (PwmManager::EAppPwm_Blue)
+/* EAppPwm_Blue enum is 4, corresponds to channel 2 in overlay */
+#define PWM_CHANNEL_BLUE ((uint32_t) ENUM_BLUE - 2)
+#define PWM_CHANNEL_TO_BIT(CHANNEL) ((CHANNEL == 0) ? FLD_PWM0_EN : BIT(CHANNEL))
+#define BIT_PWM_CHANNEL_BLUE PWM_CHANNEL_TO_BIT(PWM_CHANNEL_BLUE)
+
+#define PWM_CHANGE_TOTAL_TIME_MS (400U)
+#define PWM_CHANGE_PRE_STEP_MS (8U)
+/* The maximum count of PWM gradual change */
+#define PWM_STEP_CNT_MAX (PWM_CHANGE_TOTAL_TIME_MS / PWM_CHANGE_PRE_STEP_MS)
+/* The calculation of the pulse cycle during PWM gradual change */
+#define PWM_PULSE_CYCLE(period, level, cnt) ((period / (255 * PWM_STEP_CNT_MAX)) * (level) * (cnt))
+
+static uint32_t cnt          = 1;
+static uint8_t cur_level     = 0;
+static uint32_t timer_period = PWM_CHANGE_PRE_STEP_MS;
+
+static void init_startup_para(void)
+{
+    cluster_startup_para light_cluster_para;
+    if (read_cluster_para(&light_cluster_para) != 0)
+    {
+        if (uart_init_flag)
+        {
+            printk("Fail read cluster parameter when execute init_startup_para\n");
+        }
+    }
+
+    if (light_cluster_para.onoff == 1)
+    {
+        cur_level = light_cluster_para.level;
+    }
+    else
+    { // OFF || ERROR
+        cur_level    = 0;
+        timer_period = 0;
+    }
+}
+
+static void PwmSetTimeoutCallback(struct k_timer * timer)
+{
+    if (!timer)
+    {
+        return;
+    }
+
+    pwm_set_dt(&pwm_data->out[ENUM_BLUE], pwm_data->out[ENUM_BLUE].period,
+               PWM_PULSE_CYCLE(pwm_data->out[ENUM_BLUE].period, cur_level, cnt));
+    pwm_set_start((pwm_en_e) (BIT_PWM_CHANNEL_BLUE));
+
+    if (cnt >= PWM_STEP_CNT_MAX)
+    {
+        k_timer_stop(timer);
+        if (uart_init_flag)
+        {
+            printk("The current pulse cycle after gradual change: %d\n",
+                   PWM_PULSE_CYCLE(pwm_data->out[ENUM_BLUE].period, cur_level, cnt));
+        }
+    }
+
+    cnt++;
+}
+#endif // CONFIG_STARTUP_OPTIMIZATION
+
+void early_proc_cluster(void)
+{
+#if CONFIG_STARTUP_OPTIMIZATION
+    unsigned char val;
+    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+    if (val == USER_MATTER_PAIR_VAL)
+    {
+        init_cluster_partition();
+        init_startup_para();
+        if (timer_period != 0)
+        {
+            k_timer_init(&PwmChangeTimer, &PwmSetTimeoutCallback, nullptr);
+            k_timer_start(&PwmChangeTimer, K_MSEC(timer_period), K_MSEC(timer_period));
+        }
+    }
+#endif // CONFIG_STARTUP_OPTIMIZATION
+}
+
+typedef void (*p_early_proc)(void);
+p_early_proc early_proc_cluster_f = early_proc_cluster;
+
 int main(void)
 {
+#if CONFIG_STARTUP_OPTIMIZATION
+    /**
+     * @brief Control log output for startup optimizate module.
+     *
+     * @see It only takes effect when the startup optimizate
+     * module is opened. Note than the flag can only be set
+     * to true after the execution of the main function.
+     */
+    set_debug_flag(true);
+    printk("cur_level:%d, timer_period:%d\n", cur_level, timer_period);
+#endif // CONFIG_STARTUP_OPTIMIZATION
+
 #if defined(CONFIG_USB_DEVICE_STACK) && !defined(CONFIG_CHIP_PW_RPC)
     usb_enable(NULL);
 #endif /* CONFIG_USB_DEVICE_STACK */
