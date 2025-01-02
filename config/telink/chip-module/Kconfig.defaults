@@ -271,6 +271,11 @@ config COMPRESS_LZMA
     default y if SOC_RISCV_TELINK_TL321X
     default n
 
+config CUSTOMER_MODE
+    bool "control the demo code"
+    default n if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
+    default n
+
 config DUAL_MODE_SWTICH
     bool "Control Dual-Mode Switching"
     default y if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
