@@ -48,13 +48,15 @@
 #include <app/clusters/ota-requestor/OTARequestorInterface.h>
 #endif
 
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <zephyr/fs/nvs.h>
 #include <zephyr/settings/settings.h>
 
 #if CONFIG_DUAL_MODE_SWTICH
-uint8_t sBoot_zb = 0;
-user_para_t user_para;
+uint8_t sBoot_zb       = 0;
 uint8_t para_lightness = 0;
+user_para_t user_para;
+light_para_t light_para;
 #endif
 
 using namespace chip::app;
@@ -76,6 +78,7 @@ constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
 
 #if CONFIG_DUAL_MODE_SWTICH
 const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
 constexpr int kDnssTimeout           = 60000;
 static k_timer sDnssTimer;
 #endif
@@ -144,6 +147,8 @@ void FactoryResetExtHandler(void)
 {
     // Erase the user parameters partition to reset mode settings
     flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+    // Erase ZigBee NVS data during factory reset
+    flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
 }
 #endif
 
@@ -233,6 +238,14 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
 #if CONFIG_DUAL_MODE_SWTICH
+
+void SwitchBackToZigbee()
+{
+    uint8_t switch_flag = USER_MATTER_BACK_ZB;
+    flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
+    sys_reboot(0);
+}
+
 void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
 {
     if (!timer)
@@ -243,8 +256,11 @@ void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
      * If Dnss initialization takes longer than 60 seconds,
      * the device will reboot and revert to Zigbee mode.
      */
-    printk("Matter: DnssTimer expired. Rebooting...\n");
-    sys_reboot(0);
+    if (sBoot_zb)
+    {
+        printk("Matter: DnssTimer expired. Rebooting...\n");
+        SwitchBackToZigbee();
+    }
 }
 #endif
 
@@ -258,25 +274,28 @@ CHIP_ERROR AppTaskCommon::StartApp(void)
      * a given timeframe.
      */
     flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
+    /* If booting from Zigbee mode, set a flag and clean deprecated parameter sectors. */
     if (user_para.val == USER_ZB_SW_VAL)
     {
         sBoot_zb = 1;
+        /* If switching from ZigBee mode, get all existing clusters information. */
+        flash_read(flash_para_dev, USER_PARTITION_OFFSET + sizeof(user_para), &light_para, sizeof(light_para));
         /* Ensure brightness is at least 2 to avoid display issues on HomePod Mini */
-        if (user_para.lightness < 2)
+        if (light_para.level < 2)
         {
-            user_para.lightness = 2;
+            light_para.level = 2;
         }
         /*
          * Pass the brightness value to the initialization code
          * to avoid gaps in PWM pool initialization.
          */
-        if (user_para.onoff)
+        if (light_para.onoff)
         {
-            para_lightness = user_para.lightness;
+            para_lightness = light_para.level;
         }
         k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
         k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
-        printk("Matter: Started DNS protection timer. user_para=%x\n", *(int *) (&user_para));
+        printk("Matter: Started DNS protection timer.");
     }
 #endif
 
@@ -335,12 +354,17 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 
     PrintFirmwareInfo();
 
+/* Leave empty condition clause for development on customers boards */
+#if CONFIG_CUSTOMER_MODE
+
+#else
     InitLeds();
     UpdateStatusLED();
 
     InitPwms();
 
     InitButtons();
+#endif
 
     // Initialize function button timer
     k_timer_init(&sFactoryResetTimer, &AppTask::FactoryResetTimerTimeoutCallback, nullptr);
@@ -825,6 +849,24 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_DUAL_MODE_SWTICH
     case DeviceEventType::kCommissioningComplete: {
         uint8_t val = USER_MATTER_PAIR_VAL;
+#if CONFIG_CUSTOMER_MODE
+        /* need to add here to update the cluster information , only in the zb switch and touchlink is paired*/
+        if (user_para.val == USER_ZB_SW_VAL && user_para.on_net)
+        {
+            Protocols::InteractionModel::Status status;
+            /* Update all cluster information, only if switching from ZigBee mode and the touchlink is paired. */
+            status = Clusters::OnOff::Attributes::OnOff::Set(kExampleEndpointId, light_para.onoff);
+            if (status != Protocols::InteractionModel::Status::Success)
+            {
+                LOG_ERR("Update OnOff fail: %x", to_underlying(status));
+            }
+            status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kExampleEndpointId, light_para.level);
+            {
+                LOG_ERR("Update brightness fail: %x", to_underlying(status));
+            }
+        }
+#endif
+        sBoot_zb = 0;
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
         printk("Commissioning complete; Matter commissioned flag set.\n");
@@ -835,7 +877,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         if (sBoot_zb)
         {
             printk("FailSafeTimer expired; Matter commissioning failed. Rebooting to Zigbee mode...\n");
-            sys_reboot(0);
+            SwitchBackToZigbee();
         }
         else
         {

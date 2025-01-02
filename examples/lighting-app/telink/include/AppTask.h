@@ -42,6 +42,8 @@ public:
     bool IsTurnedOn() const;
     void SetInitiateAction(Fixture_Action aAction, int32_t aActor, uint8_t * value);
     void UpdateClusterState(void);
+    void Init_cluster_info(void);
+    void Set_cluster_info(void);
 
 private:
     friend AppTask & GetAppTask(void);
