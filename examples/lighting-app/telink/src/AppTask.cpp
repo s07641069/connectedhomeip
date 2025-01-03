@@ -23,6 +23,8 @@
 #include "LEDManager.h"
 #include "PWMManager.h"
 #include <zephyr/device.h>
+#include <zephyr/devicetree.h>
+#include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
 
@@ -59,8 +61,15 @@ void AppTask::PowerOnFactoryReset(void)
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
 #if CONFIG_CUSTOMER_MODE
-void i2c_demo_proc()
+/**
+ * @brief Use I2C to transfer data.
+ *
+ * @see CONFIG_I2C=y must be set in prj.conf
+ * when you need to use I2C module.
+ */
+void i2c_demo_proc(void)
 {
+#if CONFIG_I2C
     const uint8_t tx_buf[23] = { 0xc0, 0x63, 0x3f, 0x63, 0x63, 0x63, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00,
                                  0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2b, 0x06, 0xbe };
     /* add the i2c module here */
@@ -82,8 +91,96 @@ void i2c_demo_proc()
     }
     i2c_write(i2c.bus, tx_buf + 1, sizeof(tx_buf) - 1, tx_buf[0]);
     printk("i2c demo stop ,finish transfer\n");
+#endif // CONFIG_I2C
 }
 
+/**
+ * @brief Use ADC to sampling.
+ *
+ * @see CONFIG_ADC=y must be set in prj.conf
+ * when you need to use ADC module.
+ */
+
+/* Data of ADC io-channels specified in devicetree. */
+#define DT_SPEC_AND_COMMA(node_id, prop, idx) ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
+
+void adc_demo_proc(void)
+{
+#if CONFIG_ADC
+    static const struct adc_dt_spec adc_channels[] = { DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA) };
+
+    /* Define ADC data structure. */
+    uint16_t buf;
+    struct adc_sequence sequence = {
+        .buffer = &buf,
+        /* buffer size in bytes, not number of samples */
+        .buffer_size = sizeof(buf),
+    };
+
+    int err = 0;
+
+    /* Configure channels individually prior to sampling. */
+    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
+    {
+        if (!device_is_ready(adc_channels[i].dev))
+        {
+            printf("ADC controller device %s not ready\n", adc_channels[i].dev->name);
+            return;
+        }
+        err = adc_channel_setup_dt(&adc_channels[i]);
+        if (err < 0)
+        {
+            printf("Could not setup channel #%d (%d)\n", i, err);
+            return;
+        }
+    }
+
+    /* ADC sampling. */
+    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
+    {
+        printf("- %s, channel %d: ", adc_channels[i].dev->name, adc_channels[i].channel_id);
+        (void) adc_sequence_init_dt(&adc_channels[i], &sequence);
+        err = adc_read(adc_channels[i].dev, &sequence);
+        if (err < 0)
+        {
+            printf("Could not read (%d)\n", err);
+            continue;
+        }
+
+        int32_t val_mv = 0;
+
+        /*
+         * If using differential mode, the 16 bit value
+         * in the ADC sample buffer should be a signed 2's
+         * complement value.
+         */
+        if (adc_channels[i].channel_cfg.differential)
+        {
+            val_mv = (int32_t) ((int16_t) buf);
+        }
+        else
+        {
+            val_mv = (int32_t) buf;
+        }
+        printf("%" PRId32, val_mv);
+
+        /* conversion to mV may not be supported, skip if not */
+        err = adc_raw_to_millivolts_dt(&adc_channels[i], &val_mv);
+        if (err < 0)
+        {
+            printf(" (value in mV not available)\n");
+        }
+        else
+        {
+            printf(" = %" PRId32 " mV\n", val_mv);
+        }
+    }
+#endif // CONFIG_ADC
+}
+
+/**
+ * @brief Set cluster info.
+ */
 #define MATTER_COLORMODE_ENABLE 0
 
 void AppTask::Set_cluster_info(void)
@@ -119,6 +216,9 @@ void AppTask::Set_cluster_info(void)
     status = Clusters::LevelControl::Attributes::OnOffTransitionTime::Set(1, p_para->onoff_transition);
 }
 
+/**
+ * @brief Get cluster info.
+ */
 void AppTask::Init_cluster_info(void)
 {
     light_para_t * p_para = &light_para;
@@ -160,8 +260,7 @@ void AppTask::Init_cluster_info(void)
     // Read OnOffTransitionTime value
     status = Clusters::LevelControl::Attributes::OnOffTransitionTime::Get(1, &(p_para->onoff_transition));
 }
-
-#endif
+#endif // CONFIG_CUSTOMER_MODE
 
 CHIP_ERROR AppTask::Init(void)
 {
