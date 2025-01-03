@@ -120,6 +120,12 @@
 #define CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE 0
 #endif
 
+#ifdef CONFIG_EXPOSE_CHIPID_VIA_BLE
+#define CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE CONFIG_EXPOSE_CHIPID_VIA_BLE
+#else
+#define CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE 0
+#endif
+
 // ========== Platform-specific Configuration =========
 
 // These are configuration options that are unique to Zephyr platforms.
