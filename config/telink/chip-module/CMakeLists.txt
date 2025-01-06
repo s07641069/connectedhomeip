@@ -213,4 +213,16 @@ if (CONFIG_CHIP_FACTORY_DATA_BUILD)
     telink_generate_factory_data()
 endif()
 
+# ==============================================================================
+# Define 'build_user_token' target for building the user token image
+# ==============================================================================
+
+if(DEFINED CONFIG_USER_TOKEN AND CONFIG_USER_TOKEN STREQUAL "y")
+    add_custom_target(build_user_token ALL
+        COMMAND ${Python3_EXECUTABLE} ${CHIP_ROOT}/examples/lighting-app/telink/process_token.py
+        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
+    )
+    add_dependencies(build_user_token ${ZEPHYR_FINAL_EXECUTABLE})
+endif()
+
 endif() # CONFIG_CHIP
