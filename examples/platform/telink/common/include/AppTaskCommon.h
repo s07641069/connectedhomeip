@@ -194,11 +194,16 @@ protected:
     static void TestOTAHandler(AppEvent * aEvent);
 #endif
 
+#if CONFIG_BUTTON_FACTORY_RESET
+    static void ButtonFactoryReset(void);
+#endif // CONFIG_BUTTON_FACTORY_RESET
+
     static void ExampleActionButtonEventHandler(void);
 
     void SetExampleButtonCallbacks(EventHandler aAction_CB);
     EventHandler ExampleActionEventHandler;
 
+    static void OtaEventsHandler(const chip::DeviceLayer::ChipDeviceEvent * event);
     static void ChipEventHandler(const chip::DeviceLayer::ChipDeviceEvent * event, intptr_t arg);
 
     static void UpdateStatusLED(void);

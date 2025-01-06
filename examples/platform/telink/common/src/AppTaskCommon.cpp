@@ -18,6 +18,7 @@
 
 #include "AppTaskCommon.h"
 #include "AppTask.h"
+#include <analog.h>
 
 #include "BLEManagerImpl.h"
 #include "ButtonManager.h"
@@ -475,6 +476,58 @@ void AppTaskCommon::PrintFirmwareInfo(void)
     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
 #endif
 }
+
+/**
+ * @brief Use analog register to store OTA status.
+ *
+ * @see There are many OTA callback events in
+ * AppTaskCommon::OtaEventsHandler, please embed it as needed.
+ */
+#if CONFIG_STORAGE_OTA_STATUS
+#if CONFIG_SOC_RISCV_TELINK_B92
+#define ANALOG_REG_ADR 0x3b
+#define ANALOG_OTA_FLAG_VAL 0x55
+
+void OtaSetAnaFlag(void)
+{
+    analog_write(ANALOG_REG_ADR, ANALOG_OTA_FLAG_VAL);
+}
+
+bool OtaGetAnaFlag(void)
+{
+    if (analog_read(ANALOG_REG_ADR) == ANALOG_OTA_FLAG_VAL)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+#endif // CONFIG_SOC_RISCV_TELINK_B92
+#endif // CONFIG_STORAGE_OTA_STATUS
+
+/**
+ * @brief Control factory reset base on button.
+ *
+ * @see It must set CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE=y
+ * in prj.conf if you need to use independent button to control
+ * factory reset. Otherwise, the matrix key will be used by default.
+ */
+#if CONFIG_BUTTON_FACTORY_RESET
+void AppTaskCommon::ButtonFactoryReset(void)
+{
+    ButtonManager & buttonManager = ButtonManager::getInstance();
+    buttonManager.addCallback(AppTaskCommon::FactoryResetButtonEventHandler, 0, true);
+
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+    buttonManager.linkBackend(ButtonPool::getInstance());
+#else
+    buttonManager.linkBackend(ButtonMatrix::getInstance());
+#endif // CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+}
+#endif // CONFIG_BUTTON_FACTORY_RESET
+
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;
@@ -947,6 +1000,36 @@ void AppTaskCommon::SetExampleButtonCallbacks(EventHandler aAction_CB)
     ExampleActionEventHandler = aAction_CB;
 }
 
+void AppTaskCommon::OtaEventsHandler(const ChipDeviceEvent * event)
+{
+    switch (event->OtaStateChanged.newState)
+    {
+    case DeviceLayer::kOtaDownloadInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image download in progress\n");
+        break;
+    case DeviceLayer::kOtaDownloadComplete:
+        ChipLogProgress(DeviceLayer, "OTA image download complete\n");
+        break;
+    case DeviceLayer::kOtaDownloadFailed:
+        ChipLogProgress(DeviceLayer, "OTA image download failed\n");
+        break;
+    case DeviceLayer::kOtaDownloadAborted:
+        ChipLogProgress(DeviceLayer, "OTA image download aborted\n");
+        break;
+    case DeviceLayer::kOtaApplyInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image apply in progress\n");
+        break;
+    case DeviceLayer::kOtaApplyComplete:
+        ChipLogProgress(DeviceLayer, "OTA image apply complete\n");
+        break;
+    case DeviceLayer::kOtaApplyFailed:
+        ChipLogProgress(DeviceLayer, "OTA image apply failed\n");
+        break;
+    default:
+        break;
+    }
+}
+
 void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
 {
     switch (event->Type)
@@ -1065,6 +1148,9 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
         UpdateStatusLED();
 #endif
+        break;
+    case DeviceEventType::kOtaStateChanged:
+        AppTaskCommon::OtaEventsHandler(event);
         break;
     default:
         break;
