@@ -260,6 +260,15 @@ config NVS_LOOKUP_CACHE_SIZE
     default 400  if SOC_RISCV_TELINK_TL321X
     default 2048 if !PM
 
+config NVS_RAM_OPTIMIZATION
+    bool "Optimize the RAM required for NVS"
+    default y if PM || SOC_RISCV_TELINK_TL321X
+    default n
+
+# Test on newest based code, need to enlarge to 512 which can pass TC_RR_1.1
+config NVS_LOOKUP_CACHE_ARRAY_SIZE
+    default 512 if PM || SOC_RISCV_TELINK_TL321X
+
 config COMPRESS_LZMA
     depends on CHIP_OTA_REQUESTOR
     default y if SOC_RISCV_TELINK_TL321X
