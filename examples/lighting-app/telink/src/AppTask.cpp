@@ -29,6 +29,7 @@
 #include <zephyr/kernel.h>
 
 #include <app-common/zap-generated/attributes/Accessors.h>
+#include <app/util/persistence/DeferredAttributePersistenceProvider.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 
@@ -43,6 +44,32 @@ RgbColor_t sLedRgb;
 } // namespace
 
 AppTask AppTask::sAppTask;
+
+/**
+ * @brief Set deferred attributes storage
+ *
+ * @see Define a custom attribute persister which makes actual write of the CurrentHue, CurrentSaturation, CurrentLevel attributes
+ * value to the non-volatile storage only when it has remained constant for 5 seconds. This is to reduce the flash wearout when the
+ * attribute changes frequently as a result of MoveToLevel command. DeferredAttribute object describes a deferred attribute, but
+ * also holds a buffer with a value to be written, so it must live so long as the DeferredAttributePersistenceProvider object.
+ *
+ * @param ATTRIBUTES_ARRAY_SIZE The length of the DeferredAttribute array
+ * @param DEFERRED_STORAGE_TIME The deferred time (ms) to store attributes
+ */
+#define ATTRIBUTES_ARRAY_SIZE (1U)
+#define DEFERRED_STORAGE_TIME (5000U)
+
+DeferredAttribute gPersisters[] = {
+#if CONFIG_DEFERRED_ATTR_STORAGE
+    DeferredAttribute{
+        ConcreteAttributePath(kExampleEndpointId, Clusters::LevelControl::Id, Clusters::LevelControl::Attributes::CurrentLevel::Id)
+    }
+#endif // CONFIG_DEFERRED_ATTR_STORAGE
+};
+
+DeferredAttributePersistenceProvider gDeferredAttributePersister(Server::GetInstance().GetDefaultAttributePersister(),
+                                                                 Span<DeferredAttribute>(gPersisters, ATTRIBUTES_ARRAY_SIZE),
+                                                                 System::Clock::Milliseconds32(DEFERRED_STORAGE_TIME));
 
 bool AppTask::IsTurnedOn() const
 {
