@@ -312,6 +312,10 @@ config EXPOSE_CHIPID_VIA_BLE
     bool "Get CHIP ID via ble"
     default n
 
+config DEFERRED_ATTR_STORAGE
+    bool "Defer the storage time of attributes"
+    default y
+
 # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
 # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
 config SETTINGS_NVS_SECTOR_SIZE_MULT
