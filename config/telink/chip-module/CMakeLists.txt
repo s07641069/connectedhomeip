@@ -163,12 +163,27 @@ endif()
 # Define 'process_binaries' target for collecting final binary to flash
 # ==============================================================================
 
+if(CONFIG_SOC_RISCV_TELINK_TL321X)
+set(SOC "TL321X")
+set(ZB_FW_OFFSET "912")
+elseif(CONFIG_SOC_RISCV_TELINK_B92)
+set(SOC "B92")
+set(ZB_FW_OFFSET "1280")
+endif()
+set(ZB_FILE_PATH "${ZEPHYR_BASE}/ZB_FW/${SOC}/concurrent_sampleLight.bin")
+set(BLOCK_SIZE "1024")
+
 add_custom_target(
     process_binaries ALL
     COMMAND ${Python3_EXECUTABLE} ${CHIP_ROOT}/scripts/tools/telink/process_binaries.py
     WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
 )
-add_dependencies(process_binaries ${ZEPHYR_FINAL_EXECUTABLE})
+
+if(EXISTS ${ZB_FILE_PATH} AND CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_SERIES_RISCV_TELINK_B9X OR CONFIG_SOC_SERIES_RISCV_TELINK_TLX))
+    add_dependencies(process_binaries west_sign)
+else()
+    add_dependencies(process_binaries ${ZEPHYR_FINAL_EXECUTABLE})
+endif()
 
 # ==============================================================================
 # Define 'build_mcuboot' target for building the MCUBoot bootloader
@@ -182,6 +197,30 @@ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_SERIES_RISCV_TELINK_B9X OR CONFIG_
         COMMAND
         cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
     )
+
+    if(EXISTS ${ZB_FILE_PATH})
+        add_custom_target(merge_zigbee ALL
+            COMMAND
+            dd if=/dev/zero bs=${BLOCK_SIZE} count=${ZB_FW_OFFSET} | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/dm_merged.bin
+            COMMAND
+            dd if=${PROJECT_BINARY_DIR}/zephyr.bin of=${PROJECT_BINARY_DIR}/dm_merged.bin conv=notrunc
+            COMMAND
+            dd if=${ZB_FILE_PATH} of=${PROJECT_BINARY_DIR}/dm_merged.bin bs=${BLOCK_SIZE} seek=${ZB_FW_OFFSET} conv=notrunc
+            COMMAND
+            cp ${PROJECT_BINARY_DIR}/dm_merged.bin ${PROJECT_BINARY_DIR}/zephyr.bin
+        )
+        add_custom_target(west_sign ALL
+            COMMAND
+            west sign -t imgtool -p ${ZEPHYR_BASE}/../bootloader/mcuboot/scripts/imgtool.py -d ${PROJECT_BINARY_DIR}/.. -- --key ${ZEPHYR_BASE}/../bootloader/mcuboot/root-rsa-2048.pem
+        )
+    else()
+        message(WARNING "File ${ZB_FILE_PATH} does not exist. merge_zigbee target will not be created.")
+    endif()
+
+    if(EXISTS ${ZB_FILE_PATH})
+        add_dependencies(merge_zigbee ${ZEPHYR_FINAL_EXECUTABLE})
+        add_dependencies(west_sign merge_zigbee)
+    endif()
 endif()
 
 # ==============================================================================
