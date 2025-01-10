@@ -215,13 +215,16 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
 
 #ifdef CONFIG_SOC_RISCV_TELINK_B92
     if (efuse_get_chip_id(chip_id))
+#endif
+#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
+    if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+#endif
     {
+#ifdef CONFIG_SOC_RISCV_TELINK_B92
         aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
         aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
 #endif
 #ifdef CONFIG_SOC_RISCV_TELINK_TL321X
-    if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
-    {
         ske_dig_en();
         uint32_t r = core_interrupt_disable();
         ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 2, dac_key_decrypt, 16);
