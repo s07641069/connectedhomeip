@@ -32,7 +32,9 @@ Firmware merged successfully into /home/ubuntu/connectedhomeip/factory_data_1141
 
 import argparse
 
-def merge_factorydata_dac(factory_data_ext_path, dac_cert_key_path, dac_cert_start_address, output_path):
+
+def merge_factorydata_dac(factory_data_ext_path, dac_cert_key_path,
+                          dac_cert_start_address, output_path):
     # Read the content of the factory_data_ext.bin
     with open(factory_data_ext_path, 'rb') as f:
         factory_data_ext = f.read()
@@ -59,19 +61,26 @@ def merge_factorydata_dac(factory_data_ext_path, dac_cert_key_path, dac_cert_sta
 
     print(f"Firmware merged successfully into {output_path}")
 
+
 def main():
     # Setup argument parser
     parser = argparse.ArgumentParser(description='Merge firmware files.')
-    parser.add_argument('factory_data_ext_path', type=str, help='Path to the factory_data_ext.bin file')
-    parser.add_argument('dac_cert_key_path', type=str, help='Path to the dac_cert_key.bin file')
-    parser.add_argument('dac_cert_start_address', type=lambda x: int(x, 0), help='Start address for dac_cert_key.bin (e.g., 0x800)')
-    parser.add_argument('output_path', default="merged_factorydata_dac.bin", type=str, help='Path to the output merged firmware file')
+    parser.add_argument('factory_data_ext_path', type=str,
+                        help='Path to the factory_data_ext.bin file')
+    parser.add_argument('dac_cert_key_path', type=str,
+                        help='Path to the dac_cert_key.bin file')
+    parser.add_argument('dac_cert_start_address', type=lambda x: int(x, 0),
+                        help='Start address for dac_cert_key.bin (e.g., 0x800)')
+    parser.add_argument('output_path', default="merged_factorydata_dac.bin",
+                        type=str, help='Path to the output merged firmware file')
 
     # Parse the arguments
     args = parser.parse_args()
 
     # Call the merge function with the provided arguments
-    merge_factorydata_dac(args.factory_data_ext_path, args.dac_cert_key_path, args.dac_cert_start_address, args.output_path)
+    merge_factorydata_dac(args.factory_data_ext_path, args.dac_cert_key_path,
+                          args.dac_cert_start_address, args.output_path)
+
 
 if __name__ == '__main__':
     main()

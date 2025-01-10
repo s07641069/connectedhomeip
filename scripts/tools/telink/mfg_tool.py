@@ -31,9 +31,9 @@ import cbor2 as cbor
 import cryptography.hazmat.backends
 import cryptography.x509
 import pyqrcode
-from intelhex import IntelHex
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from intelhex import IntelHex
 
 TOOLS = {
     'spake2p': None,
@@ -457,7 +457,7 @@ def write_device_unique_data(args, out_dirs, pai_cert):
                 dacs = use_dac_cert_from_args(args, out_dirs)
             else:
                 dacs = generate_dac_cert(int(row['Index']), args, out_dirs, int(row['Discriminator']),
-                                        int(row['PIN Code']), pai_cert['key_pem'], pai_cert['cert_pem'])              
+                                         int(row['PIN Code']), pai_cert['key_pem'], pai_cert['cert_pem'])
             dac_cert_storage = read_der_file(dacs[0])
             dac_key_storage = read_key_bin_file(dacs[1])
             if not args.secure_programming_verification:
@@ -744,10 +744,10 @@ def get_and_validate_args():
 
     secure_args = parser.add_argument_group('Secure programming verification options')
     secure_args.add_argument("--secure-programming-verification", action="store_true",
-                            help="Enable secure programming mode. When set, the script will perform additional steps for secure programming verification.")
+                             help="Enable secure programming mode. When set, the script will perform additional steps for secure programming verification.")
     secure_args.add_argument("--chip-id", required=False, type=str, help="Chip ID in hex format (32 hex characters).")
     secure_args.add_argument("--disable_serial_num_storage", action="store_true",
-                            help="Disable storage of serial-num in factorydata.")
+                             help="Disable storage of serial-num in factorydata.")
 
     args = parser.parse_args()
 
