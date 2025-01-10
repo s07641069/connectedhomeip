@@ -16,7 +16,8 @@
 		slot0_partition: partition@12000 {
 			label = "image-0";
 			// Starting at 0x12000, this partition reserves 912 KB for Matter,
-			// and an additional 248 KB for Zigbee, totaling 0x122000 in size.
+			// and an additional 248 KB for Zigbee (starting at 0xf6000),
+			// totaling 0x122000 in size.
 			reg = <0x12000 0x122000>;
 		};
 		slot1_partition: partition@134000 {
@@ -60,7 +61,7 @@
 		factory_partition: partition@1f9000 {
 			label = "factory-data";
 			// factory data
-			reg = <0x1f9000 0x1000>;
+			reg = <0x1f9000 0x800>;
 		};
 		dac_keypair_partition: partition@1f9800 {
 			label = "dac-keypair";

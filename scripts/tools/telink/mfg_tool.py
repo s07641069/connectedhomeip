@@ -32,7 +32,6 @@ import cryptography.hazmat.backends
 import cryptography.x509
 import pyqrcode
 from intelhex import IntelHex
-
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 
@@ -458,7 +457,7 @@ def write_device_unique_data(args, out_dirs, pai_cert):
                 dacs = use_dac_cert_from_args(args, out_dirs)
             else:
                 dacs = generate_dac_cert(int(row['Index']), args, out_dirs, int(row['Discriminator']),
-                                         int(row['PIN Code']), pai_cert['key_pem'], pai_cert['cert_pem'])              
+                                        int(row['PIN Code']), pai_cert['key_pem'], pai_cert['cert_pem'])              
             dac_cert_storage = read_der_file(dacs[0])
             dac_key_storage = read_key_bin_file(dacs[1])
             if not args.secure_programming_verification:
@@ -466,7 +465,7 @@ def write_device_unique_data(args, out_dirs, pai_cert):
                 nvs_memory_append('dac_key', dac_key_storage)
             else:
                 logger.info("Secure programming verification enabled; DAC and its keys are not stored directly into factory data")
- 
+
             nvs_memory_append('pai_cert', read_der_file(pai_cert['cert_der']))
 
         nvs_memory_append('cert_dclrn', read_der_file(args.cert_dclrn))
@@ -489,12 +488,13 @@ def aes_encrypt(key, data):
     encryptor = cipher.encryptor()
     return encryptor.update(data) + encryptor.finalize()
 
+
 def save_dac_cert_and_keys(dac_cert, dac_key, chip_id, file_path):
     with open(file_path, 'wb') as f:
         # Write DAC private key length (2 bytes, little-endian)
         dac_key_len = len(dac_key)
         f.write(dac_key_len.to_bytes(2, 'little'))
-        
+
         # Encrypt DAC private key in two 16-byte segments
         encrypted_key_part1 = aes_encrypt(chip_id, dac_key[:16])
         encrypted_key_part2 = aes_encrypt(chip_id, dac_key[16:32])
@@ -514,6 +514,7 @@ def save_dac_cert_and_keys(dac_cert, dac_key, chip_id, file_path):
         f.write(dac_cert)
 
     print(f"DAC certificate and key have been saved to {file_path}")
+
 
 def generate_partition(args, dacs_cert, out_dirs):
     logger.info('Generating partition image: offset: 0x{:X} size: 0x{:X}'.format(args.offset, args.size))
@@ -637,7 +638,7 @@ def add_additional_kv(args, serial_num):
 
     # Add the serial-num
     if args.disable_serial_num_storage:
-        logger.info("Secure programming verification enabled; skipping serial-num")       
+        logger.info("Secure programming verification enabled; skipping serial-num")
     else:
         nvs_memory_append('sn', serial_num)
 
@@ -742,11 +743,11 @@ def get_and_validate_args():
     part_gen_args.add_argument('--size', type=allow_any_int, help='The maximum partition size')
 
     secure_args = parser.add_argument_group('Secure programming verification options')
-    secure_args.add_argument("--secure-programming-verification", action="store_true", 
-                              help="Enable secure programming mode. When set, the script will perform additional steps for secure programming verification.")
+    secure_args.add_argument("--secure-programming-verification", action="store_true",
+                            help="Enable secure programming mode. When set, the script will perform additional steps for secure programming verification.")
     secure_args.add_argument("--chip-id", required=False, type=str, help="Chip ID in hex format (32 hex characters).")
-    secure_args.add_argument("--disable_serial_num_storage", action="store_true", 
-                              help="Disable storage of serial-num in factorydata.")
+    secure_args.add_argument("--disable_serial_num_storage", action="store_true",
+                            help="Disable storage of serial-num in factorydata.")
 
     args = parser.parse_args()
 
