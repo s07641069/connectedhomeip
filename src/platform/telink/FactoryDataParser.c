@@ -205,7 +205,8 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
 {
     size_t dac_priv_key_len;
     uint8_t chip_id[16] = { 0 };
-    dac_priv_key_len    = buffer[0];
+    bool chip_id_check_result;
+    dac_priv_key_len = buffer[0];
     dac_priv_key_len |= (uint16_t) buffer[1] << 8;
     factoryData->dac_priv_key.len = dac_priv_key_len;
     if (!factoryData->dac_priv_key.len)
@@ -214,11 +215,12 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
     }
 
 #ifdef CONFIG_SOC_RISCV_TELINK_B92
-    if (efuse_get_chip_id(chip_id))
+    chip_id_check_result = efuse_get_chip_id(chip_id) ? true : false;
 #endif
 #ifdef CONFIG_SOC_RISCV_TELINK_TL321X
-    if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+    chip_id_check_result = efuse_get_chip_id(chip_id) ? false : true;
 #endif
+    if (chip_id_check_result)
     {
 #ifdef CONFIG_SOC_RISCV_TELINK_B92
         aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
@@ -228,8 +230,7 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
         ske_dig_en();
         uint32_t r = core_interrupt_disable();
         ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 2, dac_key_decrypt, 16);
-        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 18, dac_key_decrypt + 16,
-                        16);
+        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 18, dac_key_decrypt + 16, 16);
         core_restore_interrupt(r);
 #endif
         factoryData->dac_priv_key.data = dac_key_decrypt;
