@@ -21,6 +21,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "CHIPDevicePlatformConfig.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -76,6 +78,18 @@ struct FactoryData
  * @returns true on success, false otherwise.
  */
 bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData * factoryData);
+
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+/**
+ * @brief Inject dac cert and dac private key into the factory data structure.
+ *
+ * @param[in] buffer Buffer containing dac data.
+ * @param[out] factoryData address of object to be filled with parsed factory data.
+ *
+ * @returns true on success, false otherwise.
+ */
+bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData);
+#endif
 
 #ifdef __cplusplus
 }
