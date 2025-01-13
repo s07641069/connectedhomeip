@@ -246,3 +246,8 @@ config CHIP_USE_MARS_SENSOR
 	bool "Use Mars board sensor"
 	depends on SOC_RISCV_TELINK_B9X && (BOARD_TLSR9518ADK80D || BOARD_TLSR9518ADK80D_RETENTION)
 	default n
+
+config SECURE_PROGRAMMING
+	bool "Enable reading DAC and keys from the DAC partition"
+	depends on CHIP_FACTORY_DATA
+	default n

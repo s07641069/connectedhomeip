@@ -27,6 +27,10 @@
 
 LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+static uint8_t dac_key_decrypt[32] = { 0 };
+#endif
+
 static inline bool uint16_decode(zcbor_state_t * states, uint16_t * value)
 {
     uint32_t u32;
@@ -125,6 +129,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->rd_uid);
         }
+#if !CHIP_DEVICE_SECURE_PROGRAMMING
         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
@@ -133,6 +138,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_priv_key);
         }
+#endif
         else if (strncmp("pai_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->pai_cert);
@@ -185,3 +191,70 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
 
     return res && zcbor_list_map_end_force_decode(states);
 }
+
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+
+#ifdef CONFIG_SOC_RISCV_TELINK_B92
+#include "aes.h"
+#endif
+
+#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
+#include <ske.h>
+#include <ske_portable.h>
+#endif
+
+#define kDACContentsOffset 100
+
+bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
+{
+    size_t dac_priv_key_len;
+    uint8_t chip_id[16] = { 0 };
+    bool chip_id_check_result;
+    dac_priv_key_len = buffer[0];
+    dac_priv_key_len |= (uint16_t) buffer[1] << 8;
+    factoryData->dac_priv_key.len = dac_priv_key_len;
+    if (!factoryData->dac_priv_key.len)
+    {
+        return false;
+    }
+
+#ifdef CONFIG_SOC_RISCV_TELINK_B92
+    chip_id_check_result = efuse_get_chip_id(chip_id) ? true : false;
+#endif
+#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
+    chip_id_check_result = efuse_get_chip_id(chip_id) ? false : true;
+#endif
+    if (chip_id_check_result)
+    {
+#ifdef CONFIG_SOC_RISCV_TELINK_B92
+        aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
+        aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
+#endif
+#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
+        ske_dig_en();
+        uint32_t r = core_interrupt_disable();
+        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 2, dac_key_decrypt, 16);
+        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 18, dac_key_decrypt + 16, 16);
+        core_restore_interrupt(r);
+#endif
+        factoryData->dac_priv_key.data = dac_key_decrypt;
+    }
+    else
+    {
+        LOG_ERR("Private key decryption failed.");
+        return false;
+    }
+
+    size_t dac_cert_len;
+    dac_cert_len = buffer[kDACContentsOffset];
+    dac_cert_len |= (uint16_t) buffer[kDACContentsOffset + 1] << 8;
+    factoryData->dac_cert.len = dac_cert_len;
+    if (!factoryData->dac_cert.len)
+    {
+        return false;
+    }
+    factoryData->dac_cert.data = buffer + kDACContentsOffset + 2;
+
+    return true;
+}
+#endif
