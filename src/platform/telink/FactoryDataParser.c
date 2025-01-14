@@ -241,7 +241,7 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
     }
     else
     {
-        LOG_ERR("Private key decryption failed.");
+        LOG_ERR("Failed to retrieve chip ID.");
         return false;
     }
 
