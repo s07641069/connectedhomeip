@@ -18,7 +18,9 @@
 
 #include "AppTaskCommon.h"
 #include "AppTask.h"
-#include <analog.h>
+#if CONFIG_SOC_RISCV_TELINK_B92 || CONFIG_SOC_RISCV_TELINK_TL321X
+#include <analog_user.h>
+#endif
 
 #include "BLEManagerImpl.h"
 #include "ButtonManager.h"
@@ -483,15 +485,26 @@ void AppTaskCommon::PrintFirmwareInfo(void)
  *
  * @see There are many OTA callback events in
  * AppTaskCommon::OtaEventsHandler, please embed it as needed.
+ * The available analog registers address are as follows:
+ *  TLSR9528 - 0x3b
+ *  TL3218X  - 0x3b
  */
 #if CONFIG_STORAGE_OTA_STATUS
-#if CONFIG_SOC_RISCV_TELINK_B92
-#define ANALOG_REG_ADR 0x3b
-#define ANALOG_OTA_FLAG_VAL 0x55
+#define ANALOG_REG_ADR (0x3b)
+#define ANALOG_OTA_FLAG_VAL (0x55)
 
 void OtaSetAnaFlag(void)
 {
-    analog_write(ANALOG_REG_ADR, ANALOG_OTA_FLAG_VAL);
+    int err = analog_write(ANALOG_REG_ADR, ANALOG_OTA_FLAG_VAL);
+
+    if (!err)
+    {
+        printk("Write successful\n");
+    }
+    else
+    {
+        printk("The address:0x%x written is incorrect\n", ANALOG_REG_ADR);
+    }
 }
 
 bool OtaGetAnaFlag(void)
@@ -505,7 +518,6 @@ bool OtaGetAnaFlag(void)
         return false;
     }
 }
-#endif // CONFIG_SOC_RISCV_TELINK_B92
 #endif // CONFIG_STORAGE_OTA_STATUS
 
 /**
