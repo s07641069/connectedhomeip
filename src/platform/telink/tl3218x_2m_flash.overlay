@@ -20,6 +20,12 @@
 			// totaling 0x122000 in size.
 			reg = <0x12000 0x122000>;
 		};
+		zb_partition: partition@f6000 {
+			label = "image-zb";
+			// Zigbee partition
+			// End address should be same as of slot0 partition
+			reg = <0xf6000 0x3e000>;
+		};
 		slot1_partition: partition@134000 {
 			label = "image-1";
 			// Uses LZMA compression to reduce binary size.

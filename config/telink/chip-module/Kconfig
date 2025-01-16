@@ -71,10 +71,15 @@ config CHIP_OTA_IMAGE_BUILD
 	bool
 	default y if CHIP_OTA_REQUESTOR
 
+config DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
+	string "Default Zephyr signed image file name"
+	default "zephyr.signed.bin"
+	depends on CHIP_OTA_REQUESTOR
+
 config SIGNED_OTA_IMAGE_FILE_NAME
 	string "Zephyr signed image file name"
 	default "zephyr.signed.lzma.signed.bin" if COMPRESS_LZMA
-	default "zephyr.signed.bin"
+	default DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
 	depends on CHIP_OTA_REQUESTOR
 	help
 	  Provides the file name of the generated Zephyr signed image.
@@ -259,3 +264,8 @@ config SECURE_PROGRAMMING
 	bool "Enable reading DAC and keys from the DAC partition"
 	depends on CHIP_FACTORY_DATA
 	default n
+
+config TELINK_ZB_PARTITION_ADDR
+	hex "Zigbee partition address"
+	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,zb_partition),0)
+	depends on SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
