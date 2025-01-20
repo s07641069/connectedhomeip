@@ -343,6 +343,13 @@ config IEEE802154_TLX_OPTIMIZATION
 	help
 	  optimize the rf performance for tlx.
 
+config IEEE802154_B9X_OPTIMIZATION
+	bool "optimize the rf performance for b9x"
+	default y if BOARD_TLSR9528A_RETENTION
+	default n
+	help
+	  optimize the rf performance for b9x.
+
 config OPENTHREAD_THREAD_STACK_SIZE
     default 2400 if PM || SOC_RISCV_TELINK_TL321X
 
