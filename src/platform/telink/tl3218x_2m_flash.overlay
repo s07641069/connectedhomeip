@@ -33,6 +33,10 @@
 			// Zigbee NVS data will also reside here.
 			reg = <0x134000 0xb2000>;
 		};
+		zigbee_nvs_partition: partition@134000_1 {
+			label = "zigbee-nvs";
+			reg = <0x134000 0x1a000>; // zigbee nvs part , total is 104k.
+		};
 		storage_partition: partition@1e6000 {
 			label = "storage";
 			// NVS storage for Matter.

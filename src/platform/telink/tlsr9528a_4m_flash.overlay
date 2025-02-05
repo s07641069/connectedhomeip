@@ -33,8 +33,8 @@
 			label = "storage";
 			reg = <0x380000 0xb000>; // matter nvs part 
 		};
-		zigbee_partition: partition@38b000 {
-			label = "zigbee";
+		zigbee_nvs_partition: partition@38b000 {
+			label = "zigbee-nvs";
 			reg = <0x38b000 0x1a000>; // zigbee nvs part , total is 104k.
 		};
 		user_token_partition: partition@3a5000 {
