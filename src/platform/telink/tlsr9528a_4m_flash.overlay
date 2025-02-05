@@ -19,7 +19,7 @@
 			label = "image-zb";
 			// Zigbee partition
 			// End address should be same as of slot0 partition
-			reg = <0x154000 0x65000>;
+			reg = <0x154000 0x60000>;
 		};
 		slot1_partition: partition@1b9000 {
 			label = "image-1";

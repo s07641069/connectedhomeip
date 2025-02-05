@@ -136,6 +136,8 @@ if build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_TL321X'):
     SoC = 'TL321X'
 elif build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_B92'):
     SoC = 'B92'
+else:
+    SoC = ''
 ZB_FILE_PATH = os.path.join(ZEPHYR_BASE, 'ZB_FW', SoC, 'concurrent_sampleLight.bin')
 
 if os.path.exists(ZB_FILE_PATH):
