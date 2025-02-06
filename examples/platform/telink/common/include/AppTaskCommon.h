@@ -43,14 +43,8 @@
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
 
-#if CONFIG_SOC_RISCV_TELINK_B92
-#define ZB_NVS_PARTITION zigbee_partition
+#define ZB_NVS_PARTITION zigbee_nvs_partition
 #define ZB_NVS_SEC_SIZE FIXED_PARTITION_SIZE(ZB_NVS_PARTITION)
-#elif CONFIG_SOC_RISCV_TELINK_TL321X
-#define ZB_NVS_PARTITION slot1_partition
-/* zb para locate in the slot1 , and it will cost 104k size in slot1 */
-#define ZB_NVS_SEC_SIZE (104 * 1024)
-#endif
 
 #define ZB_NVS_PARTITION_DEVICE FIXED_PARTITION_DEVICE(ZB_NVS_PARTITION)
 #define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
