@@ -6,12 +6,7 @@
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
-		/delete-node/ partition@0;
-		/delete-node/ partition@20000;
-		/delete-node/ partition@88000;
-		/delete-node/ partition@f0000;
-		/delete-node/ partition@f4000;
-		/delete-node/ partition@fe000;
+
 		boot_partition: partition@0 {
 			label = "mcuboot";
 			reg = <0x00000000 0x14000>;
@@ -19,6 +14,12 @@
 		slot0_partition: partition@14000 {
 			label = "image-0";
 			reg = <0x14000 0x1a5000>;// 0x14000 is matter , 0x154000 is zigbee , 0x1b4000~0x1b9000 reserved for trailor and move sector, should be 20k
+		};
+		zb_partition: partition@154000 {
+			label = "image-zb";
+			// Zigbee partition
+			// End address should be same as of slot0 partition
+			reg = <0x154000 0x60000>;
 		};
 		slot1_partition: partition@1b9000 {
 			label = "image-1";
@@ -32,8 +33,8 @@
 			label = "storage";
 			reg = <0x380000 0xb000>; // matter nvs part 
 		};
-		zigbee_partition: partition@38b000 {
-			label = "zigbee";
+		zigbee_nvs_partition: partition@38b000 {
+			label = "zigbee-nvs";
 			reg = <0x38b000 0x1a000>; // zigbee nvs part , total is 104k.
 		};
 		user_token_partition: partition@3a5000 {

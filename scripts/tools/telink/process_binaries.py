@@ -123,13 +123,52 @@ if build_conf.getboolean('CONFIG_SOC_SERIES_RISCV_TELINK_W91'):
             '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
             '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
             'merged.bin',
-            build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME']
+            build_conf['CONFIG_DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME']
         ]
         try:
             subprocess.run(sign_command, check=True)
             os.remove('merged.bin')  # Clean up merged.bin after signing
         except subprocess.CalledProcessError as e:
             raise RuntimeError(f"Error signing the image: {e}")
+
+# Telink dual-mode Zigbee binary operations
+if build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_TL321X'):
+    SoC = 'TL321X'
+elif build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_B92'):
+    SoC = 'B92'
+else:
+    SoC = ''
+ZB_FILE_PATH = os.path.join(ZEPHYR_BASE, 'ZB_FW', SoC, 'concurrent_sampleLight.bin')
+
+if os.path.exists(ZB_FILE_PATH):
+    zb_partition_offset = build_conf['CONFIG_TELINK_ZB_PARTITION_ADDR']
+    if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
+        zb_partition_offset -= build_conf['CONFIG_FLASH_LOAD_OFFSET']
+
+    # Merge Zigbee binary
+    merge_binaries('zephyr.bin', ZB_FILE_PATH, 'merged.bin', zb_partition_offset)
+
+    # Sign the image if MCUBoot is used
+    if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
+        sign_command = [
+            'python3',
+            os.path.join(ZEPHYR_BASE, '../bootloader/mcuboot/scripts/imgtool.py'),
+            'sign',
+            '--version', '0.0.0+0',
+            '--align', '1',
+            '--header-size', str(build_conf['CONFIG_ROM_START_OFFSET']),
+            '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
+            '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
+            'merged.bin',
+            build_conf['CONFIG_DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME']
+        ]
+        try:
+            subprocess.run(sign_command, check=True)
+            os.remove('merged.bin')  # Clean up merged.bin after signing
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(f"Error signing the image: {e}")
+else:
+    print(f"File {ZB_FILE_PATH} does not exist. Merge Zigbee binary will not be performed.")
 
 # Merge MCUBoot binary if configured
 if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
