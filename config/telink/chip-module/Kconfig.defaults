@@ -63,6 +63,7 @@ config POSIX_MAX_FDS
 # Application stack size
 config MAIN_STACK_SIZE
     default 3240 if PM || SOC_RISCV_TELINK_TL321X
+    default 4512 if SOC_RISCV_TELINK_W91
     default 4096
 
 config INIT_STACKS
@@ -234,7 +235,7 @@ config CHIP_OTA_REQUESTOR
     default y
 
 config MCUBOOT_SIGNATURE_KEY_FILE
-	default "bootloader/mcuboot/root-ec-p256.pem" if BOARD_TLSR9118BDK40D
+	default "bootloader/mcuboot/root-ec-p256.pem" if BOARD_TLSR9118BDK40D || BOARD_TLSR9118BDK40D_V1
 	depends on BOOTLOADER_MCUBOOT
 
 # In current config/zephyr/Kconfig
