@@ -66,4 +66,3 @@ jobs:
         if: steps.check-testing.outcome == 'failure'
         run: |
           python -c 'import sys; print("Testing section missing (test failed)"); sys.exit(1)'
-
