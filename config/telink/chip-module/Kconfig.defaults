@@ -78,7 +78,7 @@ config IDLE_STACK_SIZE
 
 config ISR_STACK_SIZE
     default 576 if PM
-    default 528 if SOC_RISCV_TELINK_TL321X
+    default 560 if SOC_RISCV_TELINK_TL321X
 
 config SYSTEM_WORKQUEUE_STACK_SIZE
     default 616 if PM
@@ -178,7 +178,7 @@ config BT_DEVICE_NAME_GATT_WRITABLE
 if SOC_RISCV_TELINK_B9X || SOC_RISCV_TELINK_TLX
 
 config TL_BLE_CTRL_THREAD_STACK_SIZE
-    default 648 if ZEPHYR_VERSION_3_3
+    default 712 if ZEPHYR_VERSION_3_3
     default 680
 
 config TL_BLE_CTRL_MASTER_MAX_NUM
@@ -363,7 +363,7 @@ config OPENTHREAD_THREAD_STACK_SIZE
 
 config OPENTHREAD_RADIO_WORKQUEUE_STACK_SIZE
     default 432 if PM
-    default 608
+    default 672
 
 config OPENTHREAD_SLAAC
     default y
