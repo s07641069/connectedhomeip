@@ -88,7 +88,9 @@ config HEAP_MEM_POOL_SIZE
     default 1280
 
 config COMMON_LIBC_MALLOC_ARENA_SIZE
-    default 20716 if SOC_SERIES_RISCV_TELINK_B9X_RETENTION || (SOC_RISCV_TELINK_TL321X && ZEPHYR_VERSION_3_3)
+    default 20716 if SOC_SERIES_RISCV_TELINK_B9X_RETENTION || \
+                     (SOC_RISCV_TELINK_TL321X && ZEPHYR_VERSION_3_3) || \
+                     (SOC_RISCV_TELINK_TL721X && SOC_SERIES_RISCV_TELINK_TLX_RETENTION && ZEPHYR_VERSION_3_3)
     default 16384 if SOC_RISCV_TELINK_TL721X || (SOC_RISCV_TELINK_TL321X && !ZEPHYR_VERSION_3_3)
     default 12288
 
@@ -300,6 +302,17 @@ endchoice
 
 config CHIP_ENABLE_ICD_SUPPORT
     default y if CHIP_THREAD_DEVICE_ROLE_SLEEPY_END_DEVICE
+
+config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+	bool "Skip the first backoff during sending data request"
+	depends on CHIP_ENABLE_ICD_SUPPORT
+	default n
+
+config IEEE802154_TLX_OPTIMIZATION
+	bool "optimize the rf performance for tlx"
+	default n
+	help
+	  optimize the rf performance for tlx.
 
 config OPENTHREAD_THREAD_STACK_SIZE
     default 2400 if PM || SOC_RISCV_TELINK_TL321X
