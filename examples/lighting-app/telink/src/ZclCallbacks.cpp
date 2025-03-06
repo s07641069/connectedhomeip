@@ -34,6 +34,8 @@ using namespace chip::app::Clusters;
 #include "AppTaskCommon.h"
 
 static uint8_t latest_level = 0;
+
+// CLUTER_SOTRE_TIMEOUT should equal to DEFERRED_STORAGE_TIME
 #define CLUTER_SOTRE_TIMEOUT 500
 #define TRANSTION_TIMER_INIT_FLAG 0x55
 #define TRANSTION_TIMER_DEINIT_FLAG 0x00
