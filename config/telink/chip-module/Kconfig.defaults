@@ -304,11 +304,11 @@ config CHIP_ENABLE_ICD_SUPPORT
     default y if CHIP_THREAD_DEVICE_ROLE_SLEEPY_END_DEVICE
 
 config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
-	bool "Skip the first backoff during sending data request"
+	bool "Skip initial CSMA-CA backoff when sending data requests"
 	depends on CHIP_ENABLE_ICD_SUPPORT
 	default n
 	help
-	  Help save idle time during IEEE 802.15.4 communication
+	  Skip the first CSMA backoff period when sending data requests over IEEE 802.15.4.
 
 config IEEE802154_TLX_OPTIMIZATION
 	bool "Optimize 802.15.4 RF performance for TLX SoCs"
