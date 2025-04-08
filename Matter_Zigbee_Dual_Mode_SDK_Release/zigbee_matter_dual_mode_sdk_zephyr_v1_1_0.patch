@@ -1,0 +1,582 @@
+diff --git a/Kconfig.zephyr b/Kconfig.zephyr
+index fa25bb981b4..79653630d64 100644
+--- a/Kconfig.zephyr
++++ b/Kconfig.zephyr
+@@ -979,3 +979,13 @@ config COMPAT_INCLUDES
+ 	  deprecated header files.
+ 
+ endmenu
++
++menu "i2c-setting"
++
++config I2C_LED
++	bool "Control i2c raw data mode"
++	default n
++	help
++	  Transfer any address to adopt different i2c slave
++
++endmenu
+diff --git a/boards/riscv/tl321x/tl3218x-common.dtsi b/boards/riscv/tl321x/tl3218x-common.dtsi
+index d7b7e4a0fc7..c4a28a99b48 100644
+--- a/boards/riscv/tl321x/tl3218x-common.dtsi
++++ b/boards/riscv/tl321x/tl3218x-common.dtsi
+@@ -161,7 +161,11 @@
+ 		};
+ 		storage_partition: partition@f4000 {
+ 			label = "storage";
+-			reg = <0xf4000 0x0000a000>;
++			reg = <0xf4000 0x00009000>;
++		};
++		user_para_partition: partition@fd000 {
++			label = "user-para";
++			reg = <0xfd000 0x1000>;
+ 		};
+ 
+ 		/* region <0xfe000 0x2000> is used for Telink TLx RF parameters */
+@@ -233,6 +237,10 @@
+ 	clock-frequency = <I2C_BITRATE_FAST>;
+ 	pinctrl-0 = <&i2c_scl_pc3_default &i2c_sda_pc2_default>;
+ 	pinctrl-names = "default";
++	addr@44 {
++		compatible = "ledcontrol,i2c";
++		reg = <0x44>;
++	};
+ };
+ 
+ &adc {
+diff --git a/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi b/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
+index 1f4c4245fe1..c4c78ea742a 100644
+--- a/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
++++ b/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
+@@ -124,7 +124,7 @@
+ };
+ 
+ &cpu0 {
+-	clock-frequency = <48000000>;
++	clock-frequency = <96000000>;
+ };
+ 
+ &ram_ilm {
+@@ -161,7 +161,11 @@
+ 		};
+ 		storage_partition: partition@f4000 {
+ 			label = "storage";
+-			reg = <0xf4000 0x0000a000>;
++			reg = <0xf4000 0x00009000>;
++		};
++		user_para_partition: partition@fd000 {
++			label = "user-para";
++			reg = <0xfd000 0x1000>;
+ 		};
+ 
+ 		/* region <0xfe000 0x2000> is used for Telink B9x RF parameters */
+@@ -176,6 +180,11 @@
+ 	};
+ };
+ 
++&gpioa {
++	interrupts = <39 1>;
++	status = "okay";
++};
++
+ &gpiob {
+ 	status = "okay";
+ };
+@@ -236,8 +245,12 @@
+ &i2c {
+ 	status = "okay";
+ 	clock-frequency = <I2C_BITRATE_FAST>;
+-	pinctrl-0 = <&i2c_scl_pc0_default &i2c_sda_pc1_default>;
++	pinctrl-0 = <&i2c_scl_pa1_default &i2c_sda_pa0_default>;
+ 	pinctrl-names = "default";
++	addr@44 {
++		compatible = "ledcontrol,i2c";
++		reg = <0x44>;
++	};
+ };
+ 
+ &adc {
+diff --git a/boards/riscv/tlsr9528a/tlsr9528a-pinctrl.dtsi b/boards/riscv/tlsr9528a/tlsr9528a-pinctrl.dtsi
+index 552c9649f11..ff01e222264 100644
+--- a/boards/riscv/tlsr9528a/tlsr9528a-pinctrl.dtsi
++++ b/boards/riscv/tlsr9528a/tlsr9528a-pinctrl.dtsi
+@@ -76,13 +76,14 @@
+ 		pinmux = <B9x_PINMUX_SET(B9x_PORT_A, B9x_PIN_3, B92_FUNC_GSPI_MISO_IO)>;
+ 	};
+ 
+-	/* Define I2C pins: SCL(PC0), SDA(PC1) */
+-
+-	i2c_scl_pc0_default: i2c_scl_pc0_default {
+-		pinmux = <B9x_PINMUX_SET(B9x_PORT_C, B9x_PIN_0, B92_FUNC_I2C_SCL_IO)>;
+-	};
+-	i2c_sda_pc1_default: i2c_sda_pc1_default {
+-		pinmux = <B9x_PINMUX_SET(B9x_PORT_C, B9x_PIN_1, B92_FUNC_I2C_SDA_IO)>;
++	/* Define I2C pins: SCL(PA1), SDA(PA0)*/
++	i2c_scl_pa1_default: i2c_scl_pa1_default {
++		pinmux = <B9x_PINMUX_SET(B9x_PORT_A, B9x_PIN_1,
++			B92_FUNC_I2C_SCL_IO | (B9x_PULL_UP<<5))>;
++	};
++	i2c_sda_pa0_default: i2c_sda_pa0_default {
++		pinmux = <B9x_PINMUX_SET(B9x_PORT_A, B9x_PIN_0,
++			B92_FUNC_I2C_SDA_IO | (B9x_PULL_UP<<5))>;
+ 	};
+ 
+ 	/* Define ADC pins: PB0..PB7, PD0-PD1 */
+diff --git a/drivers/gpio/gpio_b9x.c b/drivers/gpio/gpio_b9x.c
+index aff80f2912c..d4dc56606c0 100644
+--- a/drivers/gpio/gpio_b9x.c
++++ b/drivers/gpio/gpio_b9x.c
+@@ -797,6 +797,20 @@ static void gpio_b9x_irq_connect_4(void)
+ }
+ #endif
+ 
++#if CONFIG_SOC_RISCV_TELINK_B92
++/* If instance 5 is present and has interrupt enabled, connect IRQ */
++#if DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) > 5
++static void gpio_b9x_irq_connect_5(void)
++{
++	#if IS_INST_IRQ_EN(5)
++	IRQ_CONNECT(DT_INST_IRQN(5), DT_INST_IRQ(5, priority),
++		    gpio_b9x_irq_handler,
++		    DEVICE_DT_INST_GET(5), 0);
++	#endif
++}
++#endif
++#endif
++
+ #if CONFIG_PM_DEVICE && CONFIG_SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+ #define PM_DEVICE_INST_DEFINE(n, gpio_b9x_pm_action)  \
+ PM_DEVICE_DT_INST_DEFINE(n, gpio_b9x_pm_action);
+diff --git a/drivers/i2c/i2c_b9x.c b/drivers/i2c/i2c_b9x.c
+index 58860a39af5..a6f35eaf2fa 100644
+--- a/drivers/i2c/i2c_b9x.c
++++ b/drivers/i2c/i2c_b9x.c
+@@ -53,7 +53,11 @@ static int i2c_b9x_configure(const struct device *dev, uint32_t dev_config)
+ 		break;
+ 
+ 	case I2C_SPEED_FAST:
++		#if CONFIG_I2C_LED
++		i2c_speed = 200000U;
++		#else
+ 		i2c_speed = 400000U;
++		#endif
+ 		break;
+ 
+ 	case I2C_SPEED_FAST_PLUS:
+@@ -101,7 +105,11 @@ static int i2c_b9x_transfer(const struct device *dev,
+ 		if (msgs[i].flags & I2C_MSG_READ) {
+ 			status = i2c_master_read(addr << 1, msgs[i].buf, msgs[i].len);
+ 		} else {
++			#if CONFIG_I2C_LED
++			status = i2c_master_write(addr, msgs[i].buf, msgs[i].len);
++			#else
+ 			status = i2c_master_write(addr << 1, msgs[i].buf, msgs[i].len);
++			#endif
+ 		}
+ 
+ 		/* check status */
+diff --git a/drivers/i2c/i2c_tlx.c b/drivers/i2c/i2c_tlx.c
+index 1ba21ec5e5f..100c983a200 100644
+--- a/drivers/i2c/i2c_tlx.c
++++ b/drivers/i2c/i2c_tlx.c
+@@ -53,7 +53,11 @@ static int i2c_tlx_configure(const struct device *dev, uint32_t dev_config)
+ 		break;
+ 
+ 	case I2C_SPEED_FAST:
++		#if CONFIG_I2C_LED
++		i2c_speed = 200000U;
++		#else
+ 		i2c_speed = 400000U;
++		#endif
+ 		break;
+ 
+ 	case I2C_SPEED_FAST_PLUS:
+@@ -101,7 +105,11 @@ static int i2c_tlx_transfer(const struct device *dev,
+ 		if (msgs[i].flags & I2C_MSG_READ) {
+ 			status = i2c_master_read(addr << 1, msgs[i].buf, msgs[i].len);
+ 		} else {
++			#if CONFIG_I2C_LED
++			status = i2c_master_write(addr, msgs[i].buf, msgs[i].len);
++			#else
+ 			status = i2c_master_write(addr << 1, msgs[i].buf, msgs[i].len);
++			#endif
+ 		}
+ 
+ 		/* check status */
+diff --git a/drivers/pwm/pwm_b9x.c b/drivers/pwm/pwm_b9x.c
+index 83724456fac..efd67e54142 100644
+--- a/drivers/pwm/pwm_b9x.c
++++ b/drivers/pwm/pwm_b9x.c
+@@ -25,18 +25,6 @@ struct pwm_b9x_data {
+ /* API implementation: init */
+ static int pwm_b9x_init(const struct device *dev)
+ {
+-	const struct pwm_b9x_config *config = dev->config;
+-
+-	uint32_t pwm_clk_div;
+-
+-	/* Calculate and check PWM clock divider */
+-	pwm_clk_div = sys_clk.pclk * 1000 * 1000 / config->clock_frequency - 1;
+-	if (pwm_clk_div > 255) {
+-		return -EINVAL;
+-	}
+-
+-	/* Set PWM Peripheral clock */
+-	pwm_set_clk((unsigned char) (pwm_clk_div & 0xFF));
+ 
+ 	return 0;
+ }
+diff --git a/drivers/pwm/pwm_tlx.c b/drivers/pwm/pwm_tlx.c
+index 08c3c5d98f8..cd03b2a7fa7 100644
+--- a/drivers/pwm/pwm_tlx.c
++++ b/drivers/pwm/pwm_tlx.c
+@@ -25,18 +25,6 @@ struct pwm_tlx_data {
+ /* API implementation: init */
+ static int pwm_tlx_init(const struct device *dev)
+ {
+-	const struct pwm_tlx_config *config = dev->config;
+-
+-	uint32_t pwm_clk_div;
+-
+-	/* Calculate and check PWM clock divider */
+-	pwm_clk_div = sys_clk.pclk * 1000 * 1000 / config->clock_frequency - 1;
+-	if (pwm_clk_div > 255) {
+-		return -EINVAL;
+-	}
+-
+-	/* Set PWM Peripheral clock */
+-	pwm_set_clk((unsigned char) (pwm_clk_div & 0xFF));
+ 
+ 	return 0;
+ }
+diff --git a/include/zephyr/drivers/hwinfo.h b/include/zephyr/drivers/hwinfo.h
+index 18132336994..cd087e75822 100644
+--- a/include/zephyr/drivers/hwinfo.h
++++ b/include/zephyr/drivers/hwinfo.h
+@@ -46,6 +46,8 @@ extern "C" {
+ #define RESET_USER				BIT(13)
+ #define RESET_TEMPERATURE			BIT(14)
+ 
++extern unsigned char efuse_get_chip_id(unsigned char *chip_id_buff);
++
+ /**
+  * @brief Copy the device id to a buffer
+  *
+diff --git a/include/zephyr/fs/nvs.h b/include/zephyr/fs/nvs.h
+index 78c18606ce1..5dacc2189ed 100644
+--- a/include/zephyr/fs/nvs.h
++++ b/include/zephyr/fs/nvs.h
+@@ -23,6 +23,16 @@ extern "C" {
+  * @{
+  * @}
+  */
++struct nvs_lookup {
++	union {
++	struct {
++		uint32_t addr:20;
++		uint32_t id:12;
++	} bf;
++	uint32_t byte;
++	} flags;
++};
++
+ 
+ /**
+  * @brief Non-volatile Storage Data Structures
+@@ -56,7 +66,12 @@ struct nvs_fs {
+ 	const struct device *flash_device;
+ 	const struct flash_parameters *flash_parameters;
+ #if CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup lookup_cache[CONFIG_NVS_LOOKUP_CACHE_ARRAY_SIZE];
++	uint32_t lookup_idx;
++	#else
+ 	uint32_t lookup_cache[CONFIG_NVS_LOOKUP_CACHE_SIZE];
++	#endif
+ #endif
+ };
+ 
+diff --git a/kernel/Kconfig b/kernel/Kconfig
+index 797a98beb2a..db58ecfcc14 100644
+--- a/kernel/Kconfig
++++ b/kernel/Kconfig
+@@ -961,4 +961,9 @@ config HAS_DYNAMIC_DEVICE_HANDLES
+ 
+ endmenu
+ 
++config STARTUP_OPTIMIZATION
++	bool "Optimize startup procedure"
++	default n
++	help
++	The option enables kernel-level optimizations to improve the efficiency of the startup process.
+ rsource "Kconfig.vm"
+diff --git a/kernel/init.c b/kernel/init.c
+index 255877033af..3d909847be2 100644
+--- a/kernel/init.c
++++ b/kernel/init.c
+@@ -540,6 +540,17 @@ FUNC_NORETURN void z_cstart(void)
+ 	z_sys_init_run_level(INIT_LEVEL_PRE_KERNEL_1);
+ 	z_sys_init_run_level(INIT_LEVEL_PRE_KERNEL_2);
+ 
++#if CONFIG_STARTUP_OPTIMIZATION
++	#ifndef CONFIG_MCUBOOT
++	typedef void (*p_early_proc)(void);
++	extern p_early_proc early_proc_cluster_f;
++
++	if (early_proc_cluster_f != NULL) {
++		early_proc_cluster_f();
++	}
++	#endif
++#endif
++
+ #ifdef CONFIG_STACK_CANARIES
+ 	uintptr_t stack_guard;
+ 
+diff --git a/subsys/fs/nvs/Kconfig b/subsys/fs/nvs/Kconfig
+index de4f282ee98..7713fabe849 100644
+--- a/subsys/fs/nvs/Kconfig
++++ b/subsys/fs/nvs/Kconfig
+@@ -27,6 +27,22 @@ config NVS_LOOKUP_CACHE_SIZE
+ 	  Number of entries in Non-volatile Storage lookup cache.
+ 	  It is recommended that it be a power of 2.
+ 
++config NVS_LOOKUP_CACHE_ARRAY_SIZE
++	int "Non-volatile Storage lookup cache size"
++	default 128
++	range 1 65536
++	depends on NVS_LOOKUP_CACHE
++	help
++	  Number of entries in Non-volatile Storage lookup cache.
++	  It is recommended that it be a power of 2.
++
++config NVS_RAM_OPTIMIZATION
++	bool "Control RAM optimization for NVS lookup cache"
++	default n
++	depends on NVS_LOOKUP_CACHE
++	help
++	  Control this option to optimize RAM usuage for NVS by using a specialized RAM-based lookup cache.
++
+ module = NVS
+ module-str = nvs
+ source "subsys/logging/Kconfig.template.log_config"
+diff --git a/subsys/fs/nvs/nvs.c b/subsys/fs/nvs/nvs.c
+index 63703147bc4..5c5d81e7f4e 100644
+--- a/subsys/fs/nvs/nvs.c
++++ b/subsys/fs/nvs/nvs.c
+@@ -40,6 +40,71 @@ static inline size_t nvs_lookup_cache_pos(uint16_t id)
+ 	return pos % CONFIG_NVS_LOOKUP_CACHE_SIZE;
+ }
+ 
++#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++static inline struct nvs_lookup *nvs_lookup_cache_location(struct nvs_fs *fs, size_t pos)
++{
++	uint16_t idx = 0;
++	struct nvs_lookup *cache_entry = fs->lookup_cache;
++	struct nvs_lookup *const cache_end = &fs->lookup_cache[fs->lookup_idx];
++
++	for (; cache_entry < cache_end; ++cache_entry) {
++		if (cache_entry->flags.bf.id == pos) {
++			return cache_entry;
++		}
++		idx++;
++	}
++
++	return  (struct nvs_lookup *) NVS_LOOKUP_CACHE_NO_ADDR;
++}
++#endif
++
++#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++static int nvs_lookup_cache_rebuild(struct nvs_fs *fs)
++{
++	int rc;
++	uint32_t addr, ate_addr;
++	struct nvs_lookup *cache_entry;
++	struct nvs_ate ate;
++
++	memset(fs->lookup_cache, 0xff, sizeof(fs->lookup_cache));
++	addr = fs->ate_wra;
++	fs->lookup_idx = 0;
++	while (true) {
++		/* Make a copy of 'addr' as it will be advanced by nvs_pref_ate() */
++		ate_addr = addr;
++		rc = nvs_prev_ate(fs, &addr, &ate);
++
++		if (rc) {
++			return rc;
++		}
++		cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(ate.id));
++		if (ate.id != 0xFFFF && (unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR &&
++		    nvs_ate_valid(fs, &ate)) {
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++			cache_entry->flags.bf.addr = ate_addr;
++			cache_entry->flags.bf.id = nvs_lookup_cache_pos(ate.id);
++		}
++
++		if (addr == fs->ate_wra) {
++			break;
++		}
++	}
++
++	return 0;
++}
++
++static void nvs_lookup_cache_invalidate(struct nvs_fs *fs, uint32_t sector)
++{
++	uint32_t *cache_entry = (uint32_t *)fs->lookup_cache;
++	uint32_t *const cache_end = (uint32_t *)&fs->lookup_cache[fs->lookup_idx];
++
++	for (; cache_entry < cache_end; ++cache_entry) {
++		if (((*cache_entry >> ADDR_SECT_SHIFT)&0xf) == sector) {
++			*cache_entry = NVS_LOOKUP_CACHE_NO_ADDR;
++		}
++	}
++}
++#else
+ static int nvs_lookup_cache_rebuild(struct nvs_fs *fs)
+ {
+ 	int rc;
+@@ -85,6 +150,7 @@ static void nvs_lookup_cache_invalidate(struct nvs_fs *fs, uint32_t sector)
+ 		}
+ 	}
+ }
++#endif
+ 
+ #endif /* CONFIG_NVS_LOOKUP_CACHE */
+ 
+@@ -170,7 +236,22 @@ static int nvs_flash_ate_wrt(struct nvs_fs *fs, const struct nvs_ate *entry)
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
+ 	/* 0xFFFF is a special-purpose identifier. Exclude it from the cache */
+ 	if (entry->id != 0xFFFF) {
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs,
++						nvs_lookup_cache_pos(entry->id));
++
++		if ((unsigned int)(cache_entry) == NVS_LOOKUP_CACHE_NO_ADDR) {
++
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++		}
++
++		cache_entry->flags.bf.addr = fs->ate_wra;
++		cache_entry->flags.bf.id = nvs_lookup_cache_pos(entry->id);
++		LOG_DBG("kp_idx2 %d %x %x %x\n", fs->lookup_idx, fs->ate_wra,
++			nvs_lookup_cache_pos(entry->id), *(int *)cache_entry);
++		#else
+ 		fs->lookup_cache[nvs_lookup_cache_pos(entry->id)] = fs->ate_wra;
++		#endif
+ 	}
+ #endif
+ 	fs->ate_wra -= nvs_al_size(fs, sizeof(struct nvs_ate));
+@@ -630,11 +711,26 @@ static int nvs_gc(struct nvs_fs *fs)
+ 		}
+ 
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs,
++						nvs_lookup_cache_pos(gc_ate.id));
++		if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++			LOG_DBG("kp_idx1 %d %x %x\n", fs->lookup_idx, fs->ate_wra,
++						nvs_lookup_cache_pos(gc_ate.id));
++			wlk_addr = fs->ate_wra;
++			cache_entry->flags.bf.addr = fs->ate_wra;
++			cache_entry->flags.bf.id = nvs_lookup_cache_pos(gc_ate.id);
++		} else {
++			wlk_addr = cache_entry->flags.bf.addr;
++		}
++		#else
+ 		wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(gc_ate.id)];
+ 
+ 		if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 			wlk_addr = fs->ate_wra;
+ 		}
++		#endif
+ #else
+ 		wlk_addr = fs->ate_wra;
+ #endif
+@@ -868,9 +964,15 @@ static int nvs_startup(struct nvs_fs *fs)
+ 		 * So, temporarily, we set the lookup cache to the end of the fs.
+ 		 * The cache will be rebuilt afterwards
+ 		 **/
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		for (int i = 0; i < CONFIG_NVS_LOOKUP_CACHE_ARRAY_SIZE; i++) {
++			fs->lookup_cache[i].flags.bf.addr = fs->ate_wra;
++		}
++		#else
+ 		for (int i = 0; i < CONFIG_NVS_LOOKUP_CACHE_SIZE; i++) {
+ 			fs->lookup_cache[i] = fs->ate_wra;
+ 		}
++		#endif
+ #endif
+ 		rc = nvs_gc(fs);
+ 		goto end;
+@@ -1035,11 +1137,22 @@ ssize_t nvs_write(struct nvs_fs *fs, uint16_t id, const void *data, size_t len)
+ 
+ 	/* find latest entry with same id */
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(id));
++
++	if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++		wlk_addr = NVS_LOOKUP_CACHE_NO_ADDR;
++		goto no_cached_entry;
++	} else {
++		wlk_addr = cache_entry->flags.bf.addr;
++	}
++	#else
+ 	wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(id)];
+ 
+ 	if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 		goto no_cached_entry;
+ 	}
++	#endif
+ #else
+ 	wlk_addr = fs->ate_wra;
+ #endif
+@@ -1165,12 +1278,24 @@ ssize_t nvs_read_hist(struct nvs_fs *fs, uint16_t id, void *data, size_t len,
+ 	cnt_his = 0U;
+ 
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(id));
++
++	if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++		wlk_addr = NVS_LOOKUP_CACHE_NO_ADDR;
++		rc = -ENOENT;
++		goto err;
++	} else {
++		wlk_addr = cache_entry->flags.bf.addr;
++	}
++	#else
+ 	wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(id)];
+ 
+ 	if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 		rc = -ENOENT;
+ 		goto err;
+ 	}
++	#endif
+ #else
+ 	wlk_addr = fs->ate_wra;
+ #endif
+diff --git a/west.yml b/west.yml
+index e91e3577cd4..1e99a322697 100644
+--- a/west.yml
++++ b/west.yml
+@@ -142,7 +142,7 @@ manifest:
+         - hal
+     - name: hal_telink
+       url: https://github.com/telink-semi/hal_telink
+-      revision: 38c66795ef4a79453330a1aed85d1217843a8d05
++      revision: 288044318e37210623b3fb4998bb30fcd5182e29
+       path: modules/hal/telink
+       groups:
+         - hal
+@@ -193,7 +193,8 @@ manifest:
+       groups:
+         - crypto
+     - name: mcuboot
+-      revision: 1558e7ab0aadb4eac11f03befb5ccd3fa3f0aafe
++      url: https://github.com/telink-semi/mcuboot
++      revision: d9cf800ec1d939a51b918d10d2f2b5e2a27b7f88
+       path: bootloader/mcuboot
+     - name: mipi-sys-t
+       path: modules/debug/mipi-sys-t

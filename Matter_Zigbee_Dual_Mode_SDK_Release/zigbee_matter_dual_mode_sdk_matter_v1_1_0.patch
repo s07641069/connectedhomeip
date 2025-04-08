@@ -1,0 +1,3189 @@
+diff --git a/.github/workflows/chef.yaml b/.github/workflows/chef.yaml
+index 06580f6408..a15eeede6c 100644
+--- a/.github/workflows/chef.yaml
++++ b/.github/workflows/chef.yaml
+@@ -93,26 +93,26 @@ jobs:
+               run: |
+                   ./scripts/run_in_build_env.sh "./examples/chef/chef.py --ci -t nrfconnect"
+ 
+-    chef_telink:
+-        name: Chef - Telink CI Examples
+-        runs-on: ubuntu-latest
+-        if: github.actor != 'restyled-io[bot]'
+-
+-        container:
+-            image: ghcr.io/project-chip/chip-build-telink:119
+-            options: --user root
+-
+-        steps:
+-            - name: Checkout
+-              uses: actions/checkout@v4
+-            - name: Checkout submodules & Bootstrap
+-              uses: ./.github/actions/checkout-submodules-and-bootstrap
+-              with:
+-                platform: telink
+-            # - name: Update Zephyr to specific revision (for developers purpose)
+-            #   shell: bash
+-            #   run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py fdccaba1ebc147908e9cca653e6c6743def3332b"
+-            - name: CI Examples Telink
+-              shell: bash
+-              run: |
+-                  ./scripts/run_in_build_env.sh "./examples/chef/chef.py --ci -t telink"
++    # chef_telink:
++    #     name: Chef - Telink CI Examples
++    #     runs-on: ubuntu-latest
++    #     if: github.actor != 'restyled-io[bot]'
++
++    #     container:
++    #         image: ghcr.io/project-chip/chip-build-telink:119
++    #         options: --user root
++
++    #     steps:
++    #         - name: Checkout
++    #           uses: actions/checkout@v4
++    #         - name: Checkout submodules & Bootstrap
++    #           uses: ./.github/actions/checkout-submodules-and-bootstrap
++    #           with:
++    #             platform: telink
++    #         - name: Update Zephyr to specific revision (for developers purpose)
++    #           shell: bash
++    #           run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py b6ad0147f4e8cd41655b2fdf6b76ae348c0e0dfd"
++    #         - name: CI Examples Telink
++    #           shell: bash
++    #           run: |
++    #               ./scripts/run_in_build_env.sh "./examples/chef/chef.py --ci -t telink"
+diff --git a/.github/workflows/examples-telink.yaml b/.github/workflows/examples-telink.yaml
+index 6287938bd2..2b48f44c72 100644
+--- a/.github/workflows/examples-telink.yaml
++++ b/.github/workflows/examples-telink.yaml
+@@ -57,76 +57,8 @@ jobs:
+               with:
+                 gh-context: ${{ toJson(github) }}
+ 
+-            # - name: Update Zephyr to specific revision (for developers purpose)
+-            #   run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py fdccaba1ebc147908e9cca653e6c6743def3332b"
+-
+-            - name: Build example Telink (B92 retention) Air Quality Sensor App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a_retention-air-quality-sensor' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a_retention air-quality-sensor-app \
+-                    out/telink-tlsr9528a_retention-air-quality-sensor/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (W91) All Clusters App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9118bdk40d-all-clusters' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9118bdk40d all-clusters-app \
+-                    out/telink-tlsr9118bdk40d-all-clusters/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B92) All Clusters Minimal App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-all-clusters-minimal' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a all-clusters-minimal-app \
+-                    out/telink-tlsr9528a-all-clusters-minimal/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (tl721x) Bridge App
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl7218x-bridge' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl7218x bridge-app \
+-                    out/telink-tl7218x-bridge/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B92 retention) Contact Sensor App
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a_retention-contact-sensor' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a_retention contact-sensor-app \
+-                    out/telink-tlsr9528a_retention-contact-sensor/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
++            - name: Update Zephyr to specific revision (for developers purpose)
++              run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py b6ad0147f4e8cd41655b2fdf6b76ae348c0e0dfd"
+ 
+             - name: Build tools required for Factory Data
+               # Run test for master and all PRs
+@@ -139,223 +71,30 @@ jobs:
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
+-            - name: Build example Telink (W91) Lighting App with OTA, Factory Data
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9118bdk40d-light-ota-factory-data' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9118bdk40d lighting-app-ota-factory-data \
+-                    out/telink-tlsr9118bdk40d-light-ota-factory-data/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output (keep tools)
+-              run: rm -rf ./out/telink*
+-
+-            - name: Build example Telink (B91) Lighting App with OTA, RPC, Factory Data, 4Mb flash
++            - name: Build example Telink (tl321x) Lighting App with OTA (LZMA), Factory Data
+               # Run test for master and all PRs
+               run: |
+                   ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-light-ota-rpc-factory-data-4mb' build"
++                    "./scripts/build/build_examples.py --target 'telink-tl3218x-light-ota-compress-lzma-factory-data' build"
+                   .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9518adk80d lighting-app-ota-rpc-factory-data-4mb \
+-                    out/telink-tlsr9518adk80d-light-ota-rpc-factory-data-4mb/zephyr/zephyr.elf \
++                    telink tl3218x light-app-ota-compress-lzma-factory-data \
++                    out/telink-tl3218x-light-ota-compress-lzma-factory-data/zephyr/zephyr.elf \
+                     /tmp/bloat_reports/
+ 
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
+-            - name: Build example Telink (tl321x) Lighting App with OTA (LZMA), Shell, Factory Data
++            - name: Build example Telink (B92) Lighting App with OTA, Shell, Factory Data
+               # Run test for master and all PRs
+               run: |
+                   ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl3218x-light-ota-compress-lzma-shell-factory-data' build"
++                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-ota-4mb-shell-factory-data' build"
+                   .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl3218x light-app-ota-compress-lzma-shell-factory-data \
+-                    out/telink-tl3218x-light-ota-compress-lzma-shell-factory-data/zephyr/zephyr.elf \
++                    telink tlsr9528a light-app-ota-4mb-shell-factory-data \
++                    out/telink-tlsr9528a-light-ota-4mb-shell-factory-data/zephyr/zephyr.elf \
+                     /tmp/bloat_reports/
+ 
+             - name: clean out build output (keep tools)
+-              run: rm -rf ./out/telink*
+-
+-            - name: Build example Telink (tl321x_retention) Light Switch App with OTA, Shell, Factory Data
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl3218x_retention-light-switch-ota-shell-factory-data' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl3218x_retention light-switch-app-ota-shell-factory-data \
+-                    out/telink-tl3218x_retention-light-switch-ota-shell-factory-data/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output (keep tools)
+-              run: rm -rf ./out/telink*
+-
+-            - name: Build example Telink (tl721x) Lighting App with OTA, Shell, Factory Data
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl7218x-light-ota-shell-factory-data' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl7218x light-app-ota-shell-factory-data \
+-                    out/telink-tl7218x-light-ota-shell-factory-data/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output (keep tools)
+-              run: rm -rf ./out/telink*
+-
+-            - name: Build example Telink (tl721x retention) Light Switch App with OTA (LZMA), Factory Data
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl7218x_retention-light-switch-ota-compress-lzma-factory-data' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl7218x_retention light-switch-app-ota-compress-lzma-factory-data \
+-                    out/telink-tl7218x_retention-light-switch-ota-compress-lzma-factory-data/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output (keep tools)
+-              run: rm -rf ./out/telink*
+-
+-            - name: Build example Telink (B92) Light Switch App with OTA (LZMA), Shell, Factory Data
+-              # Run test for master and all PRs
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-switch-ota-compress-lzma-shell-factory-data' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a light-switch-app-ota-compress-lzma-shell-factory-data \
+-                    out/telink-tlsr9528a-light-switch-ota-compress-lzma-shell-factory-data/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B92) Lock App with DFU
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-lock-dfu' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a lock-app-dfu \
+-                    out/telink-tlsr9528a-lock-dfu/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (tl321x) OTA Requestor App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl3218x-ota-requestor' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl3218x ota-requestor-app \
+-                    out/telink-tl3218x-ota-requestor/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B91 USB) Pump App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-pump-usb' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9518adk80d pump-app-usb \
+-                    out/telink-tlsr9518adk80d-pump-usb/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B91) Pump Controller App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-pump-controller' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9518adk80d pump-controller-app \
+-                    out/telink-tlsr9518adk80d-pump-controller/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B91) Shell App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-shell' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9518adk80d shell \
+-                    out/telink-tlsr9518adk80d-shell/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (B92 retention) Smoke CO Alarm App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a_retention-smoke-co-alarm' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9528a_retention smoke_co_alarm-app \
+-                    out/telink-tlsr9528a_retention-smoke-co-alarm/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            # B91 Mars adopted only for Zephyr 3.7
+-            # Will be uncommented in next commits
+-            # - name: Build example Telink (B91 Mars) Temperature Measurement App with OTA
+-            #   # Run test for master and s07641069 PRs
+-            #   if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-            #   run: |
+-            #       ./scripts/run_in_build_env.sh \
+-            #         "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-temperature-measurement-mars-ota' build"
+-            #       .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-            #         telink tlsr9518adk80d temperature-measurement-app-mars-ota \
+-            #         out/telink-tlsr9518adk80d-temperature-measurement-mars-ota/zephyr/zephyr.elf \
+-            #         /tmp/bloat_reports/
+-
+-            # - name: clean out build output
+-            #   run: rm -rf ./out
+-
+-            - name: Build example Telink (B91) Thermostat App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tlsr9518adk80d-thermostat' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tlsr9518adk80d thermostat \
+-                    out/telink-tlsr9518adk80d-thermostat/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+-              run: rm -rf ./out
+-
+-            - name: Build example Telink (tl721x) Window Covering App
+-              # Run test for master and s07641069 PRs
+-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 's07641069/connectedhomeip'
+-              run: |
+-                  ./scripts/run_in_build_env.sh \
+-                    "./scripts/build/build_examples.py --target 'telink-tl7218x-window-covering' build"
+-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
+-                    telink tl7218x window-covering \
+-                    out/telink-tl7218x-window-covering/zephyr/zephyr.elf \
+-                    /tmp/bloat_reports/
+-
+-            - name: clean out build output
+               run: rm -rf ./out
+ 
+             - name: Uploading Size Reports
+diff --git a/config/telink/app/bootloader.conf b/config/telink/app/bootloader.conf
+index cdc60a11c7..d645287f42 100644
+--- a/config/telink/app/bootloader.conf
++++ b/config/telink/app/bootloader.conf
+@@ -14,9 +14,9 @@
+ #   limitations under the License.
+ #
+ 
+-# Enable this option in case if restoring the slot0 partition is expected from slot1 
++# Enable this option in case if restoring the slot0 partition is expected from slot1
+ # partition in case if slot0 is not bootable or damaged
+-CONFIG_BOOT_BOOTSTRAP=y
++CONFIG_BOOT_BOOTSTRAP=n
+ 
+ # Enable this option in case if SWAP_MOVE logic need to be used
+ CONFIG_BOOT_SWAP_USING_MOVE=y
+@@ -27,7 +27,7 @@ CONFIG_BOOT_SWAP_USING_SCRATCH=n
+ 
+ # Enable this option in case if the whole slot0 image need to be validated
+ # With disabled option the only image magic is validated
+-CONFIG_BOOT_VALIDATE_SLOT0=y
++CONFIG_BOOT_VALIDATE_SLOT0=n
+ 
+ # Required for Zephyr 3.3 and replased with CONFIG_BOOT_MAX_IMG_SECTORS_AUTO in new versions
+ # Maximum number of image sectors supported by the bootloader.
+@@ -40,6 +40,10 @@ CONFIG_BOOT_MAX_IMG_SECTORS=512
+ #  - WARNING,  LOG_LEVEL_WRN
+ #  - INFO,  LOG_LEVEL_INF
+ #  - DEBUG, LOG_LEVEL_DBG
+-CONFIG_MCUBOOT_LOG_LEVEL_INF=y
++CONFIG_MCUBOOT_LOG_LEVEL_ERR=y
+ 
+ CONFIG_PICOLIBC=y
++
++# Enable overwrite the primary slot with the upgrade image instead of swapping them.
++# This prevents the fallback recovery.
++CONFIG_BOOT_UPGRADE_ONLY=y
+diff --git a/config/telink/app/bootloader_compress_lzma.conf b/config/telink/app/bootloader_compress_lzma.conf
+index 6cab83229b..5be44db707 100644
+--- a/config/telink/app/bootloader_compress_lzma.conf
++++ b/config/telink/app/bootloader_compress_lzma.conf
+@@ -20,7 +20,7 @@ CONFIG_BOOT_UPGRADE_ONLY=y
+ 
+ # Enable this option in case if the whole slot0 image need to be validated
+ # With disabled option the only image magic is validated
+-CONFIG_BOOT_VALIDATE_SLOT0=y
++CONFIG_BOOT_VALIDATE_SLOT0=n
+ 
+ # Required for Zephyr 3.3 and replased with CONFIG_BOOT_MAX_IMG_SECTORS_AUTO in new versions
+ # Maximum number of image sectors supported by the bootloader.
+@@ -33,7 +33,7 @@ CONFIG_BOOT_MAX_IMG_SECTORS=512
+ #  - WARNING,  LOG_LEVEL_WRN
+ #  - INFO,  LOG_LEVEL_INF
+ #  - DEBUG, LOG_LEVEL_DBG
+-CONFIG_MCUBOOT_LOG_LEVEL_INF=y
++CONFIG_MCUBOOT_LOG_LEVEL_ERR=y
+ 
+ # LZMA used sys_heap based allocators
+ CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=78000
+diff --git a/config/telink/chip-module/CMakeLists.txt b/config/telink/chip-module/CMakeLists.txt
+index 0b095a5391..7454d2719e 100644
+--- a/config/telink/chip-module/CMakeLists.txt
++++ b/config/telink/chip-module/CMakeLists.txt
+@@ -214,4 +214,16 @@ if (CONFIG_CHIP_FACTORY_DATA_BUILD)
+     telink_generate_factory_data()
+ endif()
+ 
++# ==============================================================================
++# Define 'build_user_token' target for building the user token image
++# ==============================================================================
++
++if(DEFINED CONFIG_USER_TOKEN AND CONFIG_USER_TOKEN STREQUAL "y")
++    add_custom_target(build_user_token ALL
++        COMMAND ${Python3_EXECUTABLE} ${CHIP_ROOT}/examples/lighting-app/telink/process_token.py
++        WORKING_DIRECTORY ${PROJECT_BINARY_DIR}
++    )
++    add_dependencies(build_user_token ${ZEPHYR_FINAL_EXECUTABLE})
++endif()
++
+ endif() # CONFIG_CHIP
+diff --git a/config/telink/chip-module/Kconfig b/config/telink/chip-module/Kconfig
+index 326643619b..26a3a4ff1f 100644
+--- a/config/telink/chip-module/Kconfig
++++ b/config/telink/chip-module/Kconfig
+@@ -71,10 +71,15 @@ config CHIP_OTA_IMAGE_BUILD
+ 	bool
+ 	default y if CHIP_OTA_REQUESTOR
+ 
++config DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
++	string "Default Zephyr signed image file name"
++	default "zephyr.signed.bin"
++	depends on CHIP_OTA_REQUESTOR
++
+ config SIGNED_OTA_IMAGE_FILE_NAME
+ 	string "Zephyr signed image file name"
+ 	default "zephyr.signed.lzma.signed.bin" if COMPRESS_LZMA
+-	default "zephyr.signed.bin"
++	default DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
+ 	depends on CHIP_OTA_REQUESTOR
+ 	help
+ 	  Provides the file name of the generated Zephyr signed image.
+@@ -246,3 +251,13 @@ config CHIP_USE_MARS_SENSOR
+ 	bool "Use Mars board sensor"
+ 	depends on SOC_RISCV_TELINK_B9X && (BOARD_TLSR9518ADK80D || BOARD_TLSR9518ADK80D_RETENTION)
+ 	default n
++
++config SECURE_PROGRAMMING
++	bool "Enable reading DAC and keys from the DAC partition"
++	depends on CHIP_FACTORY_DATA
++	default n
++
++config TELINK_ZB_PARTITION_ADDR
++	hex "Zigbee partition address"
++	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,zb_partition),0)
++	depends on SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
+diff --git a/config/telink/chip-module/Kconfig.defaults b/config/telink/chip-module/Kconfig.defaults
+index e1217ae880..10365ee98e 100644
+--- a/config/telink/chip-module/Kconfig.defaults
++++ b/config/telink/chip-module/Kconfig.defaults
+@@ -78,7 +78,7 @@ config IDLE_STACK_SIZE
+ 
+ config ISR_STACK_SIZE
+     default 576 if PM
+-    default 528 if SOC_RISCV_TELINK_TL321X
++    default 560 if SOC_RISCV_TELINK_TL321X
+ 
+ config SYSTEM_WORKQUEUE_STACK_SIZE
+     default 616 if PM
+@@ -178,7 +178,7 @@ config BT_DEVICE_NAME_GATT_WRITABLE
+ if SOC_RISCV_TELINK_B9X || SOC_RISCV_TELINK_TLX
+ 
+ config TL_BLE_CTRL_THREAD_STACK_SIZE
+-    default 648 if ZEPHYR_VERSION_3_3
++    default 712 if ZEPHYR_VERSION_3_3
+     default 680
+ 
+ config TL_BLE_CTRL_MASTER_MAX_NUM
+@@ -239,6 +239,9 @@ config DYNAMIC_INTERRUPTS
+ config CHIP_OTA_REQUESTOR
+     default y
+ 
++config SECURE_PROGRAMMING
++    default n
++
+ config MCUBOOT_SIGNATURE_KEY_FILE
+     default "bootloader/mcuboot/root-ec-p256.pem" if BOARD_TLSR9118BDK40D || BOARD_TLSR9118BDK40D_V1
+     depends on BOOTLOADER_MCUBOOT
+@@ -266,6 +269,59 @@ config NVS_LOOKUP_CACHE_SIZE
+     default 400  if SOC_RISCV_TELINK_TL321X
+     default 2048 if !PM
+ 
++config NVS_RAM_OPTIMIZATION
++    bool "Optimize the RAM required for NVS"
++    default y if PM || SOC_RISCV_TELINK_TL321X
++    default n
++
++# Test on newest based code, need to enlarge to 512 which can pass TC_RR_1.1
++config NVS_LOOKUP_CACHE_ARRAY_SIZE
++    default 512 if PM || SOC_RISCV_TELINK_TL321X
++
++config COMPRESS_LZMA
++    depends on CHIP_OTA_REQUESTOR
++    default y if SOC_RISCV_TELINK_TL321X
++    default n
++
++config CUSTOMER_MODE
++    bool "control the demo code"
++    default n if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
++    default n
++
++config DUAL_MODE_SWTICH
++    bool "Control Dual-Mode Switching"
++    default y if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_B92
++    default n
++
++config I2C_LED
++    bool "Control the i2 led slave use raw address"
++    default n
++    select I2C
++
++config USER_TOKEN
++    bool "Generate the user token image"
++    default n
++
++config STARTUP_OPTIMIZATION
++    bool "Optimize startup speed"
++    default n
++
++config BUTTON_FACTORY_RESET
++    bool "Do factory reset base on button"
++    default n
++
++config STORAGE_OTA_STATUS
++    bool "Store ota status base on analog register"
++    default n
++
++config EXPOSE_CHIPID_VIA_BLE
++    bool "Get CHIP ID via ble"
++    default n
++
++config DEFERRED_ATTR_STORAGE
++    bool "Defer the storage time of attributes"
++    default y
++
+ # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
+ # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
+ config SETTINGS_NVS_SECTOR_SIZE_MULT
+@@ -307,7 +363,7 @@ config OPENTHREAD_THREAD_STACK_SIZE
+ 
+ config OPENTHREAD_RADIO_WORKQUEUE_STACK_SIZE
+     default 432 if PM
+-    default 608
++    default 672
+ 
+ config OPENTHREAD_SLAAC
+     default y
+diff --git a/examples/lighting-app/telink/CMakeLists.txt b/examples/lighting-app/telink/CMakeLists.txt
+index 9593094694..5fcd960f55 100644
+--- a/examples/lighting-app/telink/CMakeLists.txt
++++ b/examples/lighting-app/telink/CMakeLists.txt
+@@ -38,6 +38,7 @@ target_include_directories(app PRIVATE
+ target_sources(app PRIVATE
+                src/AppTask.cpp
+                src/ZclCallbacks.cpp
++               ${CHIP_ROOT}/src/app/util/persistence/DeferredAttributePersistenceProvider.cpp
+                ${TELINK_COMMON}/common/src/mainCommon.cpp
+                ${TELINK_COMMON}/common/src/AppTaskCommon.cpp
+                ${TELINK_COMMON}/util/src/LEDManager.cpp
+diff --git a/examples/lighting-app/telink/include/AppTask.h b/examples/lighting-app/telink/include/AppTask.h
+index d3327d1ed3..d9314bc596 100644
+--- a/examples/lighting-app/telink/include/AppTask.h
++++ b/examples/lighting-app/telink/include/AppTask.h
+@@ -42,6 +42,8 @@ public:
+     bool IsTurnedOn() const;
+     void SetInitiateAction(Fixture_Action aAction, int32_t aActor, uint8_t * value);
+     void UpdateClusterState(void);
++    void Init_cluster_info(void);
++    void Set_cluster_info(void);
+ 
+ private:
+     friend AppTask & GetAppTask(void);
+diff --git a/examples/lighting-app/telink/process_token.py b/examples/lighting-app/telink/process_token.py
+new file mode 100644
+index 0000000000..44a1da8e08
+--- /dev/null
++++ b/examples/lighting-app/telink/process_token.py
+@@ -0,0 +1,233 @@
++import json
++import os
++
++
++def find_json(json_path):
++    """
++    Find token.json in given path.
++
++    Args:
++        json_path (string): The file path of token.json.
++
++    Returns:
++        json_data (structure): The json data structure.
++    """
++    try:
++        with open(json_path, 'r') as f:
++            json_data = json.load(f)
++
++    except FileNotFoundError:
++        print(json_path + " is not find, abort.")
++        exit(1)
++
++    except json.JSONDecodeError:
++        print(json_path + " parse error, abort.")
++        exit(1)
++
++    return json_data
++
++
++def get_json_data(json_data):
++    """
++    Get the json data from token.json.
++
++    Args:
++        json_data (structure): The data structure of json.
++
++    Returns:
++        [ start_addr, sizeByte, write_data ]: The array of json data.
++    """
++    startAddr = json_data.get("offset")
++    sizeByte = json_data.get("sizeB")
++    writeData = json_data.get("data")
++
++    return [startAddr, sizeByte, writeData]
++
++
++def intervals_intersect(interval1, interval2):
++    if interval1[1] <= interval2[0] or interval1[0] >= interval2[1]:
++        return False  # no intersection return False
++    else:
++        return True
++
++
++def find_intersection(interval1, interval2):
++    if not intervals_intersect(interval1, interval2):
++        return []
++
++    start = max(interval1[0], interval2[0])
++    end = min(interval1[1], interval2[1])
++
++    return [hex(start), hex(end)]
++
++
++def two_find_intersection(intervalArry, interval):
++    for inter in intervalArry:
++        intersection = find_intersection(inter, interval)
++        if len(intersection) != 0:  # has intersection
++            print("Intersection: ", end="\n")
++            print(intersection, end="\n")
++            return -1
++    return 0
++
++
++def curOffsetAddrCheck(curOffset, curSizeB, intervalArry, token_bin_size):
++    curOffset_INT = int(curOffset, 16)
++
++    result = two_find_intersection(
++        intervalArry,
++        [curOffset_INT + 0, curOffset_INT + curSizeB]
++    )
++    if result == (-1):
++        print("\ncurOffset: " + str(curOffset) + ",curSizeB: " + str(curSizeB), end="\n")
++
++        print("\nThe current write offset address is invalid,", end="\n")
++        print("there is a risk of overwriting the previous write interval,", end="\n")
++        print("abort!", end="\n")
++
++        exit(1)
++
++    if (curOffset_INT + curSizeB) >= token_bin_size:
++        print("curOffset: " + curOffset + ",curSizeB: " + curSizeB, end="\n")
++
++        print("The current write offset address is invalid,", end="\n")
++        print("exceed the write range of the token.bin,", end="\n")
++        print("abort!", end="\n")
++
++        exit(1)
++
++
++def offsetNewSet(preOffset, preSizeB, curOffset):
++    _TMP_ = curOffset.split("0x")
++
++    if len(_TMP_) == 1:  # use pre offset + pre sizeB to calculate cur offset
++        curOffset = hex(
++            int(preOffset, 16) + preSizeB
++        )
++
++    return curOffset
++
++
++def covertData(data):
++    _TMP_ = data.split("0x")
++
++    if len(_TMP_) == 1:
++        return [format(ord(char), '02x') for char in _TMP_[0]]
++    else:
++        return [Str.strip().replace(',', '') for Str in _TMP_[1:]]
++
++
++def adjustWrittenData(sizeB, data, offset, baseVAL="ff"):
++    dataLen = len(data)
++
++    if sizeB == dataLen:
++        return data
++    elif sizeB > dataLen:
++        return (data + ([baseVAL] * (sizeB - dataLen)))
++    elif sizeB < dataLen:
++        print("offset: " + str(offset) + ", sizeB: " + str(sizeB) + ", dataLen: " + str(dataLen), end="\n")
++        print("sizeB < len(data), illegal operation, abort!", end="\n")
++        exit(1)
++
++
++def generate_token(token_bin_path, offset, data):
++    """
++    Generate token.bin according to the data of token.json.
++
++    Args:
++        token_bin_path (string): The path of token.bin for new generate.
++        addr (int): Location of written data.
++        data (string): The data to be written.
++    """
++    try:
++        with open(token_bin_path, 'r+b') as f:
++            f.seek(int(offset, 16))
++
++            for val in data:
++                f.write(bytes.fromhex(val))
++
++    except IOError:
++        print("An error occurred while open or write to the bin, abort.")
++        exit(1)
++
++
++def main():
++    current_abs_path = os.path.dirname(os.path.abspath(__file__))
++    # print(current_abs_path)
++
++    token_json_path = current_abs_path + "/token.json"
++    token_bin_path = "./token.bin"
++
++    token_bin_size = 4096  # 4KB
++
++    # Create a bin with all values of '0xff'
++    with open(token_bin_path, 'wb+') as f:
++        f.write(bytes([0xff] * token_bin_size))
++
++    # Find the token.json.
++    _JSON_DATA_ = find_json(
++        token_json_path
++    )
++
++    preOffset = "null"
++    preSizeB = -1
++
++    intervalArry = []
++
++    for json_data in _JSON_DATA_:
++        # Get the json data.
++        offset, sizeB, data = get_json_data(json_data)
++
++        if (sizeB == 0):
++            continue
++
++        # Init preOffset and preSizeB.
++        if (preOffset == "null") or (preSizeB == -1):
++            preOffset = offset
++            preSizeB = sizeB
++
++        # Get a new offset addr.
++        newOffset = offsetNewSet(
++            preOffset,
++            preSizeB,
++            offset
++        )
++        # print(newOffset, end = "\t")
++        # print(sizeB, end = "\n")
++
++        # Check if the current write offset address is valid.
++        curOffsetAddrCheck(
++            newOffset,
++            sizeB,
++            intervalArry,
++            token_bin_size
++        )
++
++        # Covert input data and get the new write data.
++        covertArray = covertData(data)
++        newData = adjustWrittenData(sizeB, covertArray, newOffset, "ff")
++        # print(covertArray, end = "\n")
++        # print(newData, end = "\n\n")
++
++        # Generate token bin.
++        generate_token(
++            token_bin_path,
++            newOffset,
++            newData
++        )
++
++        # Update preOffset and preSizeB.
++        preOffset = newOffset
++        preSizeB = sizeB
++        # Use to two way find intersection.
++        intervalArry.append([
++            int(preOffset, 16) + 0,
++            int(preOffset, 16) + preSizeB
++        ])
++        # print(intervalArry, end="\n\n")
++
++    print("Generate successfully for the token.bin.")
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/examples/lighting-app/telink/src/AppTask.cpp b/examples/lighting-app/telink/src/AppTask.cpp
+index 9e41915071..b8b4162146 100644
+--- a/examples/lighting-app/telink/src/AppTask.cpp
++++ b/examples/lighting-app/telink/src/AppTask.cpp
+@@ -22,6 +22,11 @@
+ #include "ColorFormat.h"
+ #include "LEDManager.h"
+ #include "PWMManager.h"
++#include <zephyr/device.h>
++#include <zephyr/devicetree.h>
++#include <zephyr/drivers/adc.h>
++#include <zephyr/drivers/i2c.h>
++#include <zephyr/kernel.h>
+ 
+ #include <app-common/zap-generated/attributes/Accessors.h>
+ 
+@@ -55,11 +60,231 @@ void AppTask::PowerOnFactoryReset(void)
+ }
+ #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
+ 
++#if CONFIG_CUSTOMER_MODE
++/**
++ * @brief Use I2C to transfer data.
++ *
++ * @see CONFIG_I2C=y must be set in prj.conf
++ * when you need to use I2C module.
++ */
++void i2c_demo_proc(void)
++{
++#if CONFIG_I2C
++    const uint8_t tx_buf[23] = { 0xc0, 0x63, 0x3f, 0x63, 0x63, 0x63, 0x22, 0x22, 0x00, 0x00, 0x00, 0x00,
++                                 0x3f, 0x3f, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2b, 0x06, 0xbe };
++    /* add the i2c module here */
++    printk("i2c demo start \n.");
++    uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_FAST) | I2C_MODE_CONTROLLER;
++    /* get i2c device */
++    int rc;
++    const struct i2c_dt_spec i2c = I2C_DT_SPEC_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(ledcontrol_i2c));
++    if (!device_is_ready(i2c.bus))
++    {
++        printf("Device %s is not ready\n", i2c.bus->name);
++        return;
++    }
++    rc = i2c_configure(i2c.bus, i2c_cfg);
++    if (rc != 0)
++    {
++        printf("Failed to configure i2c device\n");
++        return;
++    }
++    i2c_write(i2c.bus, tx_buf + 1, sizeof(tx_buf) - 1, tx_buf[0]);
++    printk("i2c demo stop ,finish transfer\n");
++#endif // CONFIG_I2C
++}
++
++/**
++ * @brief Use ADC to sampling.
++ *
++ * @see CONFIG_ADC=y must be set in prj.conf
++ * when you need to use ADC module.
++ */
++
++/* Data of ADC io-channels specified in devicetree. */
++#define DT_SPEC_AND_COMMA(node_id, prop, idx) ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
++
++void adc_demo_proc(void)
++{
++#if CONFIG_ADC
++    static const struct adc_dt_spec adc_channels[] = { DT_FOREACH_PROP_ELEM(DT_PATH(zephyr_user), io_channels, DT_SPEC_AND_COMMA) };
++
++    /* Define ADC data structure. */
++    uint16_t buf;
++    struct adc_sequence sequence = {
++        .buffer = &buf,
++        /* buffer size in bytes, not number of samples */
++        .buffer_size = sizeof(buf),
++    };
++
++    int err = 0;
++
++    /* Configure channels individually prior to sampling. */
++    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
++    {
++        if (!device_is_ready(adc_channels[i].dev))
++        {
++            printf("ADC controller device %s not ready\n", adc_channels[i].dev->name);
++            return;
++        }
++        err = adc_channel_setup_dt(&adc_channels[i]);
++        if (err < 0)
++        {
++            printf("Could not setup channel #%d (%d)\n", i, err);
++            return;
++        }
++    }
++
++    /* ADC sampling. */
++    for (size_t i = 0U; i < ARRAY_SIZE(adc_channels); i++)
++    {
++        printf("- %s, channel %d: ", adc_channels[i].dev->name, adc_channels[i].channel_id);
++        (void) adc_sequence_init_dt(&adc_channels[i], &sequence);
++        err = adc_read(adc_channels[i].dev, &sequence);
++        if (err < 0)
++        {
++            printf("Could not read (%d)\n", err);
++            continue;
++        }
++
++        int32_t val_mv = 0;
++
++        /*
++         * If using differential mode, the 16 bit value
++         * in the ADC sample buffer should be a signed 2's
++         * complement value.
++         */
++        if (adc_channels[i].channel_cfg.differential)
++        {
++            val_mv = (int32_t) ((int16_t) buf);
++        }
++        else
++        {
++            val_mv = (int32_t) buf;
++        }
++        printf("%" PRId32, val_mv);
++
++        /* conversion to mV may not be supported, skip if not */
++        err = adc_raw_to_millivolts_dt(&adc_channels[i], &val_mv);
++        if (err < 0)
++        {
++            printf(" (value in mV not available)\n");
++        }
++        else
++        {
++            printf(" = %" PRId32 " mV\n", val_mv);
++        }
++    }
++#endif // CONFIG_ADC
++}
++
++/**
++ * @brief Set cluster info.
++ */
++#define MATTER_COLORMODE_ENABLE 0
++
++void AppTask::Set_cluster_info(void)
++{
++    printk("%%%%%%Set_cluster_info!!!!%%%%%%\n");
++    light_para_t * p_para = &light_para;
++    Protocols::InteractionModel::Status status;
++    printk("%%%%%%Set_cluster_info:p_para->onoff:%d!!!!%%%%%%\n", p_para->onoff);
++    status = Clusters::OnOff::Attributes::OnOff::Set(1, p_para->onoff);
++    // Set brightness value
++    printk("%%%%%%Set_cluster_info:p_para->level:%d!!!!%%%%%%\n", p_para->level);
++    status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kExampleEndpointId, p_para->level);
++
++#if MATTER_COLORMODE_ENABLE
++    // Set ColorMode value
++    printk("%%%%%%Set_cluster_info:p_para->color_mode:%d!!!!%%%%%%\n", p_para->color_mode);
++    status = Clusters::ColorControl::Attributes::ColorMode::Set(1, p_para->color_mode);
++#endif
++
++    // Set ColorTemperatureMireds value
++    status = Clusters::ColorControl::Attributes::ColorTemperatureMireds::Set(1, p_para->color_temp_mireds);
++    // Set CurrentX value
++    status = Clusters::ColorControl::Attributes::CurrentX::Set(1, p_para->currentx);
++    // Set CurrentY value
++    status = Clusters::ColorControl::Attributes::CurrentY::Set(1, p_para->currenty);
++    // Set EnhancedCurrentHue value
++    status = Clusters::ColorControl::Attributes::EnhancedCurrentHue::Set(1, p_para->enhanced_current_hue);
++    // Set CurrentHue value
++    status = Clusters::ColorControl::Attributes::CurrentHue::Set(1, p_para->cur_hue);
++    // Set CurrentSaturation value
++    status = Clusters::ColorControl::Attributes::CurrentSaturation::Set(1, p_para->cur_saturation);
++    // Set OnOffTransitionTime value
++    status = Clusters::LevelControl::Attributes::OnOffTransitionTime::Set(1, p_para->onoff_transition);
++}
++
++/**
++ * @brief Get cluster info.
++ */
++void AppTask::Init_cluster_info(void)
++{
++    light_para_t * p_para = &light_para;
++    Protocols::InteractionModel::Status status;
++    bool onoff_sts;
++    status        = Clusters::OnOff::Attributes::OnOff::Get(1, &(onoff_sts));
++    p_para->onoff = (uint8_t) onoff_sts;
++    app::DataModel::Nullable<uint8_t> brightness;
++    // Read brightness value
++    status = Clusters::LevelControl::Attributes::CurrentLevel::Get(kExampleEndpointId, brightness);
++    if (status == Protocols::InteractionModel::Status::Success && !brightness.IsNull())
++    {
++        p_para->level = brightness.Value();
++    }
++
++#if MATTER_COLORMODE_ENABLE
++    // Read ColorMode value
++    status = Clusters::ColorControl::Attributes::ColorMode::Get(1, &(p_para->color_mode));
++#endif
++
++    // Read ColorTemperatureMireds value
++    status = Clusters::ColorControl::Attributes::ColorTemperatureMireds::Get(1, &(p_para->color_temp_mireds));
++
++    // Read CurrentX value
++    status = Clusters::ColorControl::Attributes::CurrentX::Get(1, &(p_para->currentx));
++
++    // Read CurrentY value
++    status = Clusters::ColorControl::Attributes::CurrentY::Get(1, &(p_para->currenty));
++
++    // Read EnhancedCurrentHue value
++    status = Clusters::ColorControl::Attributes::EnhancedCurrentHue::Get(1, &(p_para->enhanced_current_hue));
++
++    // Read CurrentHue value
++    status = Clusters::ColorControl::Attributes::CurrentHue::Get(1, &(p_para->cur_hue));
++
++    // Read CurrentSaturation value
++    status = Clusters::ColorControl::Attributes::CurrentSaturation::Get(1, &(p_para->cur_saturation));
++
++    // Read OnOffTransitionTime value
++    status = Clusters::LevelControl::Attributes::OnOffTransitionTime::Get(1, &(p_para->onoff_transition));
++}
++#endif // CONFIG_CUSTOMER_MODE
++
+ CHIP_ERROR AppTask::Init(void)
+ {
+     SetExampleButtonCallbacks(LightingActionEventHandler);
+     InitCommonParts();
+ 
++#if CONFIG_CUSTOMER_MODE
++    if (user_para.val == USER_ZB_SW_VAL)
++    {
++        /* Switching from TouchLink (Zigbee) to Matter. Restore previous states. */
++        Set_cluster_info();
++    }
++    else if (user_para.val == USER_MATTER_PAIR_VAL)
++    {
++        /* start from matter , add cluster info demo here*/
++        Init_cluster_info();
++    }
++    else
++    {
++        /* start from matter , but without zigbee fw*/
++    }
++    /* if need , can call i2c_demo_proc here to see light works or not*/
++
++#else
+     Protocols::InteractionModel::Status status;
+ 
+     app::DataModel::Nullable<uint8_t> brightness;
+@@ -80,7 +305,7 @@ CHIP_ERROR AppTask::Init(void)
+         // Set actual state to stored before reboot
+         SetInitiateAction(storedValue ? ON_ACTION : OFF_ACTION, static_cast<int32_t>(AppEvent::kEventType_DeviceAction), nullptr);
+     }
+-
++#endif
+     return CHIP_NO_ERROR;
+ }
+ 
+diff --git a/examples/lighting-app/telink/src/ZclCallbacks.cpp b/examples/lighting-app/telink/src/ZclCallbacks.cpp
+index e28d31c833..084e540710 100644
+--- a/examples/lighting-app/telink/src/ZclCallbacks.cpp
++++ b/examples/lighting-app/telink/src/ZclCallbacks.cpp
+@@ -30,9 +30,60 @@ LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
+ using namespace chip;
+ using namespace chip::app::Clusters;
+ 
++#if CONFIG_STARTUP_OPTIMIZATION
++#include "AppTaskCommon.h"
++
++static uint8_t latest_level = 0;
++
++// CLUTER_SOTRE_TIMEOUT should equal to DEFERRED_STORAGE_TIME
++#define CLUTER_SOTRE_TIMEOUT 500
++#define TRANSTION_TIMER_INIT_FLAG 0x55
++#define TRANSTION_TIMER_DEINIT_FLAG 0x00
++
++struct k_timer LevelChangeTimer;
++static int timer_period   = CLUTER_SOTRE_TIMEOUT;
++static uint8_t init_timer = TRANSTION_TIMER_INIT_FLAG;
++
++static void LevelTimeoutCallback(struct k_timer * timer)
++{
++    if (!timer)
++    {
++        return;
++    }
++
++    cluster_startup_para cluster_para;
++    if (read_cluster_para(&cluster_para) != 0)
++    {
++        if (uart_init_flag)
++        {
++            printk("Fail read cluster parameter when execute LevelTimeoutCallback\n");
++        }
++    }
++    if (cluster_para.level != latest_level)
++    {
++        cluster_para.level = latest_level;
++        if (store_cluster_para(&cluster_para) != 0)
++        {
++            if (uart_init_flag)
++            {
++                printk("Fail store cluster parameter when execute LevelTimeoutCallback\n");
++            }
++        }
++    }
++}
++#endif // CONFIG_STARTUP_OPTIMIZATION
++
+ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
+                                        uint8_t * value)
+ {
++#if CONFIG_CUSTOMER_MODE
++    /* customer mode , add the customer code here for cb*/
++    ClusterId clusterId     = attributePath.mClusterId;
++    AttributeId attributeId = attributePath.mAttributeId;
++    ChipLogProgress(Zcl, "========MatterPostAttributeChangeCallback:clusterId=0x%x,AttributeId=0x%x,value=0x%x", clusterId,
++                    attributeId, *value);
++
++#else
+     static HsvColor_t hsv;
+     static XyColor_t xy;
+     ClusterId clusterId     = attributePath.mClusterId;
+@@ -116,4 +167,42 @@ void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath &
+             ChipLogDetail(Zcl, "Ignore ColorControl attribute (%u) that is not currently processed!", attributeId);
+         }
+     }
++#endif
++
++#if CONFIG_STARTUP_OPTIMIZATION
++    if (init_timer == TRANSTION_TIMER_INIT_FLAG)
++    {
++        k_timer_init(&LevelChangeTimer, &LevelTimeoutCallback, nullptr);
++        init_timer = TRANSTION_TIMER_DEINIT_FLAG;
++    }
++
++    if (clusterId == OnOff::Id && attributeId == OnOff::Attributes::OnOff::Id)
++    {
++        cluster_startup_para cluster_para;
++        if (read_cluster_para(&cluster_para) != 0)
++        {
++            if (uart_init_flag)
++            {
++                printk("Fail read cluster parameter when clusterId is OnOff\n");
++            }
++        }
++        if (cluster_para.onoff != *value)
++        {
++            cluster_para.onoff = *value;
++            if (store_cluster_para(&cluster_para) != 0)
++            {
++                if (uart_init_flag)
++                {
++                    printk("Fail store cluster parameter when clusterId is OnOff\n");
++                }
++            }
++        }
++    }
++    else if (clusterId == LevelControl::Id && attributeId == LevelControl::Attributes::CurrentLevel::Id)
++    {
++        latest_level = *value;
++        k_timer_stop(&LevelChangeTimer);
++        k_timer_start(&LevelChangeTimer, K_MSEC(timer_period), K_NO_WAIT);
++    }
++#endif // CONFIG_STARTUP_OPTIMIZATION
+ }
+diff --git a/examples/lighting-app/telink/token.json b/examples/lighting-app/telink/token.json
+new file mode 100644
+index 0000000000..d63bab322c
+--- /dev/null
++++ b/examples/lighting-app/telink/token.json
+@@ -0,0 +1,52 @@
++[
++    {
++        "name": "NOTE",
++        "sizeB": 0,
++        "description_1": "The following is only test data.",
++        "description_2": "This json item will no execute when sizeB = 0.",
++        "description_3": "Please make your changes and re-compile matter using (-p).",
++        "description_4": "The new token.bin will be generated under the ${project}/build/zephyr."
++    },
++    {
++        "offset": "0x00",
++        "sizeB": 32,
++        "data": "bulb CWS",
++        "description": "Basic Cluster Model Identifier, 32 Char"
++    },
++    {
++        "offset": "0x40",
++        "sizeB": 1,
++        "data": "0x01",
++        "description": "Basic Cluster Hardware Version, uint 8"
++    },
++    {
++        "offset": "",
++        "sizeB": 3,
++        "data": "0xaa, 0x12",
++        "description": "Basic Cluster Generic Device type, uint 8"
++    },
++    {
++        "offset": "",
++        "sizeB": 2,
++        "data": "0xaa, 0x56",
++        "description": "Basic Cluster Generic Device type, uint 8"
++    },
++    {
++        "offset": "0x50",
++        "sizeB": 16,
++        "data": "LED2024",
++        "description": "Basic Cluster Product Code, 16 Octet"
++    },
++    {
++        "offset": "0x60",
++        "sizeB": 1,
++        "data": "0x02",
++        "description": "Configuration of Product Type, uint 8"
++    },
++    {
++        "offset": "",
++        "sizeB": 2,
++        "data": "0x05",
++        "description": "Basic Cluster Generic Device type, uint 8"
++    }
++]
+diff --git a/examples/platform/telink/common/include/AppTaskCommon.h b/examples/platform/telink/common/include/AppTaskCommon.h
+index 25e0e4c8da..b1a29ec8b2 100644
+--- a/examples/platform/telink/common/include/AppTaskCommon.h
++++ b/examples/platform/telink/common/include/AppTaskCommon.h
+@@ -37,6 +37,76 @@
+ 
+ #include <credentials/examples/DeviceAttestationCredsExample.h>
+ 
++#if CONFIG_DUAL_MODE_SWTICH
++#include <zephyr/device.h>
++#include <zephyr/drivers/flash.h>
++#include <zephyr/storage/flash_map.h>
++#include <zephyr/sys/reboot.h>
++
++#define ZB_NVS_PARTITION zigbee_nvs_partition
++#define ZB_NVS_SEC_SIZE FIXED_PARTITION_SIZE(ZB_NVS_PARTITION)
++
++#define ZB_NVS_PARTITION_DEVICE FIXED_PARTITION_DEVICE(ZB_NVS_PARTITION)
++#define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
++
++#define USER_INIT_VAL 0xff
++#define USER_ZB_SW_VAL 0xaa
++#define USER_MATTER_PAIR_VAL 0x55
++#define USER_MATTER_BACK_ZB 0xa0 // only commisiion fail will back to zb
++#define USER_PARA_MAC_OFFSET 0x100
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++
++typedef struct
++{
++    uint8_t val;
++    uint8_t on_net;
++} user_para_t;
++
++typedef struct
++{
++    uint8_t onoff;
++    uint8_t level;
++    uint16_t color_temp_mireds;
++    uint16_t currentx;
++    uint16_t currenty;
++    uint16_t enhanced_current_hue;
++    uint16_t onoff_transition;
++    uint8_t cur_hue;
++    uint8_t cur_saturation;
++    uint8_t color_mode;
++} light_para_t;
++
++extern light_para_t light_para;
++extern user_para_t user_para;
++extern uint8_t para_lightness;
++extern uint8_t sBoot_zb;
++#endif
++
++#if CONFIG_STARTUP_OPTIMIZATION
++#define USER_CLUSTER_PARTITION user_cluster_partition
++#define USER_CLUSTER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_CLUSTER_PARTITION)
++#define USER_CLUSTER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_CLUSTER_PARTITION)
++#define USER_CLUSTER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_CLUSTER_PARTITION)
++
++typedef struct
++{
++    uint8_t onoff;
++    uint8_t level;
++    uint8_t rfu[30];
++} cluster_startup_para;
++
++extern volatile bool uart_init_flag;
++
++void set_debug_flag(bool flag);
++volatile bool read_debug_flag(void);
++void init_cluster_partition(void);
++int store_cluster_para(cluster_startup_para * data);
++int read_cluster_para(cluster_startup_para * data);
++#endif // CONFIG_STARTUP_OPTIMIZATION
++
+ #include <cstdint>
+ 
+ using namespace ::chip;
+@@ -100,6 +170,7 @@ protected:
+     virtual void LinkButtons(ButtonManager & buttonManager);
+ 
+     static void FactoryResetTimerTimeoutCallback(k_timer * timer);
++    static void DnssTimerTimeoutCallback(k_timer * timer);
+     static void FactoryResetTimerEventHandler(AppEvent * aEvent);
+     static void FactoryResetButtonEventHandler(void);
+     static void FactoryResetHandler(AppEvent * aEvent);
+@@ -120,11 +191,16 @@ protected:
+     static void TestOTAHandler(AppEvent * aEvent);
+ #endif
+ 
++#if CONFIG_BUTTON_FACTORY_RESET
++    static void ButtonFactoryReset(void);
++#endif // CONFIG_BUTTON_FACTORY_RESET
++
+     static void ExampleActionButtonEventHandler(void);
+ 
+     void SetExampleButtonCallbacks(EventHandler aAction_CB);
+     EventHandler ExampleActionEventHandler;
+ 
++    static void OtaEventsHandler(const chip::DeviceLayer::ChipDeviceEvent * event);
+     static void ChipEventHandler(const chip::DeviceLayer::ChipDeviceEvent * event, intptr_t arg);
+ 
+     static void UpdateStatusLED(void);
+diff --git a/examples/platform/telink/common/src/AppTaskCommon.cpp b/examples/platform/telink/common/src/AppTaskCommon.cpp
+index d898297670..c8b9c2ebae 100644
+--- a/examples/platform/telink/common/src/AppTaskCommon.cpp
++++ b/examples/platform/telink/common/src/AppTaskCommon.cpp
+@@ -18,6 +18,9 @@
+ 
+ #include "AppTaskCommon.h"
+ #include "AppTask.h"
++#if CONFIG_SOC_RISCV_TELINK_B92 || CONFIG_SOC_RISCV_TELINK_TL321X
++#include <analog_user.h>
++#endif
+ 
+ #include "BLEManagerImpl.h"
+ #include "ButtonManager.h"
+@@ -37,6 +40,8 @@
+ #include <app/server/Server.h>
+ #include <app/util/attribute-storage.h>
+ #include <app/util/endpoint-config-api.h>
++#include <app/util/persistence/DefaultAttributePersistenceProvider.h>
++#include <app/util/persistence/DeferredAttributePersistenceProvider.h>
+ #include <data-model-providers/codegen/Instance.h>
+ #include <setup_payload/OnboardingCodesUtil.h>
+ 
+@@ -48,9 +53,17 @@
+ #include <app/clusters/ota-requestor/OTARequestorInterface.h>
+ #endif
+ 
++#include <app-common/zap-generated/attributes/Accessors.h>
+ #include <zephyr/fs/nvs.h>
+ #include <zephyr/settings/settings.h>
+ 
++#if CONFIG_DUAL_MODE_SWTICH
++uint8_t sBoot_zb       = 0;
++uint8_t para_lightness = 0;
++user_para_t user_para;
++light_para_t light_para;
++#endif
++
+ using namespace chip::app;
+ 
+ LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
+@@ -68,6 +81,13 @@ constexpr uint32_t kIdentifyFinishOffRateMs     = 50;
+ constexpr uint32_t kIdentifyChannelChangeRateMs = 1000;
+ constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
+ 
++#if CONFIG_DUAL_MODE_SWTICH
++const struct device * flash_para_dev = USER_PARTITION_DEVICE;
++const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
++constexpr int kDnssTimeout           = 60000;
++static k_timer sDnssTimer;
++#endif
++
+ #if APP_SET_NETWORK_COMM_ENDPOINT_SEC
+ constexpr EndpointId kNetworkCommissioningEndpointSecondary = 0xFFFE;
+ #endif
+@@ -102,6 +122,37 @@ Identify sIdentify = {
+ 
+ #endif
+ 
++/**
++ * @brief Set deferred attributes storage
++ *
++ * @see Define a custom attribute persister which makes actual write of the CurrentHue, CurrentSaturation, CurrentLevel attributes
++ * value to the non-volatile storage only when it has remained constant for 5 seconds. This is to reduce the flash wearout when the
++ * attribute changes frequently as a result of MoveToLevel command. DeferredAttribute object describes a deferred attribute, but
++ * also holds a buffer with a value to be written, so it must live so long as the DeferredAttributePersistenceProvider object.
++ *
++ * @param ATTRIBUTES_ARRAY_SIZE The lenght of the DeferredAttribute array
++ * @param DEFERRED_STORAGE_TIME The deferred time(ms) to store attributes
++ */
++#define ATTRIBUTES_ARRAY_SIZE (3U)
++#define DEFERRED_STORAGE_TIME (500U)
++
++DeferredAttribute gPersisters[] = {
++#if CONFIG_DEFERRED_ATTR_STORAGE
++    DeferredAttribute(
++        ConcreteAttributePath(kExampleEndpointId, Clusters::ColorControl::Id, Clusters::ColorControl::Attributes::CurrentHue::Id)),
++    DeferredAttribute(ConcreteAttributePath(kExampleEndpointId, Clusters::ColorControl::Id,
++                                            Clusters::ColorControl::Attributes::CurrentSaturation::Id)),
++    DeferredAttribute(
++        ConcreteAttributePath(kExampleEndpointId, Clusters::LevelControl::Id, Clusters::LevelControl::Attributes::CurrentLevel::Id))
++#endif // CONFIG_DEFERRED_ATTR_STORAGE
++};
++
++// Deferred persistence will be auto-initialized as soon as the default persistence is initialized
++DefaultAttributePersistenceProvider gSimpleAttributePersistence;
++DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttributePersistence,
++                                                                 Span<DeferredAttribute>(gPersisters, ATTRIBUTES_ARRAY_SIZE),
++                                                                 System::Clock::Milliseconds32(DEFERRED_STORAGE_TIME));
++
+ // NOTE! This key is for test/certification only and should not be available in production devices!
+ uint8_t sTestEventTriggerEnableKey[TestEventTriggerDelegate::kEnableKeyLength] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+                                                                                    0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff };
+@@ -127,6 +178,144 @@ public:
+ AppCallbacks sCallbacks;
+ } // namespace
+ 
++#if CONFIG_STARTUP_OPTIMIZATION
++volatile bool uart_init_flag           = false;
++const struct device * cluster_para_dev = USER_CLUSTER_PARTITION_DEVICE;
++
++uint32_t cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
++#define CLUSTER_PARA_LEN (sizeof(cluster_startup_para))
++#define USER_CLUSTER_PARTITION_END (USER_CLUSTER_PARTITION_OFFSET + USER_CLUSTER_PARTITION_SIZE)
++
++void set_debug_flag(bool flag)
++{
++    uart_init_flag = flag;
++}
++
++volatile bool read_debug_flag(void)
++{
++    return uart_init_flag;
++}
++
++void clear_cluster_para(void)
++{
++    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
++    cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
++}
++
++void init_cluster_partition(void)
++{
++    uint32_t i, cur_addr;
++    cluster_startup_para t_cmp;
++    cluster_startup_para t_cmp_back;
++    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
++
++    for (i = 0;; i++)
++    {
++        cur_addr = USER_CLUSTER_PARTITION_OFFSET + i * CLUSTER_PARA_LEN;
++        if (cur_addr >= USER_CLUSTER_PARTITION_END)
++        {
++            clear_cluster_para();
++            if (uart_init_flag)
++            {
++                printk("The partition is full, clear and redirect to:0x%x\n", cluster_para_addr);
++            }
++            break;
++        }
++
++        flash_read(cluster_para_dev, cur_addr, &t_cmp, CLUSTER_PARA_LEN);
++        if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff
++        {
++            cluster_para_addr = cur_addr;
++            if (uart_init_flag)
++            {
++                printk("Init partition to:0x%x\n", cluster_para_addr);
++            }
++            return;
++        }
++    }
++}
++
++int store_cluster_para(cluster_startup_para * data)
++{
++    if (data == NULL)
++    {
++        if (uart_init_flag)
++        {
++            printk("The data that needs to be stored is NULL\n");
++        }
++        return -1;
++    }
++    if (cluster_para_addr >= (USER_CLUSTER_PARTITION_END - CLUSTER_PARA_LEN))
++    {
++        clear_cluster_para();
++    }
++
++    flash_write(cluster_para_dev, cluster_para_addr, data, CLUSTER_PARA_LEN);
++    cluster_para_addr += CLUSTER_PARA_LEN;
++    return 0;
++}
++
++int read_cluster_para(cluster_startup_para * data)
++{
++    if (data == NULL)
++    {
++        if (uart_init_flag)
++        {
++            printk("The data to be read is NULL\n");
++        }
++        return -1;
++    }
++    if (cluster_para_addr >= USER_CLUSTER_PARTITION_END)
++    {
++        clear_cluster_para();
++        if (uart_init_flag)
++        {
++            printk("The read address exceeds partition, clear and redirect to:0x%x\n", cluster_para_addr);
++        }
++        return -1;
++    }
++    if ((cluster_para_addr - CLUSTER_PARA_LEN) < USER_CLUSTER_PARTITION_OFFSET)
++    {
++        if (uart_init_flag)
++        {
++            printk("The partition is all NULL\n");
++        }
++        return -1;
++    }
++
++    cluster_startup_para t_cmp;
++    cluster_startup_para t_cmp_back;
++    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
++
++    flash_read(cluster_para_dev, (cluster_para_addr - CLUSTER_PARA_LEN), &t_cmp, CLUSTER_PARA_LEN);
++    if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff, error
++    {
++        clear_cluster_para();
++        if (uart_init_flag)
++        {
++            printk("The previous data was not successfully written\n");
++        }
++        return -1;
++    }
++    memcpy(data, &t_cmp, CLUSTER_PARA_LEN);
++    return 0;
++}
++#endif // CONFIG_STARTUP_OPTIMIZATION
++
++#if CONFIG_DUAL_MODE_SWTICH
++void FactoryResetExtHandler(void)
++{
++    // Erase the user parameters partition to reset mode settings
++    flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
++    // Erase ZigBee NVS data during factory reset
++    flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
++#if CONFIG_STARTUP_OPTIMIZATION
++    // Need to erase cluster para parition
++    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
++#endif // CONFIG_STARTUP_OPTIMIZATION
++}
++#endif
++
+ class AppFabricTableDelegate : public FabricTable::Delegate
+ {
+     void OnFabricRemoved(const FabricTable & fabricTable, FabricIndex fabricIndex)
+@@ -160,6 +349,11 @@ class AppFabricTableDelegate : public FabricTable::Delegate
+                 {
+                     ChipLogError(DeviceLayer, "Storage clearance failed: %d", status);
+                 }
++#if CONFIG_DUAL_MODE_SWTICH
++                printk("Erasing user parameters and resetting to Zigbee mode");
++                FactoryResetExtHandler();
++                chip::Server::GetInstance().ScheduleFactoryReset();
++#endif
+             }
+         }
+     }
+@@ -207,8 +401,68 @@ void AppTaskCommon::PowerOnFactoryReset(void)
+ }
+ #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
+ 
++#if CONFIG_DUAL_MODE_SWTICH
++
++void SwitchBackToZigbee()
++{
++    uint8_t switch_flag = USER_MATTER_BACK_ZB;
++    flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
++    sys_reboot(0);
++}
++
++void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
++{
++    if (!timer)
++    {
++        return;
++    }
++    /*
++     * If Dnss initialization takes longer than 60 seconds,
++     * the device will reboot and revert to Zigbee mode.
++     */
++    if (sBoot_zb)
++    {
++        printk("Matter: DnssTimer expired. Rebooting...\n");
++        SwitchBackToZigbee();
++    }
++}
++#endif
++
+ CHIP_ERROR AppTaskCommon::StartApp(void)
+ {
++
++#if CONFIG_DUAL_MODE_SWTICH
++    /*
++     * If the device boots from Zigbee, set a flag and adjust user parameters.
++     * Then start a timer to ensure Dnss initialization completes within
++     * a given timeframe.
++     */
++    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
++    /* If booting from Zigbee mode, set a flag and clean deprecated parameter sectors. */
++    if (user_para.val == USER_ZB_SW_VAL)
++    {
++        sBoot_zb = 1;
++        /* If switching from ZigBee mode, get all existing clusters information. */
++        flash_read(flash_para_dev, USER_PARTITION_OFFSET + sizeof(user_para), &light_para, sizeof(light_para));
++        /* Ensure brightness is at least 2 to avoid display issues on HomePod Mini */
++        if (light_para.level < 2)
++        {
++            light_para.level = 2;
++        }
++        /*
++         * Pass the brightness value to the initialization code
++         * to avoid gaps in PWM pool initialization.
++         */
++        if (light_para.onoff)
++        {
++            para_lightness = light_para.level;
++        }
++        k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
++        k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
++        printk("Matter: Started DNS protection timer.");
++    }
++#endif
++
+     CHIP_ERROR err = GetAppTask().Init();
+ 
+     if (err != CHIP_NO_ERROR)
+@@ -258,18 +512,85 @@ void AppTaskCommon::PrintFirmwareInfo(void)
+     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
+ #endif
+ }
++
++/**
++ * @brief Use analog register to store OTA status.
++ *
++ * @see There are many OTA callback events in
++ * AppTaskCommon::OtaEventsHandler, please embed it as needed.
++ * The available analog registers address are as follows:
++ *  TLSR9528 - 0x3b
++ *  TL3218X  - 0x3b
++ */
++#if CONFIG_STORAGE_OTA_STATUS
++#define ANALOG_REG_ADR (0x3b)
++#define ANALOG_OTA_FLAG_VAL (0x55)
++
++void OtaSetAnaFlag(void)
++{
++    int err = analog_write(ANALOG_REG_ADR, ANALOG_OTA_FLAG_VAL);
++
++    if (!err)
++    {
++        printk("Write successful\n");
++    }
++    else
++    {
++        printk("The address:0x%x written is incorrect\n", ANALOG_REG_ADR);
++    }
++}
++
++bool OtaGetAnaFlag(void)
++{
++    if (analog_read(ANALOG_REG_ADR) == ANALOG_OTA_FLAG_VAL)
++    {
++        return true;
++    }
++    else
++    {
++        return false;
++    }
++}
++#endif // CONFIG_STORAGE_OTA_STATUS
++
++/**
++ * @brief Control factory reset base on button.
++ *
++ * @see It must set CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE=y
++ * in prj.conf if you need to use independent button to control
++ * factory reset. Otherwise, the matrix key will be used by default.
++ */
++#if CONFIG_BUTTON_FACTORY_RESET
++void AppTaskCommon::ButtonFactoryReset(void)
++{
++    ButtonManager & buttonManager = ButtonManager::getInstance();
++    buttonManager.addCallback(AppTaskCommon::FactoryResetButtonEventHandler, 0, true);
++
++#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
++    buttonManager.linkBackend(ButtonPool::getInstance());
++#else
++    buttonManager.linkBackend(ButtonMatrix::getInstance());
++#endif // CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
++}
++#endif // CONFIG_BUTTON_FACTORY_RESET
++
+ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
+ {
+     CHIP_ERROR err;
+ 
+     PrintFirmwareInfo();
+ 
++/* Leave empty condition clause for development on customers boards */
++#if CONFIG_CUSTOMER_MODE
++
++#else
+     InitLeds();
+     UpdateStatusLED();
+ 
+     InitPwms();
+ 
+     InitButtons();
++#endif
+ 
+     // Initialize function button timer
+     k_timer_init(&sFactoryResetTimer, &AppTask::FactoryResetTimerTimeoutCallback, nullptr);
+@@ -302,6 +623,8 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
+     VerifyOrDie(sTestEventTriggerDelegate.AddHandler(&sOtaTestEventTriggerHandler) == CHIP_NO_ERROR);
+ #endif
+     (void) initParams.InitializeStaticResourcesBeforeServerInit();
++    VerifyOrDie(gSimpleAttributePersistence.Init(initParams.persistentStorageDelegate) == CHIP_NO_ERROR);
++
+     initParams.dataModelProvider        = CodegenDataModelProviderInstance(initParams.persistentStorageDelegate);
+     initParams.appDelegate              = &sCallbacks;
+     initParams.testEventTriggerDelegate = &sTestEventTriggerDelegate;
+@@ -312,6 +635,9 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
+     chip::DeviceLayer::SetDeviceInfoProvider(&gExampleDeviceInfoProvider);
+ #endif
+ 
++    /* add deferred storage attribute for provider */
++    app::SetAttributePersistenceProvider(&gDeferredAttributePersister);
++
+     ConfigurationMgr().LogDeviceConfig();
+     PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
+ 
+@@ -590,6 +916,10 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
+         k_timer_stop(&sFactoryResetTimer);
+         sFactoryResetCntr = 0;
+ 
++#if CONFIG_DUAL_MODE_SWTICH
++        printk("Factory reset triggered by button; reverting to Zigbee mode\n");
++        FactoryResetExtHandler();
++#endif
+         chip::Server::GetInstance().ScheduleFactoryReset();
+     }
+ }
+@@ -722,6 +1052,36 @@ void AppTaskCommon::SetExampleButtonCallbacks(EventHandler aAction_CB)
+     ExampleActionEventHandler = aAction_CB;
+ }
+ 
++void AppTaskCommon::OtaEventsHandler(const ChipDeviceEvent * event)
++{
++    switch (event->OtaStateChanged.newState)
++    {
++    case DeviceLayer::kOtaDownloadInProgress:
++        ChipLogProgress(DeviceLayer, "OTA image download in progress\n");
++        break;
++    case DeviceLayer::kOtaDownloadComplete:
++        ChipLogProgress(DeviceLayer, "OTA image download complete\n");
++        break;
++    case DeviceLayer::kOtaDownloadFailed:
++        ChipLogProgress(DeviceLayer, "OTA image download failed\n");
++        break;
++    case DeviceLayer::kOtaDownloadAborted:
++        ChipLogProgress(DeviceLayer, "OTA image download aborted\n");
++        break;
++    case DeviceLayer::kOtaApplyInProgress:
++        ChipLogProgress(DeviceLayer, "OTA image apply in progress\n");
++        break;
++    case DeviceLayer::kOtaApplyComplete:
++        ChipLogProgress(DeviceLayer, "OTA image apply complete\n");
++        break;
++    case DeviceLayer::kOtaApplyFailed:
++        ChipLogProgress(DeviceLayer, "OTA image apply failed\n");
++        break;
++    default:
++        break;
++    }
++}
++
+ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
+ {
+     switch (event->Type)
+@@ -747,6 +1107,58 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+         }
+ #endif
+         break;
++#if CONFIG_DUAL_MODE_SWTICH
++    case DeviceEventType::kCommissioningComplete: {
++        uint8_t val = USER_MATTER_PAIR_VAL;
++#if CONFIG_CUSTOMER_MODE
++        /* need to add here to update the cluster information , only in the zb switch and touchlink is paired*/
++        if (user_para.val == USER_ZB_SW_VAL && user_para.on_net)
++        {
++            Protocols::InteractionModel::Status status;
++            /* Update all cluster information, only if switching from ZigBee mode and the touchlink is paired. */
++            status = Clusters::OnOff::Attributes::OnOff::Set(kExampleEndpointId, light_para.onoff);
++            if (status != Protocols::InteractionModel::Status::Success)
++            {
++                LOG_ERR("Update OnOff fail: %x", to_underlying(status));
++            }
++            status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kExampleEndpointId, light_para.level);
++            {
++                LOG_ERR("Update brightness fail: %x", to_underlying(status));
++            }
++        }
++#endif
++        sBoot_zb = 0;
++        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
++        flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
++#if CONFIG_STARTUP_OPTIMIZATION
++        cluster_startup_para cluster_para;
++        cluster_para.onoff = light_para.onoff;
++        cluster_para.level = light_para.level;
++        if (store_cluster_para(&cluster_para) != 0)
++        {
++            if (uart_init_flag)
++            {
++                printk("Fail store cluster parameter after commissioning complete\n");
++            }
++        }
++#endif // CONFIG_STARTUP_OPTIMIZATION
++        printk("Commissioning complete; Matter commissioned flag set.\n");
++    }
++    break;
++    case DeviceEventType::kFailSafeTimerExpired:
++        /* Reset to Zigbee mode if commissioning fails */
++        if (sBoot_zb)
++        {
++            printk("FailSafeTimer expired; Matter commissioning failed. Rebooting to Zigbee mode...\n");
++            SwitchBackToZigbee();
++        }
++        else
++        {
++            printk("FailSafeTimer expired; Matter commissioning failed.\n");
++        }
++        break;
++#endif
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     case DeviceEventType::kDnssdInitialized:
+ #if CONFIG_CHIP_OTA_REQUESTOR
+@@ -760,6 +1172,14 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+ #if CONFIG_CHIP_OTA_REQUESTOR
+         }
+ #endif
++
++#if CONFIG_DUAL_MODE_SWTICH
++        if (sBoot_zb)
++        {
++            k_timer_stop(&sDnssTimer);
++            printk("DnssTimer stopped; DNS-SD has been initialized.\n");
++        }
++#endif
+         break;
+     case DeviceEventType::kThreadStateChange:
+         sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
+@@ -781,6 +1201,9 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+         UpdateStatusLED();
+ #endif
+         break;
++    case DeviceEventType::kOtaStateChanged:
++        AppTaskCommon::OtaEventsHandler(event);
++        break;
+     default:
+         break;
+     }
+diff --git a/examples/platform/telink/common/src/mainCommon.cpp b/examples/platform/telink/common/src/mainCommon.cpp
+index 099ffec0de..6c99b11d15 100644
+--- a/examples/platform/telink/common/src/mainCommon.cpp
++++ b/examples/platform/telink/common/src/mainCommon.cpp
+@@ -105,8 +105,167 @@ static void FactoryResetOnBoot(void)
+ }
+ #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
+ 
++#if CONFIG_CUSTOMER_MODE
++
++#define MATTER_NVS_DEMO_EN 0
++
++#if MATTER_NVS_DEMO_EN
++void matter_nvs_raw_demo(void)
++{
++    static constexpr char kFactoryResetOnBootStoreKey[] = "TelinkFactoryResetOnBootCnt";
++    uint32_t test_flag                                  = 0x55;
++
++    if (chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Put(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag)) !=
++        CHIP_NO_ERROR)
++    {
++        printk("FactoryResetOnBootCnt write fail\n");
++    }
++
++    test_flag = 0xaa;
++    CHIP_ERROR FactoryResetOnBootErr =
++        chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
++    if (FactoryResetOnBootErr != CHIP_NO_ERROR)
++    {
++        printk("FactoryResetOnBootCnt get fail\n");
++    }
++    printk("nvs read value is %x \n", test_flag);
++    (void) chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Delete(kFactoryResetOnBootStoreKey);
++    test_flag = 0xbb;
++    FactoryResetOnBootErr =
++        chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
++    if (FactoryResetOnBootErr != CHIP_NO_ERROR)
++    {
++        printk("FactoryResetOnBootCnt delete after read fail \n");
++    }
++}
++#endif
++
++#endif
++
++#if CONFIG_STARTUP_OPTIMIZATION
++#include "AppTaskCommon.h"
++#include <PWMManager.h>
++#include <pwm.h>
++#include <zephyr/drivers/flash.h>
++#include <zephyr/drivers/pwm.h>
++#include <zephyr/storage/flash_map.h>
++#include <zephyr_pwm_pool.h>
++
++struct k_timer PwmChangeTimer;
++static PWM_POOL_DEFINE(pwm_pool);
++struct pwm_pool_data * pwm_data             = &pwm_pool;
++static const struct device * flash_para_dev = USER_PARTITION_DEVICE;
++
++/**
++ * @brief Parameters which is used to PWM gradual change
++ *
++ * @see The follow are just a basic configuration,
++ * and it is only open the blue light. Users can make
++ * modifications according to actual situation.
++ *
++ * @param PWM_CHANGE_TOTAL_TIME_MS Total duration time of gradual change
++ * @param PWM_CHANGE_PRE_STEP_MS The interval for PWM gradual change
++ *
++ */
++#define ENUM_BLUE (PwmManager::EAppPwm_Blue)
++/* EAppPwm_Blue enum is 4, corresponds to channel 2 in overlay */
++#define PWM_CHANNEL_BLUE ((uint32_t) ENUM_BLUE - 2)
++#define PWM_CHANNEL_TO_BIT(CHANNEL) ((CHANNEL == 0) ? FLD_PWM0_EN : BIT(CHANNEL))
++#define BIT_PWM_CHANNEL_BLUE PWM_CHANNEL_TO_BIT(PWM_CHANNEL_BLUE)
++
++#define PWM_CHANGE_TOTAL_TIME_MS (400U)
++#define PWM_CHANGE_PRE_STEP_MS (8U)
++/* The maximum count of PWM gradual change */
++#define PWM_STEP_CNT_MAX (PWM_CHANGE_TOTAL_TIME_MS / PWM_CHANGE_PRE_STEP_MS)
++/* The calculation of the pulse cycle during PWM gradual change */
++#define PWM_PULSE_CYCLE(period, level, cnt) ((period / (255 * PWM_STEP_CNT_MAX)) * (level) * (cnt))
++
++static uint32_t cnt          = 1;
++static uint8_t cur_level     = 0;
++static uint32_t timer_period = PWM_CHANGE_PRE_STEP_MS;
++
++static void init_startup_para(void)
++{
++    cluster_startup_para light_cluster_para;
++    if (read_cluster_para(&light_cluster_para) != 0)
++    {
++        if (uart_init_flag)
++        {
++            printk("Fail read cluster parameter when execute init_startup_para\n");
++        }
++    }
++
++    if (light_cluster_para.onoff == 1)
++    {
++        cur_level = light_cluster_para.level;
++    }
++    else
++    { // OFF || ERROR
++        cur_level    = 0;
++        timer_period = 0;
++    }
++}
++
++static void PwmSetTimeoutCallback(struct k_timer * timer)
++{
++    if (!timer)
++    {
++        return;
++    }
++
++    pwm_set_dt(&pwm_data->out[ENUM_BLUE], pwm_data->out[ENUM_BLUE].period,
++               PWM_PULSE_CYCLE(pwm_data->out[ENUM_BLUE].period, cur_level, cnt));
++    pwm_set_start((pwm_en_e) (BIT_PWM_CHANNEL_BLUE));
++
++    if (cnt >= PWM_STEP_CNT_MAX)
++    {
++        k_timer_stop(timer);
++        if (uart_init_flag)
++        {
++            printk("The current pulse cycle after gradual change: %d\n",
++                   PWM_PULSE_CYCLE(pwm_data->out[ENUM_BLUE].period, cur_level, cnt));
++        }
++    }
++
++    cnt++;
++}
++#endif // CONFIG_STARTUP_OPTIMIZATION
++
++void early_proc_cluster(void)
++{
++#if CONFIG_STARTUP_OPTIMIZATION
++    unsigned char val;
++    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
++    if (val == USER_MATTER_PAIR_VAL)
++    {
++        init_cluster_partition();
++        init_startup_para();
++        if (timer_period != 0)
++        {
++            k_timer_init(&PwmChangeTimer, &PwmSetTimeoutCallback, nullptr);
++            k_timer_start(&PwmChangeTimer, K_MSEC(timer_period), K_MSEC(timer_period));
++        }
++    }
++#endif // CONFIG_STARTUP_OPTIMIZATION
++}
++
++typedef void (*p_early_proc)(void);
++p_early_proc early_proc_cluster_f = early_proc_cluster;
++
+ int main(void)
+ {
++#if CONFIG_STARTUP_OPTIMIZATION
++    /**
++     * @brief Control log output for startup optimizate module.
++     *
++     * @see It only takes effect when the startup optimizate
++     * module is opened. Note than the flag can only be set
++     * to true after the execution of the main function.
++     */
++    set_debug_flag(true);
++    printk("cur_level:%d, timer_period:%d\n", cur_level, timer_period);
++#endif // CONFIG_STARTUP_OPTIMIZATION
++
+ #if defined(CONFIG_USB_DEVICE_STACK) && !defined(CONFIG_CHIP_PW_RPC)
+     usb_enable(NULL);
+ #endif /* CONFIG_USB_DEVICE_STACK */
+diff --git a/examples/platform/telink/zephyr_ext/zephyr_pwm_pool.c b/examples/platform/telink/zephyr_ext/zephyr_pwm_pool.c
+index 0322e812b6..4f1a2c09b7 100644
+--- a/examples/platform/telink/zephyr_ext/zephyr_pwm_pool.c
++++ b/examples/platform/telink/zephyr_ext/zephyr_pwm_pool.c
+@@ -175,7 +175,12 @@ bool pwm_pool_init(struct pwm_pool_data * pwm_pool)
+         /* init all PWMs are ready */
+         for (size_t i = 0; i < pwm_pool->out_len; i++)
+         {
++#if CONFIG_DUAL_MODE_SWTICH
++            extern unsigned char para_lightness;
++            if (pwm_set_dt(&pwm_pool->out[i], pwm_pool->out[i].period, para_lightness * pwm_pool->out[i].period / 255))
++#else
+             if (pwm_set_dt(&pwm_pool->out[i], pwm_pool->out[i].period, 0))
++#endif
+             {
+                 result = false;
+                 break;
+diff --git a/scripts/tools/telink/merge_factorydata_dac.py b/scripts/tools/telink/merge_factorydata_dac.py
+new file mode 100644
+index 0000000000..c4ebf18683
+--- /dev/null
++++ b/scripts/tools/telink/merge_factorydata_dac.py
+@@ -0,0 +1,86 @@
++#!/usr/bin/env python3
++#
++#    Copyright (c) 2022-2025 Project CHIP Authors
++#
++#    Licensed under the Apache License, Version 2.0 (the "License");
++#    you may not use this file except in compliance with the License.
++#    You may obtain a copy of the License at
++#
++#        http://www.apache.org/licenses/LICENSE-2.0
++#
++#    Unless required by applicable law or agreed to in writing, software
++#    distributed under the License is distributed on an "AS IS" BASIS,
++#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++#    See the License for the specific language governing permissions and
++#    limitations under the License.
++#
++
++"""
++This script aims to merge factory data and dac cert firmware into one data block 
++because Telink BDT requires 4k aligned during programming.
++
++Example Usage for TL321x:
++python3 scripts/tools/telink/merge_factorydata_dac.py \
++~/connectedhomeip/factory_data_1141_8005_0x1f9000/1141_8005/11418005202501100001/factory_data_ext.bin \
++~/connectedhomeip/factory_data_1141_8005_0x1f9000/1141_8005/11418005202501100001/dac_cert_key.bin \
++0x800 \
++~/connectedhomeip/factory_data_1141_8005_0x1f9000/1141_8005/11418005202501100001/merged_factorydata_dac.bin
++
++Expected Result:
++Firmware merged successfully into /home/ubuntu/connectedhomeip/factory_data_1141_8005_0x1f9000/1141_8005/11418005202501100001/merged_factorydata_dac.bin
++"""
++
++import argparse
++
++
++def merge_factorydata_dac(factory_data_ext_path, dac_cert_key_path,
++                          dac_cert_start_address, output_path):
++    # Read the content of the factory_data_ext.bin
++    with open(factory_data_ext_path, 'rb') as f:
++        factory_data_ext = f.read()
++
++    # Read the content of the dac_cert_key.bin
++    with open(dac_cert_key_path, 'rb') as f:
++        dac_cert_key = f.read()
++
++    # Determine the size of the gap to fill with 0xFF
++    gap_size = dac_cert_start_address - len(factory_data_ext)
++
++    if gap_size < 0:
++        raise ValueError("factory_data_ext.bin is too large to fit in the specified address space")
++
++    # Fill the gap with 0xFF
++    gap = b'\xFF' * gap_size
++
++    # Construct the final merged data
++    merged_data = factory_data_ext + gap + dac_cert_key
++
++    # Write the merged data to the output file
++    with open(output_path, 'wb') as f:
++        f.write(merged_data)
++
++    print(f"Firmware merged successfully into {output_path}")
++
++
++def main():
++    # Setup argument parser
++    parser = argparse.ArgumentParser(description='Merge firmware files.')
++    parser.add_argument('factory_data_ext_path', type=str,
++                        help='Path to the factory_data_ext.bin file')
++    parser.add_argument('dac_cert_key_path', type=str,
++                        help='Path to the dac_cert_key.bin file')
++    parser.add_argument('dac_cert_start_address', type=lambda x: int(x, 0),
++                        help='Start address for dac_cert_key.bin (e.g., 0x800)')
++    parser.add_argument('output_path', default="merged_factorydata_dac.bin",
++                        type=str, help='Path to the output merged firmware file')
++
++    # Parse the arguments
++    args = parser.parse_args()
++
++    # Call the merge function with the provided arguments
++    merge_factorydata_dac(args.factory_data_ext_path, args.dac_cert_key_path,
++                          args.dac_cert_start_address, args.output_path)
++
++
++if __name__ == '__main__':
++    main()
+diff --git a/scripts/tools/telink/mfg_tool.py b/scripts/tools/telink/mfg_tool.py
+index dcc41d7882..990dc0e75c 100644
+--- a/scripts/tools/telink/mfg_tool.py
++++ b/scripts/tools/telink/mfg_tool.py
+@@ -31,6 +31,8 @@ import cbor2 as cbor
+ import cryptography.hazmat.backends
+ import cryptography.x509
+ import pyqrcode
++from cryptography.hazmat.backends import default_backend
++from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+ from intelhex import IntelHex
+ 
+ TOOLS = {
+@@ -456,9 +458,14 @@ def write_device_unique_data(args, out_dirs, pai_cert):
+             else:
+                 dacs = generate_dac_cert(int(row['Index']), args, out_dirs, int(row['Discriminator']),
+                                          int(row['PIN Code']), pai_cert['key_pem'], pai_cert['cert_pem'])
++            dac_cert_storage = read_der_file(dacs[0])
++            dac_key_storage = read_key_bin_file(dacs[1])
++            if not args.secure_programming_verification:
++                nvs_memory_append('dac_cert', dac_cert_storage)
++                nvs_memory_append('dac_key', dac_key_storage)
++            else:
++                logger.info("Secure programming verification enabled; DAC and its keys are not stored directly into factory data")
+ 
+-            nvs_memory_append('dac_cert', read_der_file(dacs[0]))
+-            nvs_memory_append('dac_key', read_key_bin_file(dacs[1]))
+             nvs_memory_append('pai_cert', read_der_file(pai_cert['cert_der']))
+ 
+         nvs_memory_append('cert_dclrn', read_der_file(args.cert_dclrn))
+@@ -472,7 +479,44 @@ def write_device_unique_data(args, out_dirs, pai_cert):
+         return dacs
+ 
+ 
+-def generate_partition(args, out_dirs):
++def aes_encrypt(key, data):
++    # Ensure data is 16 bytes (AES block size)
++    assert len(data) == 16, "Data block for AES must be 16 bytes."
++    assert len(key) == 16, "AES key must be 16 bytes (128 bits)."
++
++    cipher = Cipher(algorithms.AES(key), modes.ECB(), backend=default_backend())
++    encryptor = cipher.encryptor()
++    return encryptor.update(data) + encryptor.finalize()
++
++
++def save_dac_cert_and_keys(dac_cert, dac_key, chip_id, file_path):
++    with open(file_path, 'wb') as f:
++        # Write DAC private key length (2 bytes, little-endian)
++        dac_key_len = len(dac_key)
++        f.write(dac_key_len.to_bytes(2, 'little'))
++
++        # Encrypt DAC private key in two 16-byte segments
++        encrypted_key_part1 = aes_encrypt(chip_id, dac_key[:16])
++        encrypted_key_part2 = aes_encrypt(chip_id, dac_key[16:32])
++
++        # Write the encrypted DAC private key parts (32 bytes total)
++        f.write(encrypted_key_part1)
++        f.write(encrypted_key_part2)
++
++        # Pad the file with 0xFF to reach the 100th byte
++        f.write(b'\xFF' * (100 - f.tell()))
++
++        # Write DAC certificate length (2 bytes, little-endian)
++        dac_cert_len = len(dac_cert)
++        f.write(dac_cert_len.to_bytes(2, 'little'))
++
++        # Write DAC certificate data
++        f.write(dac_cert)
++
++    print(f"DAC certificate and key have been saved to {file_path}")
++
++
++def generate_partition(args, dacs_cert, out_dirs):
+     logger.info('Generating partition image: offset: 0x{:X} size: 0x{:X}'.format(args.offset, args.size))
+     cbor_data = cbor.dumps(NVS_MEMORY)
+     # Create hex file
+@@ -480,8 +524,57 @@ def generate_partition(args, out_dirs):
+         raise ValueError("generated CBOR file exceeds declared maximum partition size! {} > {}".format(len(cbor_data), args.size))
+     ih = IntelHex()
+     ih.putsz(args.offset, cbor_data)
+-    ih.write_hex_file(os.sep.join([out_dirs['output'], 'factory_data.hex']), True)
+-    ih.tobinfile(os.sep.join([out_dirs['output'], 'factory_data.bin']))
++    # ih.write_hex_file(os.sep.join([out_dirs['output'], 'factory_data.hex']), True)
++    # ih.tobinfile(os.sep.join([out_dirs['output'], 'factory_data.bin']))
++
++    output_dir = out_dirs['output']
++    hex_file_path = os.path.join(output_dir, 'factory_data.hex')
++    bin_file_path = os.path.join(output_dir, 'factory_data.bin')
++    ih.write_hex_file(hex_file_path, True)
++    ih.tobinfile(bin_file_path)
++
++    if args.secure_programming_verification:
++        dac_cert_key_file_path = os.path.join(output_dir, 'dac_cert_key.bin')
++        dac_cert_storage = read_der_file(dacs_cert[0])
++        logger.info("dac_cert_storaget (Hex): {}".format(dac_cert_storage.hex()))
++        dac_key_storage = read_key_bin_file(dacs_cert[1])
++        logger.info("dac_key_storage (Hex): {}".format(dac_key_storage.hex()))
++        chip_id_bytes = bytes.fromhex(args.chip_id)
++        logger.info("chip_id_bytes (Hex): {}".format(chip_id_bytes.hex()))
++        save_dac_cert_and_keys(dac_cert_storage, dac_key_storage, chip_id_bytes, dac_cert_key_file_path)
++        logger.info(f"DAC certificate and key have been saved to {dac_cert_key_file_path}")
++
++    with open(os.sep.join([out_dirs['output'], 'pin_disc.csv']), 'r') as csvf:
++        pin_disc_dict = csv.DictReader(csvf)
++        row = pin_disc_dict.__next__()
++
++        # Extract Discriminator, PID, and VID
++        discriminator = int(row['Discriminator'])
++        pid = args.product_id
++        vid = args.vendor_id
++
++        logger.info("Discriminator = {}".format(discriminator))
++        logger.info("PID = 0x{:X}".format(pid))
++        logger.info("VID = 0x{:X}".format(vid))
++
++        # Convert Discriminator, PID, and VID to bytes
++        discriminator_bytes = discriminator.to_bytes(2, byteorder='little')
++        pid_bytes = pid.to_bytes(2, byteorder='little')
++        vid_bytes = vid.to_bytes(2, byteorder='little')
++
++        # Read the existing binary data
++        with open(bin_file_path, 'rb') as bin_file:
++            bin_data = bin_file.read()
++
++        # Prepend the hex data to the binary data
++        extended_data = discriminator_bytes + pid_bytes + vid_bytes + bin_data
++
++        # Write the combined data to a new file
++        ext_bin_file_path = os.path.join(output_dir, 'factory_data_ext.bin')
++        with open(ext_bin_file_path, 'wb') as ext_bin_file:
++            ext_bin_file.write(extended_data)
++
++        logger.info(f"Extended binary data written to {ext_bin_file_path}")
+ 
+ 
+ def generate_json_summary(args, out_dirs, pai_certs, dacs_cert, serial_num: str):
+@@ -544,7 +637,10 @@ def add_additional_kv(args, serial_num):
+         nvs_memory_append('rd_uid', args.rd_id_uid)
+ 
+     # Add the serial-num
+-    nvs_memory_append('sn', serial_num)
++    if args.disable_serial_num_storage:
++        logger.info("Secure programming verification enabled; skipping serial-num")
++    else:
++        nvs_memory_append('sn', serial_num)
+ 
+     nvs_memory_append('version', FACTORY_DATA_VERSION)
+ 
+@@ -601,7 +697,7 @@ def get_and_validate_args():
+                                     help='Commissionable device discovery networking technology. \
+                                           0:WiFi-SoftAP, 1:BLE, 2:On-network. Default is BLE.', choices=[0, 1, 2])
+ 
+-    # Device insrance information
++    # Device instance information
+     dev_inst_args = parser.add_argument_group('Device instance information options')
+     dev_inst_args.add_argument('-v', '--vendor-id', type=allow_any_int, required=False, help='Vendor id')
+     dev_inst_args.add_argument('--vendor-name', type=str, required=False, help='Vendor name')
+@@ -646,8 +742,34 @@ def get_and_validate_args():
+                                help='Partition offset - an address in devices NVM memory, where factory data will be stored')
+     part_gen_args.add_argument('--size', type=allow_any_int, help='The maximum partition size')
+ 
++    secure_args = parser.add_argument_group('Secure programming verification options')
++    secure_args.add_argument("--secure-programming-verification", action="store_true",
++                             help="Enable secure programming mode. When set, the script will perform additional steps for secure programming verification.")
++    secure_args.add_argument("--chip-id", required=False, type=str, help="Chip ID in hex format (32 hex characters).")
++    secure_args.add_argument("--disable_serial_num_storage", action="store_true",
++                             help="Disable storage of serial-num in factorydata.")
++
+     args = parser.parse_args()
+ 
++    if args.secure_programming_verification:
++        if not args.chip_id:
++            logger.error("--chip-id is required when --secure-programming-verification is enabled.")
++            sys.exit(1)
++
++        if args.count > 1:
++            logger.error("--count cannot be greater than 1 when --secure-programming-verification is enabled.")
++            sys.exit(1)
++
++    # Additional validation on chip-id format
++    if args.chip_id:
++        try:
++            chip_id_bytes = bytes.fromhex(args.chip_id)
++            if len(chip_id_bytes) != 16:
++                raise ValueError()
++        except ValueError:
++            logger.error("--chip-id must be a valid 16-byte hex string (32 hex characters).")
++            sys.exit(1)
++
+     # Validate in-tree parameter
+     if args.count > 1 and args.in_tree:
+         logger.error('Option --in-tree can not be use together with --count > 1')
+@@ -743,7 +865,7 @@ def main():
+         if args.paa or args.pai:
+             pai_cert = setup_root_certificates(args, out_dirs)
+         dacs_cert = write_device_unique_data(args, out_dirs, pai_cert)
+-        generate_partition(args, out_dirs)
++        generate_partition(args, dacs_cert, out_dirs)
+         generate_json_summary(args, out_dirs, pai_cert, dacs_cert, serial_num_str)
+ 
+     dev_sn_file.close()
+diff --git a/scripts/tools/telink/process_binaries.py b/scripts/tools/telink/process_binaries.py
+index 27443ba072..bba7e65b2b 100755
+--- a/scripts/tools/telink/process_binaries.py
++++ b/scripts/tools/telink/process_binaries.py
+@@ -123,13 +123,52 @@ if build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_W91'):
+             '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
+             '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
+             'merged.bin',
+-            build_conf['CONFIG_SIGNED_OTA_IMAGE_FILE_NAME']
++            build_conf['CONFIG_DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME']
++        ]
++        try:
++            subprocess.run(sign_command, check=True)
++            os.remove('merged.bin')  # Clean up merged.bin after signing
++        except subprocess.CalledProcessError as e:
++            raise RuntimeError(f"Error signing the image: {e}")
++
++# Telink dual-mode Zigbee binary operations
++if build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_TL321X'):
++    SoC = 'TL321X'
++elif build_conf.getboolean('CONFIG_SOC_RISCV_TELINK_B92'):
++    SoC = 'B92'
++else:
++    SoC = ''
++ZB_FILE_PATH = os.path.join(ZEPHYR_BASE, 'ZB_FW', SoC, 'concurrent_sampleLight.bin')
++
++if os.path.exists(ZB_FILE_PATH):
++    zb_partition_offset = build_conf['CONFIG_TELINK_ZB_PARTITION_ADDR']
++    if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
++        zb_partition_offset -= build_conf['CONFIG_FLASH_LOAD_OFFSET']
++
++    # Merge Zigbee binary
++    merge_binaries('zephyr.bin', ZB_FILE_PATH, 'merged.bin', zb_partition_offset)
++
++    # Sign the image if MCUBoot is used
++    if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
++        sign_command = [
++            'python3',
++            os.path.join(ZEPHYR_BASE, '../bootloader/mcuboot/scripts/imgtool.py'),
++            'sign',
++            '--version', '0.0.0+0',
++            '--align', '1',
++            '--header-size', str(build_conf['CONFIG_ROM_START_OFFSET']),
++            '--slot-size', str(build_conf['CONFIG_FLASH_LOAD_SIZE']),
++            '--key', os.path.join(ZEPHYR_BASE, '../', build_conf['CONFIG_MCUBOOT_SIGNATURE_KEY_FILE']),
++            'merged.bin',
++            build_conf['CONFIG_DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME']
+         ]
+         try:
+             subprocess.run(sign_command, check=True)
+             os.remove('merged.bin')  # Clean up merged.bin after signing
+         except subprocess.CalledProcessError as e:
+             raise RuntimeError(f"Error signing the image: {e}")
++else:
++    print(f"File {ZB_FILE_PATH} does not exist. Merge Zigbee binary will not be performed.")
+ 
+ # Merge MCUBoot binary if configured
+ if build_conf.getboolean('CONFIG_BOOTLOADER_MCUBOOT'):
+diff --git a/src/platform/telink/BLEManagerImpl.cpp b/src/platform/telink/BLEManagerImpl.cpp
+index 7844b62a47..793398d5a1 100644
+--- a/src/platform/telink/BLEManagerImpl.cpp
++++ b/src/platform/telink/BLEManagerImpl.cpp
+@@ -86,6 +86,10 @@ const bt_uuid_128 UUID128_CHIPoBLEChar_TX =
+ const bt_uuid_128 UUID128_CHIPoBLEChar_C3 =
+     BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0x63, 0x64);
+ #endif
++#if CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++const bt_uuid_128 UUID128_CHIPoBLEChar_ChipID =
++    BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0xA1, 0x01);
++#endif // CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
+ 
+ bt_uuid_16 UUID16_CHIPoBLEService = BT_UUID_INIT_16(0xFFF6);
+ 
+@@ -110,6 +114,12 @@ bt_gatt_attr sChipoBleAttributes[] = {
+                                BT_GATT_PERM_READ,
+                                BLEManagerImpl::HandleC3Read, nullptr, nullptr),
+ #endif
++#if CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++        BT_GATT_CHARACTERISTIC(&UUID128_CHIPoBLEChar_ChipID.uuid,
++                               BT_GATT_CHRC_READ,
++                               BT_GATT_PERM_READ,
++                               BLEManagerImpl::HandleChipIDRead, nullptr, nullptr),
++#endif // CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
+ };
+ 
+ bt_gatt_service sChipoBleService = BT_GATT_SERVICE(sChipoBleAttributes);
+@@ -916,6 +926,19 @@ ssize_t BLEManagerImpl::HandleC3Read(struct bt_conn * conId, const struct bt_gat
+ }
+ #endif
+ 
++#if CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++#include <zephyr/drivers/hwinfo.h>
++ssize_t BLEManagerImpl::HandleChipIDRead(struct bt_conn * conId, const struct bt_gatt_attr * attr, void * buf, uint16_t len,
++                                         uint16_t offset)
++{
++    ChipLogDetail(DeviceLayer, "Read request received for CHIPoBLE Chip ID (ConnId 0x%02x)", bt_conn_index(conId));
++
++    uint8_t chip_id_value[16] = { 0 };
++    efuse_get_chip_id(chip_id_value);
++    return bt_gatt_attr_read(conId, attr, buf, len, offset, chip_id_value, sizeof(chip_id_value));
++}
++#endif // CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+ CHIP_ERROR BLEManagerImpl::HandleOperationalNetworkEnabled(const ChipDeviceEvent * event)
+ {
+diff --git a/src/platform/telink/BLEManagerImpl.h b/src/platform/telink/BLEManagerImpl.h
+index 65b74fb144..2bfc686886 100644
+--- a/src/platform/telink/BLEManagerImpl.h
++++ b/src/platform/telink/BLEManagerImpl.h
+@@ -167,6 +167,11 @@ public:
+     static ssize_t HandleC3Read(struct bt_conn * conn, const struct bt_gatt_attr * attr, void * buf, uint16_t len, uint16_t offset);
+ #endif
+ 
++#if CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++    static ssize_t HandleChipIDRead(struct bt_conn * conn, const struct bt_gatt_attr * attr, void * buf, uint16_t len,
++                                    uint16_t offset);
++#endif // CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     // Switch context from BLE to Thread
+     void SwitchToIeee802154(void);
+diff --git a/src/platform/telink/CHIPDevicePlatformConfig.h b/src/platform/telink/CHIPDevicePlatformConfig.h
+index 8229b781a2..458e62bb63 100644
+--- a/src/platform/telink/CHIPDevicePlatformConfig.h
++++ b/src/platform/telink/CHIPDevicePlatformConfig.h
+@@ -120,6 +120,18 @@
+ #define CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE 0
+ #endif
+ 
++#ifdef CONFIG_EXPOSE_CHIPID_VIA_BLE
++#define CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE CONFIG_EXPOSE_CHIPID_VIA_BLE
++#else
++#define CHIP_DEVICE_EXPOSE_CHIPID_VIA_BLE 0
++#endif
++
++#ifdef CONFIG_SECURE_PROGRAMMING
++#define CHIP_DEVICE_SECURE_PROGRAMMING CONFIG_SECURE_PROGRAMMING
++#else
++#define CHIP_DEVICE_SECURE_PROGRAMMING 0
++#endif
++
+ // ========== Platform-specific Configuration =========
+ 
+ // These are configuration options that are unique to Zephyr platforms.
+diff --git a/src/platform/telink/CHIPPlatformConfig.h b/src/platform/telink/CHIPPlatformConfig.h
+index 27b2104c24..a787b1162a 100644
+--- a/src/platform/telink/CHIPPlatformConfig.h
++++ b/src/platform/telink/CHIPPlatformConfig.h
+@@ -114,6 +114,14 @@
+ #define CHIP_CONFIG_MAX_FABRICS 5
+ #endif
+ 
++#ifndef CHIP_CONFIG_MAX_GROUP_ENDPOINTS_PER_FABRIC
++#define CHIP_CONFIG_MAX_GROUP_ENDPOINTS_PER_FABRIC 2
++#endif // CHIP_CONFIG_MAX_GROUP_ENDPOINTS_PER_FABRIC
++
++#ifndef CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_SUBJECTS_PER_ENTRY
++#define CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_SUBJECTS_PER_ENTRY (4 * CHIP_CONFIG_MAX_GROUP_ENDPOINTS_PER_FABRIC)
++#endif // CHIP_CONFIG_EXAMPLE_ACCESS_CONTROL_MAX_SUBJECTS_PER_ENTRY
++
+ #ifdef CONFIG_CHIP_LOG_SIZE_OPTIMIZATION
+ // Disable some of the too detailed log modules to save flash
+ #define CHIP_CONFIG_LOG_MODULE_ExchangeManager_DETAIL 0
+diff --git a/src/platform/telink/FactoryDataParser.c b/src/platform/telink/FactoryDataParser.c
+index a2d4c26ede..2eb6f3d5a5 100644
+--- a/src/platform/telink/FactoryDataParser.c
++++ b/src/platform/telink/FactoryDataParser.c
+@@ -27,6 +27,10 @@
+ 
+ LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
+ 
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++static uint8_t dac_key_decrypt[32] = { 0 };
++#endif
++
+ static inline bool uint16_decode(zcbor_state_t * states, uint16_t * value)
+ {
+     uint32_t u32;
+@@ -125,6 +129,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData
+         {
+             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->rd_uid);
+         }
++#if !CHIP_DEVICE_SECURE_PROGRAMMING
+         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
+         {
+             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
+@@ -133,6 +138,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData
+         {
+             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_priv_key);
+         }
++#endif
+         else if (strncmp("pai_cert", (const char *) currentString.value, currentString.len) == 0)
+         {
+             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->pai_cert);
+@@ -185,3 +191,70 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData
+ 
+     return res && zcbor_list_map_end_force_decode(states);
+ }
++
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++
++#ifdef CONFIG_SOC_RISCV_TELINK_B92
++#include "aes.h"
++#endif
++
++#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
++#include <ske.h>
++#include <ske_portable.h>
++#endif
++
++#define kDACContentsOffset 100
++
++bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
++{
++    size_t dac_priv_key_len;
++    uint8_t chip_id[16] = { 0 };
++    bool chip_id_check_result;
++    dac_priv_key_len = buffer[0];
++    dac_priv_key_len |= (uint16_t) buffer[1] << 8;
++    factoryData->dac_priv_key.len = dac_priv_key_len;
++    if (!factoryData->dac_priv_key.len)
++    {
++        return false;
++    }
++
++#ifdef CONFIG_SOC_RISCV_TELINK_B92
++    chip_id_check_result = efuse_get_chip_id(chip_id) ? true : false;
++#endif
++#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
++    chip_id_check_result = efuse_get_chip_id(chip_id) ? false : true;
++#endif
++    if (chip_id_check_result)
++    {
++#ifdef CONFIG_SOC_RISCV_TELINK_B92
++        aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
++        aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
++#endif
++#ifdef CONFIG_SOC_RISCV_TELINK_TL321X
++        ske_dig_en();
++        uint32_t r = core_interrupt_disable();
++        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 2, dac_key_decrypt, 16);
++        ske_lp_crypto(SKE_ALG_AES_128, SKE_MODE_ECB, SKE_CRYPTO_DECRYPT, chip_id, 0, NULL, buffer + 18, dac_key_decrypt + 16, 16);
++        core_restore_interrupt(r);
++#endif
++        factoryData->dac_priv_key.data = dac_key_decrypt;
++    }
++    else
++    {
++        LOG_ERR("Failed to retrieve chip ID.");
++        return false;
++    }
++
++    size_t dac_cert_len;
++    dac_cert_len = buffer[kDACContentsOffset];
++    dac_cert_len |= (uint16_t) buffer[kDACContentsOffset + 1] << 8;
++    factoryData->dac_cert.len = dac_cert_len;
++    if (!factoryData->dac_cert.len)
++    {
++        return false;
++    }
++    factoryData->dac_cert.data = buffer + kDACContentsOffset + 2;
++
++    return true;
++}
++#endif
+diff --git a/src/platform/telink/FactoryDataParser.h b/src/platform/telink/FactoryDataParser.h
+index de8f7c72da..7e97ad1412 100644
+--- a/src/platform/telink/FactoryDataParser.h
++++ b/src/platform/telink/FactoryDataParser.h
+@@ -21,6 +21,8 @@
+ #include <stddef.h>
+ #include <stdint.h>
+ 
++#include "CHIPDevicePlatformConfig.h"
++
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+@@ -77,6 +79,18 @@ struct FactoryData
+  */
+ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData * factoryData);
+ 
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++/**
++ * @brief Inject dac cert and dac private key into the factory data structure.
++ *
++ * @param[in] buffer Buffer containing dac data.
++ * @param[out] factoryData address of object to be filled with parsed factory data.
++ *
++ * @returns true on success, false otherwise.
++ */
++bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData);
++#endif
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/src/platform/telink/FactoryDataProvider.cpp b/src/platform/telink/FactoryDataProvider.cpp
+index b2d58313f6..2ccf862152 100644
+--- a/src/platform/telink/FactoryDataProvider.cpp
++++ b/src/platform/telink/FactoryDataProvider.cpp
+@@ -52,12 +52,16 @@ CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_
+ } // namespace
+ 
+ namespace DeviceLayer {
+-
++static constexpr uint32_t kFactoryDataOffset = 6;
+ template <class FlashFactoryData>
+ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
+ {
+     uint8_t * factoryData = nullptr;
+     size_t factoryDataSize;
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++    uint8_t * dacData = nullptr;
++    size_t dacDataSize;
++#endif
+ 
+     CHIP_ERROR error = mFlashFactoryData.ProtectFactoryDataPartitionAgainstWrite();
+ 
+@@ -81,12 +85,30 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
+         return error;
+     }
+ 
+-    if (!ParseFactoryData(factoryData, factoryDataSize, &mFactoryData))
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++    error = mFlashFactoryData.GetDACDataPartition(dacData, dacDataSize);
++
++    if (error != CHIP_NO_ERROR)
++    {
++        ChipLogError(DeviceLayer, "Failed to read DAC data partition");
++        return error;
++    }
++#endif
++
++    if (!ParseFactoryData(factoryData + kFactoryDataOffset, factoryDataSize - kFactoryDataOffset, &mFactoryData))
+     {
+         ChipLogError(DeviceLayer, "Failed to parse factory data");
+         return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
+     }
+ 
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++    if (!LoadDACCertAndKey(dacData, &mFactoryData))
++    {
++        ChipLogError(DeviceLayer, "Failed to inject dac data");
++        return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
++    }
++#endif
++
+     // Check if factory data version is correct
+     if (mFactoryData.version != CONFIG_CHIP_FACTORY_DATA_VERSION)
+     {
+diff --git a/src/platform/telink/FactoryDataProvider.h b/src/platform/telink/FactoryDataProvider.h
+index 18bb8f3bea..f7b443f874 100644
+--- a/src/platform/telink/FactoryDataProvider.h
++++ b/src/platform/telink/FactoryDataProvider.h
+@@ -31,6 +31,9 @@ namespace chip {
+ namespace DeviceLayer {
+ 
+ __attribute__((section(".bss"))) static uint8_t mFactoryDataBuffer[FIXED_PARTITION_SIZE(factory_partition)];
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++__attribute__((section(".bss"))) static uint8_t mDACDataBuffer[FIXED_PARTITION_SIZE(dac_keypair_partition)];
++#endif
+ 
+ struct InternalFlashFactoryData
+ {
+@@ -62,6 +65,24 @@ struct ExternalFlashFactoryData
+         return CHIP_NO_ERROR;
+     }
+ 
++#if CHIP_DEVICE_SECURE_PROGRAMMING
++    CHIP_ERROR GetDACDataPartition(uint8_t *& data, size_t & dataSize)
++    {
++        int ret = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition), mDACDataBuffer,
++                             FIXED_PARTITION_SIZE(dac_keypair_partition));
++
++        if (ret != 0)
++        {
++            return CHIP_ERROR_READ_FAILED;
++        }
++
++        data     = mDACDataBuffer;
++        dataSize = FIXED_PARTITION_SIZE(dac_keypair_partition);
++
++        return CHIP_NO_ERROR;
++    }
++#endif
++
+     CHIP_ERROR ProtectFactoryDataPartitionAgainstWrite() { return CHIP_ERROR_NOT_IMPLEMENTED; }
+ 
+     const struct device * mFlashDevice = DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+diff --git a/src/platform/telink/ThreadStackManagerImpl.cpp b/src/platform/telink/ThreadStackManagerImpl.cpp
+index 41d9189ab5..869443e2cb 100644
+--- a/src/platform/telink/ThreadStackManagerImpl.cpp
++++ b/src/platform/telink/ThreadStackManagerImpl.cpp
+@@ -71,7 +71,7 @@ void ThreadStackManagerImpl::_UnlockThreadStack()
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD_SRP_CLIENT
+ void ThreadStackManagerImpl::_WaitOnSrpClearAllComplete()
+ {
+-    k_sem_take(&mSrpClearAllSemaphore, K_SECONDS(2));
++    k_sem_take(&mSrpClearAllSemaphore, K_MSEC(500));
+ }
+ 
+ void ThreadStackManagerImpl::_NotifySrpClearAllComplete()
+diff --git a/src/platform/telink/tl3218x.overlay b/src/platform/telink/tl3218x.overlay
+new file mode 100644
+index 0000000000..efa4333dca
+--- /dev/null
++++ b/src/platform/telink/tl3218x.overlay
+@@ -0,0 +1,82 @@
++/ {
++	/* Short TL_Key3 (J6 pin 21) to ground */
++	key_pool {
++		compatible = "gpio-keys";
++
++		inp {
++			gpios = <&gpiob 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>,
++					<&gpiob 5 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
++		};
++	};
++
++	key_matrix {
++		compatible = "gpio-keys";
++
++		col {
++			gpios = <&gpiob 6 GPIO_ACTIVE_HIGH>,
++					<&gpiob 7 GPIO_ACTIVE_HIGH>;
++		};
++
++		row {
++			gpios = <&gpiob 3 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>,
++					<&gpiob 5 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
++		};
++	};
++
++	led_pool {
++		compatible = "gpio-leds";
++
++		out {
++			gpios = <&gpiod 0 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++	pwm_pool {
++		compatible = "pwm-leds";
++		out {
++			pwms = <&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 1 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
++		};
++	};
++	zephyr,user {
++		/* adjust channel number according to pinmux in board.dts for adc demo. */
++		io-channels = <&adc 0>;
++	};
++};
++
++&pwm0 {
++	/* On board RGB LEDs */
++	pinctrl-ch0 = <&pwm_ch0_pb1_default>;
++	pinctrl-ch1 = <&pwm_ch1_pb0_default>;
++	pinctrl-ch2 = <&pwm_ch2_pb2_default>;
++};
++
++&pinctrl {
++	pwm_ch0_pb1_default: pwm_ch0_pb1_default {
++		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_1, TL321X_FUNC_PWM0)>;
++	};
++	pwm_ch1_pb0_default: pwm_ch1_pb0_default {
++		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_0, TL321X_FUNC_PWM1)>;
++	};
++	pwm_ch2_pb2_default: pwm_ch2_pb2_default {
++		pinmux = <TLX_PINMUX_SET(TLX_PORT_B, TLX_PIN_2, TL321X_FUNC_PWM2)>;
++	};
++};
++
++&adc {
++	/* the channel setting for adc demo */
++
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	channel@0 {
++		reg = <0>;
++		zephyr,gain = "ADC_GAIN_1_4";
++		zephyr,reference = "ADC_REF_INTERNAL";
++		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
++		zephyr,resolution = <12>;
++		zephyr,input-positive = <DT_ADC_VBAT>;
++	};
++};
+diff --git a/src/platform/telink/tl3218x_2m_flash.overlay b/src/platform/telink/tl3218x_2m_flash.overlay
+index bff368eea1..f2395bc563 100644
+--- a/src/platform/telink/tl3218x_2m_flash.overlay
++++ b/src/platform/telink/tl3218x_2m_flash.overlay
+@@ -9,30 +9,83 @@
+ 
+ 		boot_partition: partition@0 {
+ 			label = "mcuboot";
+-			reg = <0x00000000 0xf000>;
++			// The bootloader is optimized to fit within 72 KB (0x12000).
++			// 4 KB (0x1000) are reserved for user data or future expansion.
++			reg = <0x00000000 0x12000>;
+ 		};
+-		slot0_partition: partition@f000 {
++		slot0_partition: partition@12000 {
+ 			label = "image-0";
+-			reg = <0xf000 0xf1000>;
++			// Starting at 0x12000, this partition reserves 912 KB for Matter,
++			// and an additional 248 KB for Zigbee (starting at 0xf6000),
++			// totaling 0x122000 in size.
++			reg = <0x12000 0x122000>;
+ 		};
+-		factory_partition: partition@100000 {
+-			label = "factory-data";
+-			reg = <0x100000 0x800>;
++		zb_partition: partition@f6000 {
++			label = "image-zb";
++			// Zigbee partition
++			// End address should be same as of slot0 partition
++			reg = <0xf6000 0x3e000>;
++		};
++		slot1_partition: partition@134000 {
++			label = "image-1";
++			// Uses LZMA compression to reduce binary size.
++			// The combined space (920 KB + 248 KB) is reduced to ~60% (~712 KB).
++			// Zigbee NVS data will also reside here.
++			reg = <0x134000 0xb2000>;
+ 		};
+-		factory_rfu_partition: partition@100800 {
+-			label = "factory-data-rfu";
+-			reg = <0x100800 0x800>;
++		zigbee_nvs_partition: partition@134000_1 {
++			label = "zigbee-nvs";
++			reg = <0x134000 0x1a000>; // zigbee nvs part , total is 104k.
+ 		};
+-		storage_partition: partition@101000 {
++		storage_partition: partition@1e6000 {
+ 			label = "storage";
+-			reg = <0x101000 0xc000>;
++			// NVS storage for Matter.
++			reg = <0x1e6000 0xb000>;
+ 		};
+-		slot1_partition: partition@10d000 {
+-			label = "image-1";
+-			reg = <0x10d000 0xf1000>;
++		user_token_partition: partition@1f1000 {
++ 			label = "user-token";
++			// Stores token information. If unused, this partition can be removed.
++			reg = <0x1f1000 0x1000>;
++ 		};
++		user_para_partition: partition@1f2000 {
++ 			label = "user-para";
++			// Stores mode information and key data.
++			reg = <0x1f2000 0x1000>;
++ 		};
++		user_cluster_partition: partition@1f3000 {
++ 			label = "user-cluster";
++			//user_cluster: reserve 4k for user storage cluster para. proc transition part
++			reg = <0x1f3000 0x1000>;
++ 		};
++		stack_extend_partition: partition@1f4000 {
++ 			label = "stack_extend";
++			//reserved for matter stack extend proc，reserve 16k for extend.
++			reg = <0x1f4000 0x4000>;
++ 		};
++		secure_partition: partition@1f8000 {
++ 			label = "secure";
++			// Secure area reserved for secure boot.
++			// If not in use, it may be repurposed.
++			reg = <0x1f8000 0x1000>;
++ 		};
++		factory_partition: partition@1f9000 {
++			label = "factory-data";
++			// factory data
++			reg = <0x1f9000 0x800>;
++		};
++		dac_keypair_partition: partition@1f9800 {
++			label = "dac-keypair";
++			// Stores DAC certificate and key pair (2 KB).
++			reg = <0x1f9800 0x800>;
+ 		};
++		user_rfu_partition: partition@1fa000 {
++ 			label = "user_rfu";
++			// Reserves 16 KB for user-specific extensions.
++			reg = <0x1fa000 0x4000>;
++ 		};
+ 		vendor_partition: partition@1fe000 {
+ 			label = "vendor-data";
++			// Holds MAC, ADC, or other vendor-specific data (8 KB).
+ 			reg = <0x1fe000 0x2000>;
+ 		};
+ 	};
+diff --git a/src/platform/telink/tlsr9528a.overlay b/src/platform/telink/tlsr9528a.overlay
+new file mode 100644
+index 0000000000..8e9715d2d1
+--- /dev/null
++++ b/src/platform/telink/tlsr9528a.overlay
+@@ -0,0 +1,83 @@
++/ {
++	/* Short TL_Key3 (J5 pin 13) to ground (J3 pin 24, 26, 28, 30) */
++	key_pool {
++		compatible = "gpio-keys";
++
++		inp {
++			gpios = <&gpiod 2 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>,
++					<&gpiod 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
++		};
++	};
++
++	key_matrix {
++		compatible = "gpio-keys";
++
++		col {
++			gpios = <&gpiod 6 GPIO_ACTIVE_HIGH>,
++					<&gpiof 6 GPIO_ACTIVE_HIGH>;
++		};
++
++		row {
++			gpios = <&gpiod 2 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>,
++					<&gpiod 7 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
++		};
++	};
++
++	led_pool {
++		compatible = "gpio-leds";
++
++		out {
++			gpios = <&gpioe 6 GPIO_ACTIVE_HIGH>;
++		};
++	};
++
++	pwm_pool {
++		compatible = "pwm-leds";
++		out {
++			pwms = <&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 0 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 1 PWM_MSEC(1) PWM_POLARITY_NORMAL>,
++					<&pwm0 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
++		};
++	};
++
++	zephyr,user {
++		/* adjust channel number according to pinmux in board.dts for adc demo. */
++		io-channels = <&adc 0>;
++	};
++};
++
++&pwm0 {
++	/* On board RGB LEDs */
++	pinctrl-ch0 = <&pwm_ch0_pe7_default>;
++	pinctrl-ch1 = <&pwm_ch1_pd1_default>;
++	pinctrl-ch2 = <&pwm_ch2_pd0_default>;
++};
++
++&pinctrl {
++	pwm_ch0_pe7_default: pwm_ch0_pe7_default {
++		pinmux = <B9x_PINMUX_SET(B9x_PORT_E, B9x_PIN_7, B92_FUNC_PWM0)>;
++	};
++	pwm_ch1_pd1_default: pwm_ch1_pd1_default {
++		pinmux = <B9x_PINMUX_SET(B9x_PORT_D, B9x_PIN_1, B92_FUNC_PWM1)>;
++	};
++	pwm_ch2_pd0_default: pwm_ch2_pd0_default {
++		pinmux = <B9x_PINMUX_SET(B9x_PORT_D, B9x_PIN_0, B92_FUNC_PWM2)>;
++	};
++};
++
++&adc {
++	/* the channel setting for adc demo */
++
++	#address-cells = <1>;
++	#size-cells = <0>;
++
++	channel@0 {
++		reg = <0>;
++		zephyr,gain = "ADC_GAIN_1_4";
++		zephyr,reference = "ADC_REF_INTERNAL";
++		zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
++		zephyr,resolution = <12>;
++		zephyr,input-positive = <DT_ADC_VBAT>;
++	};
++};
+diff --git a/src/platform/telink/tlsr9528a_4m_flash.overlay b/src/platform/telink/tlsr9528a_4m_flash.overlay
+index 9ab2890d4a..e0671c7c6f 100644
+--- a/src/platform/telink/tlsr9528a_4m_flash.overlay
++++ b/src/platform/telink/tlsr9528a_4m_flash.overlay
+@@ -9,39 +9,73 @@
+ 
+ 		boot_partition: partition@0 {
+ 			label = "mcuboot";
+-			reg = <0x00000000 0x13000>;
++			reg = <0x00000000 0x14000>;
+ 		};
+-		slot0_partition: partition@13000 {
++		slot0_partition: partition@14000 {
+ 			label = "image-0";
+-			reg = <0x13000 0x1ea000>;
++			reg = <0x14000 0x1a5000>;// 0x14000 is matter , 0x154000 is zigbee , 0x1b4000~0x1b9000 reserved for trailor and move sector, should be 20k
+ 		};
+-		slot1_partition: partition@1fd000 {
++		zb_partition: partition@154000 {
++			label = "image-zb";
++			// Zigbee partition
++			// End address should be same as of slot0 partition
++			reg = <0x154000 0x60000>;
++		};
++		slot1_partition: partition@1b9000 {
+ 			label = "image-1";
+-			reg = <0x1fd000 0x1ea000>;
++			reg = <0x1b9000 0x1a5000>;
+ 		};
+-		storage_partition: partition@3e7000 {
++		rfu_partition: partition@35e000 {
++ 			label = "rfu";
++			reg = <0x35e000 0x22000>; //reserved for next step flash protect to keep 3.5k,now use all protect 
++ 		};
++		storage_partition: partition@380000 {
+ 			label = "storage";
+-			reg = <0x3e7000 0xf000>; // matter nvs part 
++			reg = <0x380000 0xb000>; // matter nvs part 
+ 		};
++		zigbee_nvs_partition: partition@38b000 {
++			label = "zigbee-nvs";
++			reg = <0x38b000 0x1a000>; // zigbee nvs part , total is 104k.
++		};
++		user_token_partition: partition@3a5000 {
++ 			label = "user-token";
++			reg = <0x3a5000 0x1000>; //user:store token info, for customer to config.
++ 		};
++		user_para_partition: partition@3a6000 {
++ 			label = "user-para";
++			reg = <0x3a6000 0x1000>; //user:store the mode info and the key info part.
++ 		};
++		user_rfu_partition: partition@3a7000 {
++ 			label = "user_rfu";
++			reg = <0x3a7000 0x19000>; //user_rfu: reserve 100k for user extend.
++ 		};
++		user_cluster_partition: partition@3c0000 {
++ 			label = "user-cluster";
++			reg = <0x3c0000 0x1000>; //user_cluster: reserve 4k for user storage cluster para.
++ 		};
++		stack_extend_partition: partition@3c1000 {
++ 			label = "stack_extend";
++			reg = <0x3c1000 0x35000>; //reserved for matter stack extend proc，about 212k.
++ 		};
+ 		dac_keypair_partition: partition@3f6000 {
+ 			label = "dac-keypair";
+-			reg = <0x3f6000 0x1000>; // store dac and key pair.
++			reg = <0x3f6000 0x1000>; //store dac and key pair.
+ 		};
+ 		factory_partition: partition@3f7000 {
+ 			label = "factory-data";
+-			reg = <0x3f7000 0x1000>; // factory data info.
++			reg = <0x3f7000 0x1000>; // factory data info 
+ 		};
+ 		secure_partition: partition@3f8000 {
+  			label = "secure";
+-			reg = <0x3f8000 0x4000>; // secure info, reserved for secure boot. if not use, can be used by other way.
++			reg = <0x3f8000 0x4000>; //secure info ,reserved for secure boot .if not use , can beused by other way .
+  		};
+ 		vendor_rfu_partition: partition@3fc000 {
+ 			label = "vendor-rfu";
+-			reg = <0x3fc000 0x2000>; // reserved for chip extend.
++			reg = <0x3fc000 0x2000>;// reserved for chip extend.
+ 		};
+ 		vendor_partition: partition@3fe000 {
+ 			label = "vendor-data";
+-			reg = <0x3fe000 0x2000>; // mac and adc info.
++			reg = <0x3fe000 0x2000>;// mac and adc info.
+ 		};
+ 	};
+ };
