@@ -1,0 +1,214 @@
+diff --git a/boot/zephyr/main.c b/boot/zephyr/main.c
+index 50b98702..2a7cb684 100644
+--- a/boot/zephyr/main.c
++++ b/boot/zephyr/main.c
+@@ -319,6 +319,57 @@ static void do_boot(struct boot_rsp *rsp)
+  * lock interrupts and jump there. This is the right thing to do for X86 and
+  * possibly other platforms.
+  */
++#if (CONFIG_SOC_RISCV_TELINK_TL321X || CONFIG_SOC_RISCV_TELINK_B92)
++#include <ext_driver/ext_pm.h>
++#include <zephyr/device.h>
++#include <zephyr/storage/flash_map.h>
++
++#define USER_PARTITION		user_para_partition
++#define USER_PARTITION_DEVICE	FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET	FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE 	FIXED_PARTITION_SIZE(USER_PARTITION) 
++
++#define SLOT0_PARTITION		slot0_partition
++#define SLOT0_PARTITION_DEVICE	FIXED_PARTITION_DEVICE(SLOT0_PARTITION)
++#define SLOT0_PARTITION_OFFSET	FIXED_PARTITION_OFFSET(SLOT0_PARTITION)
++
++#if CONFIG_SOC_SERIES_RISCV_TELINK_TLX
++#define SLOT0_ZB_OFFSET     (0xF6000)
++#else
++#define SLOT0_ZB_OFFSET     (0x154000)
++#endif
++
++#define USER_MATTER_PAIR_VAL    0x55  // jump to matter
++
++#define USER_INIT_VAL           0xff  // init state or others will go into zb 
++#define USER_ZB_SW_VAL          0xaa  // jump to matter,use XIP
++#define USER_MATTER_BACK_ZB     0xa0  // only commisiion fail will back to zb 
++
++#define ZB_FW_FLAG_OFFSET       0x20 //telink fw valid flag offset .
++
++const struct device * flash_para_dev = USER_PARTITION_DEVICE;
++const struct device * flash_slot0_dev = SLOT0_PARTITION_DEVICE;
++const uint8_t zb_fw_flag[4]={ 0x4b, 0x4e, 0x4c, 0x54 };
++uint8_t zb_slot0_flag[4];
++
++static void restore_all_irq_priorities(void)
++{
++    #if CONFIG_SOC_SERIES_RISCV_TELINK_TLX 
++    #define PLIC_PRIO (0xc4000000)
++    #elif CONFIG_SOC_SERIES_RISCV_TELINK_B9X
++    #define PLIC_PRIO (0xe4000000)
++    #endif  
++    #define PLIC_IRQS (CONFIG_NUM_IRQS - CONFIG_2ND_LVL_ISR_TBL_OFFSET)
++    volatile uint32_t *prio = (volatile uint32_t *)PLIC_PRIO;
++    int i;
++    for (i = 1; i < PLIC_IRQS; i++)
++    {
++        *prio = 1U;
++        prio++;
++    }
++}
++#endif
++
+ static void do_boot(struct boot_rsp *rsp)
+ {
+     void *start;
+@@ -336,8 +387,41 @@ static void do_boot(struct boot_rsp *rsp)
+                      rsp->br_hdr->ih_hdr_size);
+ #endif
+ 
++#if (CONFIG_SOC_RISCV_TELINK_TL321X || CONFIG_SOC_RISCV_TELINK_B92)
++    /* read the boot flag from the user partition to determine the boot behavior */
++    uint8_t boot_flag = 0;
++    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &boot_flag, 1);
++    printk("boot flag: 0x%x\n", boot_flag);
++
++    /* read the Zigbee firmware flag from the slot1 partition */
++    flash_read(flash_slot0_dev, SLOT0_ZB_OFFSET + ZB_FW_FLAG_OFFSET, zb_slot0_flag, sizeof(zb_slot0_flag));
++    if (memcmp(zb_slot0_flag, zb_fw_flag, sizeof(zb_fw_flag))){
++        /* default to Matter if Zigbee firmware flag not found */
++        printk("Zigbee firmware flag not found.\n");
++        start = (void *)(flash_base + rsp->br_image_off +
++                        rsp->br_hdr->ih_hdr_size);
++    } else {
++        if ( boot_flag == USER_MATTER_PAIR_VAL ) {
++            /* switch to Matter only if commissioned (paired) */
++            start = (void *)(flash_base + rsp->br_image_off +
++                        rsp->br_hdr->ih_hdr_size);
++        } else {
++            /* Otherwise, switch to Zigbee */
++            restore_all_irq_priorities();
++            irq_lock();
++            reg_irq_src0 = 0;
++            reg_irq_src1 = 0;
++            core_interrupt_disable();
++            start = (void *)(flash_base + SLOT0_ZB_OFFSET);
++        }
++    }
++
++    /* print the start address for debugging */
++    printk("start address: 0x%x\n", (uint32_t)start);
++#else
+     /* Lock interrupts and dive into the entry point */
+     irq_lock();
++#endif
+     ((void (*)(void))start)();
+ }
+ #endif
+@@ -495,6 +579,90 @@ static void boot_serial_enter()
+ }
+ #endif
+ 
++#include <zephyr/drivers/uart.h>
++#include <zephyr/sys/crc.h>
++
++void print_buffer(uint8_t *buffer, size_t size)
++{
++	for (size_t i = 0; i < size; i++) {
++		printk("%c", buffer[i]);
++	}
++}
++
++#define HEADER_MAGIC1  0xAA
++#define HEADER_MAGIC2  0x12
++#define TRAILER_MAGIC  0x55
++
++/* Vendor-specific code executed during MCUBoot startup */
++void telink_mcu_boot_startup(void)
++{
++	/* BOOT_LOG_INF("Telink MCUBoot on early boot"); */
++#if (CONFIG_SOC_RISCV_TELINK_B92 || CONFIG_SOC_RISCV_TELINK_TL321X)
++#if CONFIG_SOC_RISCV_TELINK_B92
++	#include <zephyr/dt-bindings/pinctrl/b92-pinctrl.h>
++#elif CONFIG_SOC_RISCV_TELINK_TL321X
++	#include <zephyr/dt-bindings/pinctrl/tl321x-pinctrl.h>
++#endif
++
++	bool show_chip_id = false;
++
++	/* Check if the console UART RX line is held low (shorted to ground). */
++	const struct device *const uart_con = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
++
++	if (device_is_ready(uart_con)) {
++
++		/* Use the uart corresponding to your zephyr_console configuration */
++		#define UART_RX_PINMUX \
++			DT_PROP(DT_PINCTRL_BY_IDX(DT_NODELABEL(uart0), 0, 1), pinmux)
++
++		#if CONFIG_SOC_RISCV_TELINK_B92
++			gpio_pin_e uart_rx = B9x_PINMUX_GET_PIN(UART_RX_PINMUX);
++		#elif CONFIG_SOC_RISCV_TELINK_TL321X
++			gpio_pin_e uart_rx = TLX_PINMUX_GET_PIN(UART_RX_PINMUX);
++		#endif
++
++		/* Disable The UART RX PIN */
++		gpio_set_low_level(uart_rx);
++		gpio_output_dis(uart_rx);
++		gpio_function_dis(uart_rx);
++
++		/* Enable The UART RX PIN GPIO Function */
++		gpio_function_en(uart_rx);
++		gpio_input_en(uart_rx);
++		gpio_set_up_down_res(uart_rx, GPIO_PIN_PULLUP_10K);
++
++		/* Check if Console UART RX PIN is at low level - shorted to ground */
++		if (gpio_get_level(uart_rx) == 0) {
++			show_chip_id = true;
++		}
++	} else {
++		BOOT_LOG_ERR("UART console device not ready");
++	}
++
++	if (show_chip_id) {
++		uint8_t chip_id[21] = {0};
++		#if CONFIG_SOC_RISCV_TELINK_B92
++			extern unsigned char efuse_get_chip_id(unsigned char *chip_id_buff);
++			if (efuse_get_chip_id(chip_id + 2))
++		#elif CONFIG_SOC_RISCV_TELINK_TL321X
++			extern drv_api_status_e efuse_get_chip_id(unsigned char *chip_id_buff);
++			if (efuse_get_chip_id(chip_id + 2) == DRV_API_SUCCESS)
++		#endif
++			{
++				uint16_t chip_id_crc = crc16_itu_t(0, chip_id + 2, 16);
++				chip_id[0] = HEADER_MAGIC1;
++				chip_id[1] = HEADER_MAGIC2;
++				chip_id[18] = chip_id_crc & 0x00ff;
++				chip_id[19] = chip_id_crc >> 8;
++				chip_id[20] = TRAILER_MAGIC;
++				print_buffer(chip_id, sizeof(chip_id));
++			} else {
++				BOOT_LOG_ERR("Failed to read Chip ID");
++			}
++	}
++#endif /*(CONFIG_SOC_RISCV_TELINK_B92 || CONFIG_SOC_RISCV_TELINK_TL321X)*/
++}
++
+ void main(void)
+ {
+     struct boot_rsp rsp;
+@@ -527,6 +695,8 @@ void main(void)
+ 
+     ZEPHYR_BOOT_LOG_START();
+ 
++    telink_mcu_boot_startup();
++
+     (void)rc;
+ 
+     mcuboot_status_change(MCUBOOT_STATUS_STARTUP);
+diff --git a/boot/zephyr/prj.conf b/boot/zephyr/prj.conf
+index e4c01294..75ef6fd9 100644
+--- a/boot/zephyr/prj.conf
++++ b/boot/zephyr/prj.conf
+@@ -34,3 +34,5 @@ CONFIG_LOG_MODE_MINIMAL=y # former CONFIG_MODE_MINIMAL
+ CONFIG_LOG_DEFAULT_LEVEL=0
+ ### Decrease footprint by ~4 KB in comparison to CBPRINTF_COMPLETE=y
+ CONFIG_CBPRINTF_NANO=y
++### Disabling the boot banner ensures accurate parsing of the Chip ID
++CONFIG_BOOT_BANNER=n
