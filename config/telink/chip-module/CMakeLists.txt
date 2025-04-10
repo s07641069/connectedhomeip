@@ -178,8 +178,8 @@ if (CONFIG_BOOTLOADER_MCUBOOT)
         cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
         COMMAND
         cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin ${PROJECT_BINARY_DIR}/mcuboot_for_sign.bin
-        COMMENT "mcuboot_for_sign.bin is for external signing."
     )
+    message(WARNING "mcuboot_for_sign.bin is for external signing.")
 
     set(SBOOT_FILE_PATH "${ZEPHYR_BASE}/Secure_Demo.bin")
 
@@ -193,7 +193,8 @@ if (CONFIG_BOOTLOADER_MCUBOOT)
             dd if=${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin bs=${BLOCK_SIZE} seek=${SKIP_BYTES_DECIMAL} conv=notrunc
             COMMAND
             cp ${PROJECT_BINARY_DIR}/bootloader_merged.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
-            COMMENT "merge secure boot to mcuboot."
+        )
+        message(WARNING "merged secure boot to mcuboot..")
     else()
         message(WARNING "File ${SBOOT_FILE_PATH} does not exist. merge_sboot target will not be created.")
     endif()
@@ -212,6 +213,8 @@ if (CONFIG_BOOTLOADER_MCUBOOT)
             dd if=${PROJECT_BINARY_DIR}/zephyr.bin of=${PROJECT_BINARY_DIR}/dm_merged.bin conv=notrunc
             COMMAND
             dd if=${ZEPHYR_BASE}/concurrent_sampleLight_b92.bin of=${PROJECT_BINARY_DIR}/dm_merged.bin bs=${BLOCK_SIZE} seek=1280 conv=notrunc
+            COMMAND
+            cp ${PROJECT_BINARY_DIR}/zephyr.bin ${PROJECT_BINARY_DIR}/zephyr.matter.bin
             COMMAND
             cp ${PROJECT_BINARY_DIR}/dm_merged.bin ${PROJECT_BINARY_DIR}/zephyr.bin
         )
