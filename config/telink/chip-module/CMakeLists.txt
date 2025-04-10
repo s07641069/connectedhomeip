@@ -166,17 +166,45 @@ dt_reg_size(mcuboot_size PATH ${dts_partition_path})
 math(EXPR boot_blocks "${mcuboot_size} / ${BLOCK_SIZE}" OUTPUT_FORMAT DECIMAL)
 
 if (CONFIG_BOOTLOADER_MCUBOOT)
+
+    math(EXPR SKIP_BYTES_DECIMAL "${CONFIG_MCUBOOT_START_OFFSET} / ${BLOCK_SIZE}" OUTPUT_FORMAT DECIMAL)
     add_custom_target(build_mcuboot ALL
         COMMAND
         west build -b ${BASE_BOARD} -d build_mcuboot ${ZEPHYR_BASE}/../bootloader/mcuboot/boot/zephyr
             -- -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
         COMMAND
-        cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
+        dd if=${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin of=${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin bs=${BLOCK_SIZE} skip=${SKIP_BYTES_DECIMAL} conv=notrunc
+        COMMAND
+        cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
+        COMMAND
+        cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin ${PROJECT_BINARY_DIR}/mcuboot_for_sign.bin
+        COMMENT "mcuboot_for_sign.bin is for external signing."
     )
+
+    set(SBOOT_FILE_PATH "${ZEPHYR_BASE}/Secure_Demo.bin")
+
+    if (EXISTS ${SBOOT_FILE_PATH})
+        add_custom_target(merge_sboot ALL
+            COMMAND
+            dd if=/dev/zero bs=${BLOCK_SIZE} count=${SKIP_BYTES_DECIMAL} | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/bootloader_merged.bin
+            COMMAND
+            dd if=${ZEPHYR_BASE}/Secure_Demo.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin conv=notrunc
+            COMMAND
+            dd if=${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin bs=${BLOCK_SIZE} seek=${SKIP_BYTES_DECIMAL} conv=notrunc
+            COMMAND
+            cp ${PROJECT_BINARY_DIR}/bootloader_merged.bin ${PROJECT_BINARY_DIR}/zephyr.mcuboot.bin
+            COMMENT "merge secure boot to mcuboot."
+    else()
+        message(WARNING "File ${SBOOT_FILE_PATH} does not exist. merge_sboot target will not be created.")
+    endif()
+
+    if (EXISTS ${SBOOT_FILE_PATH})
+        add_dependencies(merge_sboot build_mcuboot)
+    endif()
 
     set(ZB_FILE_PATH "${ZEPHYR_BASE}/concurrent_sampleLight_b92.bin")
 
-    if(EXISTS ${ZB_FILE_PATH})
+    if (EXISTS ${ZB_FILE_PATH})
         add_custom_target(merge_zigbee ALL
             COMMAND
             dd if=/dev/zero bs=${BLOCK_SIZE} count=1280 | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/dm_merged.bin
@@ -202,10 +230,14 @@ if (CONFIG_BOOTLOADER_MCUBOOT)
         dd if=${PROJECT_BINARY_DIR}/zephyr.signed.bin of=${PROJECT_BINARY_DIR}/zephyr.bin bs=${BLOCK_SIZE} seek=${boot_blocks}
     )
 
-    if(EXISTS ${ZB_FILE_PATH})
+    if (EXISTS ${ZB_FILE_PATH})
         add_dependencies(merge_zigbee ${ZEPHYR_FINAL_EXECUTABLE})
         add_dependencies(west_sign merge_zigbee)
-        add_dependencies(merge_mcuboot west_sign)
+        if (EXISTS ${SBOOT_FILE_PATH})
+            add_dependencies(merge_mcuboot merge_sboot west_sign)
+        else()
+            add_dependencies(merge_mcuboot west_sign)
+        endif()
     else()
         add_dependencies(merge_mcuboot ${ZEPHYR_FINAL_EXECUTABLE})
     endif()
@@ -215,7 +247,7 @@ if (CONFIG_CHIP_OTA_IMAGE_BUILD)
         INPUT_FILES ${PROJECT_BINARY_DIR}/zephyr.signed.bin
         OUTPUT_FILE ${PROJECT_BINARY_DIR}/zephyr-ota.bin
     )
-    if(EXISTS ${ZB_FILE_PATH})
+    if (EXISTS ${ZB_FILE_PATH})
         add_dependencies(chip-ota-image west_sign)
     else()
         add_dependencies(chip-ota-image ${ZEPHYR_FINAL_EXECUTABLE})
