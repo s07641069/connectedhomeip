@@ -373,10 +373,10 @@ config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS
 endif # NET_L2_OPENTHREAD
 
 config NET_TX_STACK_SIZE
-    default 554 if PM || SOC_RISCV_TELINK_TL321X
+    default 584 if PM || SOC_RISCV_TELINK_TL321X
 
 config NET_RX_STACK_SIZE
-    default 554 if PM || SOC_RISCV_TELINK_TL321X
+    default 584 if PM || SOC_RISCV_TELINK_TL321X
 
 # Disable certain parts of Zephyr IPv6 stack
 config NET_IPV6_NBR_CACHE
