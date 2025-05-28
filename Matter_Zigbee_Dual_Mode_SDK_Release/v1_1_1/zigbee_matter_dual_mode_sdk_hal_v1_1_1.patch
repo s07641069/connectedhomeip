@@ -1,0 +1,602 @@
+diff --git a/tlsr9/CMakeLists.txt b/tlsr9/CMakeLists.txt
+index 79883c0..2a36e5b 100644
+--- a/tlsr9/CMakeLists.txt
++++ b/tlsr9/CMakeLists.txt
+@@ -69,6 +69,11 @@ if (NOT (CONFIG_SOC_SERIES_RISCV_TELINK_TLX OR CONFIG_SOC_RISCV_TELINK_TLX))
+ 	zephyr_library_sources(drivers/${SOC}/analog.c)
+ endif()
+ 
++# analog_user.c reference sources for B92 and TL321X
++if (CONFIG_SOC_RISCV_TELINK_B92 OR CONFIG_SOC_RISCV_TELINK_TL321X)
++	zephyr_library_sources(drivers/${SOC}/analog_user.c)
++endif()
++
+ # MbedTLS HW acceleration
+ if(CONFIG_MBEDTLS)
+ 	add_subdirectory( crypto/mbedtls )
+diff --git a/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c b/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
+index 76f4d48..5cd66d8 100644
+--- a/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
++++ b/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
+@@ -29,6 +29,14 @@
+ #include <zephyr/storage/flash_map.h>
+ #include <zephyr/drivers/flash.h>
+ 
++#if CONFIG_SOC_RISCV_TELINK_B92
++#define USER_PARA_MAC_OFFSET (0x100)
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++#endif
++
+ #if CONFIG_TL_BLE_CTRL_MAC_TYPE_PUBLIC || CONFIG_TL_BLE_CTRL_MAC_FLASH
+ static const struct device *flash_device =
+ 	DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+@@ -111,9 +119,22 @@ _attribute_no_inline_ int b9x_bt_blc_mac_init(uint8_t *bt_mac)
+ 	err = flash_write(flash_device, FIXED_PARTITION_OFFSET(vendor_partition)
+ 			+ B9X_BT_MAC_ADDR_OFFSET, temp_mac, BLE_ADDR_LEN + 3);
+ #else
++	#if CONFIG_SOC_RISCV_TELINK_B92
++	uint8_t dummy_mac[BLE_ADDR_LEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
++
++	/*Get the ramdom mac address from zb which will passed in the user-para sector */
++	err = flash_read(USER_PARTITION_DEVICE, USER_PARTITION_OFFSET
++			+ USER_PARA_MAC_OFFSET, bt_mac, BLE_ADDR_LEN);
++	if(memcmp(bt_mac, dummy_mac, sizeof(dummy_mac)) == 0){
++		// if mac address is empty, use random instead .
++		generateRandomNum(BLE_ADDR_LEN, bt_mac);
++	}
++	bt_mac[5] |= 0xC0; /* random static by default */
++	#else
+ 	generateRandomNum(BLE_ADDR_LEN, bt_mac);
+ 	/* The random static address will be generated on every reboot */
+ 	bt_mac[5] |= 0xC0; /* random static by default */
++	#endif
+ #endif
+ #else
+ #error "Other address types are not supported or need to be set via HCI"
+diff --git a/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c b/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
+index 64065cb..727fcd0 100644
+--- a/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
++++ b/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
+@@ -28,6 +28,12 @@
+ #include <zephyr/storage/flash_map.h>
+ #include <zephyr/drivers/flash.h>
+ 
++#define USER_PARA_MAC_OFFSET (0x100)
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++
+ #if CONFIG_TL_BLE_CTRL_MAC_TYPE_PUBLIC || CONFIG_TL_BLE_CTRL_MAC_FLASH
+ static const struct device *flash_device =
+ 	DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+@@ -110,9 +116,22 @@ _attribute_no_inline_ int tlx_bt_blc_mac_init(uint8_t *bt_mac)
+ 	err = flash_write(flash_device, FIXED_PARTITION_OFFSET(vendor_partition)
+ 			+ TLX_BT_MAC_ADDR_OFFSET, temp_mac, BLE_ADDR_LEN + 3);
+ #else
++	#if CONFIG_SOC_RISCV_TELINK_TL321X
++	uint8_t dummy_mac[BLE_ADDR_LEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
++
++	/*Get the ramdom mac address from zb which will passed in the user-para sector */
++	err = flash_read(USER_PARTITION_DEVICE, USER_PARTITION_OFFSET
++			+ USER_PARA_MAC_OFFSET, bt_mac, BLE_ADDR_LEN);
++	if(memcmp(bt_mac, dummy_mac, sizeof(dummy_mac)) == 0){
++		// if mac address is empty, use random instead .
++		generateRandomNum(BLE_ADDR_LEN, bt_mac);
++	}
++	bt_mac[5] |= 0xC0; /* random static by default */
++	#else
+ 	generateRandomNum(BLE_ADDR_LEN, bt_mac);
+ 	/* The random static address will be generated on every reboot */
+ 	bt_mac[5] |= 0xC0; /* random static by default */
++	#endif
+ #endif
+ #else
+ #error "Other address types are not supported or need to be set via HCI"
+diff --git a/tlsr9/drivers/B92/analog_user.c b/tlsr9/drivers/B92/analog_user.c
+new file mode 100644
+index 0000000..21d3b2a
+--- /dev/null
++++ b/tlsr9/drivers/B92/analog_user.c
+@@ -0,0 +1,56 @@
++/********************************************************************************************************
++ * @file    analog_user.c
++ *
++ * @brief   This is the source file for TLSR9528
++ *
++ * @author  Driver Group
++ * @date    2024
++ *
++ * @par     Copyright (c) 2024, Telink Semiconductor (Shanghai) Co., Ltd. ("TELINK")
++ *
++ *          Licensed under the Apache License, Version 2.0 (the "License");
++ *          you may not use this file except in compliance with the License.
++ *          You may obtain a copy of the License at
++ *
++ *              http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *          Unless required by applicable law or agreed to in writing, software
++ *          distributed under the License is distributed on an "AS IS" BASIS,
++ *          WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *          See the License for the specific language governing permissions and
++ *          limitations under the License.
++ *
++ *******************************************************************************************************/
++
++#include "analog_user.h"
++#include "analog.h"
++
++/**
++ * @brief      This function serves to analog register read by byte.
++ * @param[in]  addr - address need to be read.
++ * @return     the result of read.
++ */
++_attribute_ram_code_sec_optimize_o2_ unsigned char user_analog_read_reg8(unsigned char addr)
++{
++    return analog_read_reg8(addr);
++}
++
++/**
++ * @brief      This function serves to analog register write by byte.
++ * @param[in]  addr - address need to be write.
++ * @param[in]  data - the value need to be write.
++ * @return     none.
++ */
++_attribute_ram_code_sec_optimize_o2_ int user_analog_write_reg8(unsigned char addr, unsigned char data)
++{
++    if (addr == analog_reg_59 || addr == analog_reg_60)
++    {
++        analog_write_reg8(addr, data);
++        return 0;
++    }
++    return -1;
++}
++
++
++_attribute_data_retention_sec_ analog_read_f analog_read = user_analog_read_reg8;
++_attribute_data_retention_sec_ analog_write_f analog_write = user_analog_write_reg8;
+diff --git a/tlsr9/drivers/B92/analog_user.h b/tlsr9/drivers/B92/analog_user.h
+new file mode 100644
+index 0000000..f9e4264
+--- /dev/null
++++ b/tlsr9/drivers/B92/analog_user.h
+@@ -0,0 +1,53 @@
++/********************************************************************************************************
++ * @file    analog_user.h
++ *
++ * @brief   This is the header file for TLSR9528
++ *
++ * @author  Driver Group
++ * @date    2024
++ *
++ * @par     Copyright (c) 2024, Telink Semiconductor (Shanghai) Co., Ltd. ("TELINK")
++ *
++ *          Licensed under the Apache License, Version 2.0 (the "License");
++ *          you may not use this file except in compliance with the License.
++ *          You may obtain a copy of the License at
++ *
++ *              http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *          Unless required by applicable law or agreed to in writing, software
++ *          distributed under the License is distributed on an "AS IS" BASIS,
++ *          WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *          See the License for the specific language governing permissions and
++ *          limitations under the License.
++ *
++ *******************************************************************************************************/
++
++#pragma once
++
++#include "compiler.h"
++
++#define analog_reg_59   (0x3b)
++#define analog_reg_60   (0x3c)
++
++/**
++ * @brief      This function serves to analog register read by byte.
++ * @param[in]  addr - address need to be read.
++ * @return     the result of read.
++ */
++_attribute_ram_code_sec_optimize_o2_ unsigned char user_analog_read_reg8(unsigned char addr);
++
++
++/**
++ * @brief      This function serves to analog register write by byte.
++ * @param[in]  addr - address need to be write.
++ * @param[in]  data - the value need to be write.
++ * @return     none.
++ */
++_attribute_ram_code_sec_optimize_o2_ int user_analog_write_reg8(unsigned char addr, unsigned char data);
++
++
++typedef unsigned char (*analog_read_f)(unsigned char addr);
++typedef int (*analog_write_f)(unsigned char addr, unsigned char data);
++
++extern _attribute_data_retention_sec_ analog_read_f analog_read;
++extern _attribute_data_retention_sec_ analog_write_f analog_write;
+diff --git a/tlsr9/drivers/B92/i2c.c b/tlsr9/drivers/B92/i2c.c
+index 874bdfc..6b14a25 100644
+--- a/tlsr9/drivers/B92/i2c.c
++++ b/tlsr9/drivers/B92/i2c.c
+@@ -202,7 +202,11 @@ static inline unsigned char i2c_master_data_nack_detect(void)
+ unsigned char i2c_master_write(unsigned char id, unsigned char *data, unsigned int len)
+ {
+ 	i2c_clr_irq_status(I2C_TX_BUF_STATUS);
++#if CONFIG_I2C_LED
++	reg_i2c_id = id; //BIT(0):R:High  W:Low
++#else
+ 	reg_i2c_id = id & (~FLD_I2C_WRITE_READ_BIT); //BIT(0):R:High  W:Low
++#endif
+ 	reg_i2c_sct1 = (FLD_I2C_LS_ID| FLD_I2C_LS_START);
+ 	while(i2c_master_busy());
+ 	if(i2c_master_id_nack_detect()){
+diff --git a/tlsr9/drivers/B92/pwm.c b/tlsr9/drivers/B92/pwm.c
+index 6984e89..ff084d0 100644
+--- a/tlsr9/drivers/B92/pwm.c
++++ b/tlsr9/drivers/B92/pwm.c
+@@ -128,3 +128,26 @@ void pwm_set_tx_dma_add_list_element(dma_chn_e chn,dma_chain_config_t *config_ad
+ 	config_addr->dma_chain_llp_ptr=(unsigned int)convert_ram_addr_cpu2bus(llpoint);
+ }
+ 
++/**
++ * @brief     This function servers to start the pwm,can have more than one PWM open at the same time.
++ * @param[in] en - variable of enum to select the pwm.
++ * @return	  none.
++ */
++void pwm_start_t(pwm_en_e en)
++{
++	pwm_start(en);
++}
++
++/**
++* @brief     This function servers to stop the pwm,can have more than one PWM stop at the same time.
++ * @param[in] en - variable of enum to select the pwm.
++ * @return	  none.
++ */
++void pwm_stop_t(pwm_en_e en)
++{
++	pwm_stop(en);
++}
++
++pwm_set_pin_t   pwm_set_pinctrl = pwm_set_pin;
++pwm_set_start_t pwm_set_start   = pwm_start_t;
++pwm_set_stop_t  pwm_set_stop    = pwm_stop_t;
+diff --git a/tlsr9/drivers/B92/pwm.h b/tlsr9/drivers/B92/pwm.h
+index 05a17df..d4c4631 100644
+--- a/tlsr9/drivers/B92/pwm.h
++++ b/tlsr9/drivers/B92/pwm.h
+@@ -133,8 +133,10 @@ static inline void pwm_set_tmax(pwm_id_e id, unsigned short tmax){
+  * @return	  none.
+  */
+ static inline void pwm_start(pwm_en_e en){
+-
++	if(!(reg_pwm_enable & en))
++	{
+ 		reg_pwm_enable|=en;
++	}
+ }
+ 
+ 
+@@ -475,6 +477,15 @@ static inline void pwm_32k_chn_dis(pwm_clk_32k_en_chn_e pwm_32K_en_chn)
+ {
+     BM_CLR(reg_pwm_mode32k, pwm_32K_en_chn);
+ }
++
++typedef void (*pwm_set_pin_t)(gpio_func_pin_e pin, gpio_func_e func);
++typedef void (*pwm_set_start_t)(pwm_en_e en);
++typedef void (*pwm_set_stop_t)(pwm_en_e id);
++
++extern pwm_set_pin_t   pwm_set_pinctrl;
++extern pwm_set_start_t pwm_set_start;
++extern pwm_set_stop_t  pwm_set_stop;
++
+ #endif
+ 
+ 
+diff --git a/tlsr9/drivers/TL321X/analog_user.c b/tlsr9/drivers/TL321X/analog_user.c
+new file mode 100644
+index 0000000..92f400b
+--- /dev/null
++++ b/tlsr9/drivers/TL321X/analog_user.c
+@@ -0,0 +1,56 @@
++/********************************************************************************************************
++ * @file    analog_user.c
++ *
++ * @brief   This is the source file for TL321X
++ *
++ * @author  Driver Group
++ * @date    2024
++ *
++ * @par     Copyright (c) 2024, Telink Semiconductor (Shanghai) Co., Ltd. ("TELINK")
++ *
++ *          Licensed under the Apache License, Version 2.0 (the "License");
++ *          you may not use this file except in compliance with the License.
++ *          You may obtain a copy of the License at
++ *
++ *              http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *          Unless required by applicable law or agreed to in writing, software
++ *          distributed under the License is distributed on an "AS IS" BASIS,
++ *          WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *          See the License for the specific language governing permissions and
++ *          limitations under the License.
++ *
++ *******************************************************************************************************/
++
++#include "analog_user.h"
++#include "lib/include/analog.h"
++
++/**
++ * @brief      This function serves to analog register read by byte.
++ * @param[in]  addr - address need to be read.
++ * @return     the result of read.
++ */
++_attribute_ram_code_com_sec_noinline_ unsigned char user_analog_read_reg8(unsigned char addr)
++{
++    return analog_read_reg8(addr);
++}
++
++/**
++ * @brief      This function serves to analog register write by byte.
++ * @param[in]  addr - address need to be write.
++ * @param[in]  data - the value need to be write.
++ * @return     none.
++ */
++_attribute_ram_code_com_sec_noinline_ int user_analog_write_reg8(unsigned char addr, unsigned char data)
++{
++    if (addr == analog_reg_59 || addr == analog_reg_60)
++    {
++        analog_write_reg8(addr, data);
++        return 0;
++    }
++    return -1;
++}
++
++
++_attribute_data_retention_sec_ analog_read_f analog_read = user_analog_read_reg8;
++_attribute_data_retention_sec_ analog_write_f analog_write = user_analog_write_reg8;
+diff --git a/tlsr9/drivers/TL321X/analog_user.h b/tlsr9/drivers/TL321X/analog_user.h
+new file mode 100644
+index 0000000..54a1ed1
+--- /dev/null
++++ b/tlsr9/drivers/TL321X/analog_user.h
+@@ -0,0 +1,53 @@
++/********************************************************************************************************
++ * @file    analog_user.h
++ *
++ * @brief   This is the header file for TL321X
++ *
++ * @author  Driver Group
++ * @date    2024
++ *
++ * @par     Copyright (c) 2024, Telink Semiconductor (Shanghai) Co., Ltd. ("TELINK")
++ *
++ *          Licensed under the Apache License, Version 2.0 (the "License");
++ *          you may not use this file except in compliance with the License.
++ *          You may obtain a copy of the License at
++ *
++ *              http://www.apache.org/licenses/LICENSE-2.0
++ *
++ *          Unless required by applicable law or agreed to in writing, software
++ *          distributed under the License is distributed on an "AS IS" BASIS,
++ *          WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ *          See the License for the specific language governing permissions and
++ *          limitations under the License.
++ *
++ *******************************************************************************************************/
++
++#pragma once
++
++#include "compiler.h"
++
++#define analog_reg_59   (0x3b)
++#define analog_reg_60   (0x3c)
++
++/**
++ * @brief      This function serves to analog register read by byte.
++ * @param[in]  addr - address need to be read.
++ * @return     the result of read.
++ */
++_attribute_ram_code_com_sec_noinline_ unsigned char user_analog_read_reg8(unsigned char addr);
++
++
++/**
++ * @brief      This function serves to analog register write by byte.
++ * @param[in]  addr - address need to be write.
++ * @param[in]  data - the value need to be write.
++ * @return     none.
++ */
++_attribute_ram_code_com_sec_noinline_ int user_analog_write_reg8(unsigned char addr, unsigned char data);
++
++
++typedef unsigned char (*analog_read_f)(unsigned char addr);
++typedef int (*analog_write_f)(unsigned char addr, unsigned char data);
++
++extern _attribute_data_retention_sec_ analog_read_f analog_read;
++extern _attribute_data_retention_sec_ analog_write_f analog_write;
+diff --git a/tlsr9/drivers/TL321X/flash.c b/tlsr9/drivers/TL321X/flash.c
+index 44547fa..b267b0f 100644
+--- a/tlsr9/drivers/TL321X/flash.c
++++ b/tlsr9/drivers/TL321X/flash.c
+@@ -648,22 +648,20 @@ flash_capacity_e flash_get_capacity(unsigned int flash_mid)
+ }
+ 
+ /*******************************************************************************************************************
+- *									This function serves to 1m area flash protection
++ *									This function serves to 1920k area flash protection
+  ******************************************************************************************************************/
+ #define FLASH_1M_ADR_OFFSET 		0x100000
+-#define FLASH_2M_ADR_OFFSET 		0x200000
+-#define FLASH_3M_ADR_OFFSET 		0x300000
+-#define FLASH_3M5_ADR_OFFSET 		0x380000
++#define FLASH_1920K_ADR_OFFSET 		0x1e0000
+ 
+-#define FLASH_ADR_OFFSET_SELECT		FLASH_1M_ADR_OFFSET
++#define FLASH_ADR_OFFSET_SELECT		FLASH_1920K_ADR_OFFSET
+ 
+-#define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1M
++#define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1920K
+ 
+ void flash_protection_lock_init(void)
+ {
+     flash_protection_init();
+ 
+-    unsigned int app_lockBlock = FLASH_PROTECT_BLOCK_SIZE; // init is 1M, in the ble lib, actual area will be less than 1m, so we protect 1m.
++    unsigned int app_lockBlock = FLASH_PROTECT_BLOCK_SIZE; // we will default to protect 1920KB flash for 2M buteo.
+ 
+     unsigned int flash_lockBlock_cmd = flash_change_app_lock_block_to_flash_lock_block(app_lockBlock);
+ 
+diff --git a/tlsr9/drivers/TL321X/i2c.c b/tlsr9/drivers/TL321X/i2c.c
+index d4532a3..42145c9 100644
+--- a/tlsr9/drivers/TL321X/i2c.c
++++ b/tlsr9/drivers/TL321X/i2c.c
+@@ -262,7 +262,11 @@ static unsigned char i2c_master_data_nack_detect(void)
+ unsigned char i2c_master_write(unsigned char id, unsigned char *data, unsigned int len)
+ {
+     i2c_clr_irq_status(I2C_TX_BUF_STATUS);
+-    reg_i2c_id   = id & (~FLD_I2C_WRITE_READ_BIT); //BIT(0):R:High  W:Low
++#if CONFIG_I2C_LED
++    reg_i2c_id = id; //BIT(0):R:High  W:Low
++#else
++    reg_i2c_id = id & (~FLD_I2C_WRITE_READ_BIT); //BIT(0):R:High  W:Low
++#endif
+     reg_i2c_sct1 = (FLD_I2C_LS_ID | FLD_I2C_LS_START);
+     if (I2C_WAIT(I2C_API_ERROR_TIMEOUT_ID)) {
+         return DRV_API_TIMEOUT;
+diff --git a/tlsr9/drivers/TL321X/lib/include/flash_prot.h b/tlsr9/drivers/TL321X/lib/include/flash_prot.h
+index cdfaf8f..b49917c 100755
+--- a/tlsr9/drivers/TL321X/lib/include/flash_prot.h
++++ b/tlsr9/drivers/TL321X/lib/include/flash_prot.h
+@@ -75,6 +75,9 @@ typedef enum{
+     /* lock all Flash area, even system data and user data.
+      * Attention: More conditions need to be considered, such as system data(SMP pairing information or OTA data if OTA used)*/
+     FLASH_LOCK_ALL_AREA         =   4,
++
++    /* User can set 1920KB flash protect. */
++    FLASH_LOCK_FW_LOW_1920K     =   0x09,
+ }flash_app_lock_e;
+ 
+ 
+diff --git a/tlsr9/drivers/TL321X/pwm.c b/tlsr9/drivers/TL321X/pwm.c
+index 946be0c..13f88c3 100644
+--- a/tlsr9/drivers/TL321X/pwm.c
++++ b/tlsr9/drivers/TL321X/pwm.c
+@@ -115,3 +115,27 @@ void pwm_set_tx_dma_add_list_element(dma_chn_e chn, dma_chain_config_t *config_a
+     config_addr->dma_chain_data_len = dma_cal_size(data_len, DMA_WORD_WIDTH);
+     config_addr->dma_chain_llp_ptr  = (unsigned int)(llpoint);
+ }
++
++/**
++ * @brief     This function servers to start the pwm,can have more than one PWM open at the same time.
++ * @param[in] en - variable of enum to select the pwm.
++ * @return	  none.
++ */
++void pwm_start_t(pwm_en_e en)
++{
++	pwm_start(en);
++}
++
++/**
++* @brief     This function servers to stop the pwm,can have more than one PWM stop at the same time.
++ * @param[in] en - variable of enum to select the pwm.
++ * @return	  none.
++ */
++void pwm_stop_t(pwm_en_e en)
++{
++	pwm_stop(en);
++}
++
++pwm_set_pin_t   pwm_set_pinctrl = pwm_set_pin;
++pwm_set_start_t pwm_set_start   = pwm_start_t;
++pwm_set_stop_t  pwm_set_stop    = pwm_stop_t;
+diff --git a/tlsr9/drivers/TL321X/pwm.h b/tlsr9/drivers/TL321X/pwm.h
+index 92c3a1d..dd15e39 100644
+--- a/tlsr9/drivers/TL321X/pwm.h
++++ b/tlsr9/drivers/TL321X/pwm.h
+@@ -124,7 +124,10 @@ static inline void pwm_set_tmax(pwm_id_e id, unsigned short tmax)
+  */
+ static inline void pwm_start(pwm_en_e en)
+ {
+-    reg_pwm_enable |= en;
++    if(!(reg_pwm_enable & en))
++    {
++        reg_pwm_enable |= en;
++    }
+ }
+ 
+ /**
+@@ -466,4 +469,14 @@ static inline void pwm_32k_chn_dis(pwm_clk_32k_en_chn_e pwm_32K_en_chn)
+ {
+     BM_CLR(reg_pwm_mode32k, pwm_32K_en_chn);
+ }
++
++
++typedef void (*pwm_set_pin_t)(gpio_func_pin_e pin, gpio_func_e func);
++typedef void (*pwm_set_start_t)(pwm_en_e en);
++typedef void (*pwm_set_stop_t)(pwm_en_e id);
++
++extern pwm_set_pin_t   pwm_set_pinctrl;
++extern pwm_set_start_t pwm_set_start;
++extern pwm_set_stop_t  pwm_set_stop;
++
+ #endif
+diff --git a/zephyr/module.yml b/zephyr/module.yml
+index b931c57..4f7c350 100644
+--- a/zephyr/module.yml
++++ b/zephyr/module.yml
+@@ -8,7 +8,7 @@ blobs:
+     type: lib
+     version: 'tl-wiki-0002'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/b91_lib/lib_zephyr_b91_13ca3999c731bbd5bab0ea73ccb24e9d0a80a2d2.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/b91_lib/lib_zephyr_b91_13ca3999c731bbd5bab0ea73ccb24e9d0a80a2d2.a
+     description: "Binary libraries supporting Telink B91 series BLE subsystems"
+ 
+   - path: lib_zephyr_b92.a
+@@ -16,7 +16,7 @@ blobs:
+     type: lib
+     version: 'tl-wiki-0002'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/b92_lib/lib_zephyr_b92_60ee93696be87a14b06f67a938aa8c9efaa0fc42.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/b92_lib/lib_zephyr_b92_60ee93696be87a14b06f67a938aa8c9efaa0fc42.a
+     description: "Binary libraries supporting Telink B92 series BLE subsystems"
+ 
+   - path: lib_zephyr_tl321x.a
+@@ -24,7 +24,7 @@ blobs:
+     type: lib
+     version: 'V4.0.4.3'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/tl321x_lib/lib_zephyr_tl321x_f44642133421864883e67eb8b94193ab71bf956d.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/tl321x_lib/lib_zephyr_tl321x_f44642133421864883e67eb8b94193ab71bf956d.a
+     description: "Binary libraries supporting Telink TL321X series BLE subsystems"
+ 
+   - path: lib_zephyr_tl321x_pm.a
+@@ -32,7 +32,7 @@ blobs:
+     type: lib
+     version: 'V4.0.4.3'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/tl321x_lib/lib_zephyr_tl321x_f44642133421864883e67eb8b94193ab71bf956d_pm.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/tl321x_lib/lib_zephyr_tl321x_f44642133421864883e67eb8b94193ab71bf956d_pm.a
+     description: "Binary libraries for the Telink TL321X series BLE subsystems, optimized for low-power mode"
+     
+   - path: lib_zephyr_tl721x.a
+@@ -40,7 +40,7 @@ blobs:
+     type: lib
+     version: 'V4.0.4.2-c8c196e0'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/tl721x_lib/lib_zephyr_tl721x_231ff74e827641da44db7cb8e5b09248b3697403.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/tl721x_lib/lib_zephyr_tl721x_231ff74e827641da44db7cb8e5b09248b3697403.a
+     description: "Binary libraries supporting Telink TL721X series BLE subsystems"
+ 
+   - path: lib_zephyr_tl721x_pm.a
+@@ -48,5 +48,5 @@ blobs:
+     type: lib
+     version: 'V4.0.4.2-c8c196e0'
+     license-path: tlsr9/ble/license.txt
+-    url: http://wiki.telink-semi.cn/wiki/protocols/Zephyr/binaries/public/tl721x_lib/lib_zephyr_tl721x_231ff74e827641da44db7cb8e5b09248b3697403_pm.a
++    url: https://doc.telink-semi.cn/Zephyr/binaries/public/tl721x_lib/lib_zephyr_tl721x_231ff74e827641da44db7cb8e5b09248b3697403_pm.a
+     description: "Binary libraries supporting Telink TL721X series BLE subsystems, optimized for low-power mode"
+\ No newline at end of file
