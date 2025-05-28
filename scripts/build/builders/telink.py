@@ -158,6 +158,7 @@ class TelinkBuilder(Builder):
                  enable_rpcs: bool = False,
                  enable_factory_data: bool = False,
                  enable_4mb_flash: bool = False,
+                 enable_dual_mode: bool = False,
                  mars_board_config: bool = False,
                  usb_board_config: bool = False,
                  compress_lzma_config: bool = False,
@@ -173,6 +174,7 @@ class TelinkBuilder(Builder):
         self.enable_rpcs = enable_rpcs
         self.enable_factory_data = enable_factory_data
         self.enable_4mb_flash = enable_4mb_flash
+        self.enable_dual_mode = enable_dual_mode
         self.mars_board_config = mars_board_config
         self.usb_board_config = usb_board_config
         self.compress_lzma_config = compress_lzma_config
@@ -215,6 +217,9 @@ class TelinkBuilder(Builder):
 
         if self.enable_4mb_flash:
             flags.append("-DFLASH_SIZE=4m")
+
+        if self.enable_dual_mode:
+            flags.append("-DCONFIG_DUAL_MODE=y")
 
         if self.mars_board_config:
             flags.append("-DTLNK_MARS_BOARD=y")

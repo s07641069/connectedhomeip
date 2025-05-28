@@ -37,7 +37,7 @@
 
 #include <credentials/examples/DeviceAttestationCredsExample.h>
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
