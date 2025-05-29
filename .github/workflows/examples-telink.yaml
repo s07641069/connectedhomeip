@@ -392,7 +392,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (W91) All Clusters App
               # Run test for master and s07641069 PRs
@@ -406,7 +406,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B92) All Clusters Minimal App
               # Run test for master and s07641069 PRs
@@ -420,7 +420,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (tl721x) Bridge App
               # Run test for master and s07641069 PRs
@@ -433,7 +433,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B92 retention) Contact Sensor App
               # Run test for master and s07641069 PRs
@@ -447,7 +447,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build tools required for Factory Data
               # Run test for master and all PRs
@@ -563,7 +563,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (tl321x) OTA Requestor App
               # Run test for master and s07641069 PRs
@@ -577,7 +577,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B91 USB) Pump App
               # Run test for master and s07641069 PRs
@@ -591,7 +591,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B91) Pump Controller App
               # Run test for master and s07641069 PRs
@@ -605,7 +605,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B91) Shell App
               # Run test for master and s07641069 PRs
@@ -619,7 +619,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B92 retention) Smoke CO Alarm App
               # Run test for master and s07641069 PRs
@@ -633,7 +633,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B92) lighting with precompiled OpenThread library
               # Run test for s07641069 PRs
@@ -647,7 +647,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (B91) Thermostat App
               # Run test for master and s07641069 PRs
@@ -661,7 +661,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Build example Telink (tl721x) Window Covering App
               # Run test for master and s07641069 PRs
@@ -675,7 +675,7 @@ jobs:
                     /tmp/bloat_reports/
 
             - name: clean out build output
-              run: rm -rf ./out/telink*
+              run: rm -rf ./out
 
             - name: Uploading Size Reports
               uses: ./.github/actions/upload-size-reports
