@@ -1,0 +1,234 @@
+diff --git a/config/telink/chip-module/Kconfig b/config/telink/chip-module/Kconfig
+index 3e5e287643..ac9e6d6740 100644
+--- a/config/telink/chip-module/Kconfig
++++ b/config/telink/chip-module/Kconfig
+@@ -239,6 +239,7 @@ config CHIP_ENABLE_POWER_ON_FACTORY_RESET
+ config CHIP_TASK_STACK_SIZE
+ 	int
+ 	default 6192 if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_W91
++	default 5965 if (PM && (SOC_RISCV_TELINK_B92 || SOC_RISCV_TELINK_TL721X))
+ 	default 5352 if PM
+ 	default 8192
+ 
+diff --git a/config/telink/chip-module/Kconfig.defaults b/config/telink/chip-module/Kconfig.defaults
+index 0173594757..baa477c47c 100644
+--- a/config/telink/chip-module/Kconfig.defaults
++++ b/config/telink/chip-module/Kconfig.defaults
+@@ -77,8 +77,8 @@ config IDLE_STACK_SIZE
+ 
+ 
+ config ISR_STACK_SIZE
+-    default 576 if PM
+-    default 528 if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_W91
++    default 576 if (PM || SOC_RISCV_TELINK_TL321X)
++    default 528 if SOC_RISCV_TELINK_W91
+ 
+ config SYSTEM_WORKQUEUE_STACK_SIZE
+     default 616 if PM
+@@ -87,6 +87,7 @@ config HEAP_MEM_POOL_SIZE
+     default 256 if ZEPHYR_VERSION_3_3
+     default 1280
+ 
++# need to enlarge to 21000 , to pass TC_RR_1.1
+ config COMMON_LIBC_MALLOC_ARENA_SIZE
+     default 20716 if SOC_SERIES_RISCV_TELINK_B9X_RETENTION || (SOC_RISCV_TELINK_TL321X && ZEPHYR_VERSION_3_3) || (SOC_RISCV_TELINK_TL721X && SOC_SERIES_RISCV_TELINK_TLX_RETENTION)
+     default 16384 if SOC_RISCV_TELINK_TL721X || (SOC_RISCV_TELINK_TL321X && !ZEPHYR_VERSION_3_3)
+@@ -178,7 +179,7 @@ config BT_DEVICE_NAME_GATT_WRITABLE
+ if SOC_RISCV_TELINK_B9X || SOC_RISCV_TELINK_TLX
+ 
+ config TL_BLE_CTRL_THREAD_STACK_SIZE
+-    default 648 if ZEPHYR_VERSION_3_3
++    default 708 if ZEPHYR_VERSION_3_3
+     default 680
+ 
+ config TL_BLE_CTRL_MASTER_MAX_NUM
+@@ -203,6 +204,7 @@ endif # BT
+ 
+ if BOARD_TLSR9528A_RETENTION || BOARD_TLSR9518ADK80D_RETENTION
+ config SOC_SERIES_RISCV_TELINK_B9X_NON_RETENTION_RAM_CODE
++    default n if (PM && BOARD_TLSR9528A_RETENTION)
+     default y if PM
+ 
+ config TELINK_B9X_MATTER_RETENTION_LAYOUT
+@@ -262,10 +264,21 @@ config TELINK_SOC_REBOOT_ON_FAULT
+ config NVS_LOOKUP_CACHE
+     default y
+ 
++# the nvs lookup cache size should be 2048 ,or the TC_RR1.0 will fail .
+ config NVS_LOOKUP_CACHE_SIZE
+     default 400  if SOC_RISCV_TELINK_TL321X
+     default 2048 if !PM
+ 
++config NVS_RAM_OPTIMIZATION
++    bool
++    default y if PM || SOC_RISCV_TELINK_TL321X
++    default n 
++
++# test on newest based code, need to enlarge to 512 which can pass TC_RR_1.1
++config NVS_LOOKUP_CACHE_ARRAY_SIZE
++    int "Non-volatile Storage lookup cache size"
++    default 512 if PM || SOC_RISCV_TELINK_TL321X
++
+ # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
+ # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
+ config SETTINGS_NVS_SECTOR_SIZE_MULT
+@@ -305,16 +318,32 @@ config CHIP_ENABLE_ICD_SUPPORT
+ config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+     bool "Skip initial CSMA-CA backoff when sending data requests"
+     depends on CHIP_ENABLE_ICD_SUPPORT
++    default n if (SOC_SERIES_RISCV_TELINK_TLX_RETENTION && SOC_RISCV_TELINK_TL721X)
++    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+     default n
+     help
+       Skip the first CSMA backoff period when sending data requests over IEEE 802.15.4.
+ 
++config ZEPHYR_NETBUFFER_OPTIMIZATION
++	bool "Place net buffer in DLM instead of ILM"
++	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
++	default n
++	help
++	  This option enables storing the net buffer in DLM rather than ILM.
++
+ config IEEE802154_TLX_OPTIMIZATION
+     bool "Optimize 802.15.4 RF performance for TLX SoCs"
++    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION
+     default n
+     help
+       Improve RF performance in IEEE 802.15.4 communication on TLX SoCs.
+ 
++config IEEE802154_B9X_OPTIMIZATION
++	bool "optimize the rf performance for b9x"
++	default n
++	help
++	  optimize the rf performance for b9x.
++
+ config OPENTHREAD_THREAD_STACK_SIZE
+     default 2400 if PM || SOC_RISCV_TELINK_TL321X
+ 
+@@ -339,10 +368,10 @@ config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS
+ endif # NET_L2_OPENTHREAD
+ 
+ config NET_TX_STACK_SIZE
+-    default 554 if PM || SOC_RISCV_TELINK_TL321X
++    default 584 if PM || SOC_RISCV_TELINK_TL321X
+ 
+ config NET_RX_STACK_SIZE
+-    default 554 if PM || SOC_RISCV_TELINK_TL321X
++    default 584 if PM || SOC_RISCV_TELINK_TL321X
+ 
+ # Disable certain parts of Zephyr IPv6 stack
+ config NET_IPV6_NBR_CACHE
+diff --git a/examples/platform/telink/common/src/AppTaskCommon.cpp b/examples/platform/telink/common/src/AppTaskCommon.cpp
+index d898297670..a645a48038 100644
+--- a/examples/platform/telink/common/src/AppTaskCommon.cpp
++++ b/examples/platform/telink/common/src/AppTaskCommon.cpp
+@@ -747,6 +747,14 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+         }
+ #endif
+         break;
++    case DeviceEventType::kCHIPoBLEConnectionClosed:
++        if (Internal::BLEMgrImpl().NeedToResetFailSafeTimer())
++        {
++            LOG_INF("BLE disconnected during commissioning.");
++            Internal::BLEMgrImpl().ClearResetFailSafeTimerFlag();
++            Server::GetInstance().GetFailSafeContext().ForceFailSafeTimerExpiry();
++        }
++        break;
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     case DeviceEventType::kDnssdInitialized:
+ #if CONFIG_CHIP_OTA_REQUESTOR
+diff --git a/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp b/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
+index 410766834a..c422b88853 100644
+--- a/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
++++ b/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
+@@ -66,6 +66,10 @@ extern "C" void otSysProcessDrivers(otInstance * aInstance);
+ extern "C" void otAppCliInit(otInstance * aInstance);
+ #endif
+ 
++#if defined CONFIG_IEEE802154_TLX_OPTIMIZATION
++bool isThreadCommissioned = false;
++#endif /* CONFIG_IEEE802154_TLX_OPTIMIZATION */
++
+ namespace chip {
+ namespace DeviceLayer {
+ namespace Internal {
+@@ -379,6 +383,14 @@ bool GenericThreadStackManagerImpl_OpenThread<ImplClass>::_IsThreadAttached()
+     curRole = otThreadGetDeviceRole(mOTInst);
+     Impl()->UnlockThreadStack();
+ 
++#if defined CONFIG_IEEE802154_TLX_OPTIMIZATION
++    if ((curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED))
++    {
++        if (isThreadCommissioned == false)
++            isThreadCommissioned = true;
++    }
++#endif /* CONFIG_IEEE802154_TLX_OPTIMIZATION */
++
+     return (curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED);
+ }
+ 
+diff --git a/src/platform/telink/BLEManagerImpl.cpp b/src/platform/telink/BLEManagerImpl.cpp
+index 00f5950ac0..993321bc77 100644
+--- a/src/platform/telink/BLEManagerImpl.cpp
++++ b/src/platform/telink/BLEManagerImpl.cpp
+@@ -508,9 +508,11 @@ CHIP_ERROR BLEManagerImpl::HandleGAPConnect(const ChipDeviceEvent * event)
+ CHIP_ERROR BLEManagerImpl::HandleGAPDisconnect(const ChipDeviceEvent * event)
+ {
+     const BleConnEventType * connEvent = &event->Platform.BleConnEvent;
++    const uint8_t hciResult            = connEvent->HciResult;
+ 
+-    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (reason 0x%02x)", connEvent->HciResult);
++    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (reason 0x%02x)", hciResult);
+ 
++    mNeedToResetFailSafeTimer = (hciResult == BT_HCI_ERR_REMOTE_USER_TERM_CONN || hciResult == BT_HCI_ERR_CONN_TIMEOUT);
+     mGAPConns--;
+ 
+     // If indications were enabled for this connection, record that they are now disabled and
+@@ -518,7 +520,7 @@ CHIP_ERROR BLEManagerImpl::HandleGAPDisconnect(const ChipDeviceEvent * event)
+     if (UnsetSubscribed(connEvent->BtConn))
+     {
+         CHIP_ERROR disconReason;
+-        switch (connEvent->HciResult)
++        switch (hciResult)
+         {
+         case BT_HCI_ERR_REMOTE_USER_TERM_CONN:
+             // Do not treat proper connection termination as an error and exit.
+diff --git a/src/platform/telink/BLEManagerImpl.h b/src/platform/telink/BLEManagerImpl.h
+index 700f54bdee..8624b4bd25 100644
+--- a/src/platform/telink/BLEManagerImpl.h
++++ b/src/platform/telink/BLEManagerImpl.h
+@@ -109,6 +109,7 @@ private:
+ #endif
+     bool mBLERadioInitialized;
+     bool mReadyToAttachThread;
++    bool mNeedToResetFailSafeTimer;
+ 
+     void DriveBLEState(void);
+     CHIP_ERROR PrepareAdvertisingRequest(void);
+@@ -168,6 +169,9 @@ public:
+     static ssize_t HandleC3Read(struct bt_conn * conn, const struct bt_gatt_attr * attr, void * buf, uint16_t len, uint16_t offset);
+ #endif
+ 
++    bool NeedToResetFailSafeTimer(void);
++    void ClearResetFailSafeTimerFlag(void);
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     // Switch context from BLE to Thread
+     void SwitchToIeee802154(void);
+@@ -212,6 +216,16 @@ inline BLEManagerImpl & BLEMgrImpl(void)
+     return BLEManagerImpl::sInstance;
+ }
+ 
++inline bool BLEManagerImpl::NeedToResetFailSafeTimer(void)
++{
++    return mNeedToResetFailSafeTimer;
++}
++
++inline void BLEManagerImpl::ClearResetFailSafeTimerFlag(void)
++{
++    mNeedToResetFailSafeTimer = false;
++}
++
+ inline BleLayer * BLEManagerImpl::_GetBleLayer()
+ {
+     return this;
