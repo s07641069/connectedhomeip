@@ -1,0 +1,803 @@
+diff --git a/Kconfig.zephyr b/Kconfig.zephyr
+index fa25bb981b4..32e1b03f349 100644
+--- a/Kconfig.zephyr
++++ b/Kconfig.zephyr
+@@ -979,3 +979,7 @@ config COMPAT_INCLUDES
+ 	  deprecated header files.
+ 
+ endmenu
++
++config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
++	bool "Skip the initial CSMA-CA backoff for data requests"
++	default n
+diff --git a/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi b/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
+index 1f4c4245fe1..0b657731b1a 100644
+--- a/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
++++ b/boards/riscv/tlsr9528a/tlsr9528a-common.dtsi
+@@ -124,7 +124,7 @@
+ };
+ 
+ &cpu0 {
+-	clock-frequency = <48000000>;
++	clock-frequency = <96000000>;
+ };
+ 
+ &ram_ilm {
+diff --git a/drivers/ieee802154/Kconfig.b9x b/drivers/ieee802154/Kconfig.b9x
+index 16cf0d341cc..f6af67a87a0 100644
+--- a/drivers/ieee802154/Kconfig.b9x
++++ b/drivers/ieee802154/Kconfig.b9x
+@@ -48,6 +48,12 @@ config IEEE802154_B9X_DELAY_TRX_ACC
+ 	  Accuracy of the clock used for scheduling radio delayed operations (delayed transmission
+ 	  or delayed reception), in ppm.
+ 
++config IEEE802154_B9X_OPTIMIZATION
++	bool "optimize the rf performance for b9x"
++	default n
++	help
++	  optimize the rf performance for b9x.
++
+ if IEEE802154_B9X_MAC_STATIC
+ 
+ config IEEE802154_B9X_MAC4
+diff --git a/drivers/ieee802154/ieee802154_b9x.c b/drivers/ieee802154/ieee802154_b9x.c
+index f93083e983a..fe3752793b2 100644
+--- a/drivers/ieee802154/ieee802154_b9x.c
++++ b/drivers/ieee802154/ieee802154_b9x.c
+@@ -10,6 +10,10 @@
+ #include "stimer.h"
+ #include "tl_rf_power.h"
+ 
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++#include "clock.h"
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
++
+ #define LOG_MODULE_NAME ieee802154_b9x
+ #if defined(CONFIG_IEEE802154_DRIVER_LOG_LEVEL)
+ #define LOG_LEVEL CONFIG_IEEE802154_DRIVER_LOG_LEVEL
+@@ -634,7 +638,7 @@ static void ALWAYS_INLINE b9x_rf_rx_isr(const struct device *dev)
+ 	struct b9x_data *b9x = dev->data;
+ 	int status = -EINVAL;
+ 	struct net_pkt *pkt = NULL;
+-
++	struct ieee802154_frame frame = {};
+ #if defined(CONFIG_NET_PKT_TIMESTAMP) && defined(CONFIG_NET_PKT_TXTIME)
+ 	uint64_t rx_time = k_ticks_to_us_near64(k_uptime_ticks());
+ 	uint32_t delta_time = (stimer_get_tick() - ZB_RADIO_TIMESTAMP_GET(b9x->rx_buffer)) /
+@@ -671,7 +675,10 @@ static void ALWAYS_INLINE b9x_rf_rx_isr(const struct device *dev)
+ 			break;
+ 		}
+ 		uint8_t *payload = (b9x->rx_buffer + B9X_PAYLOAD_OFFSET);
+-		struct ieee802154_frame frame;
++
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++		cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_96M_HCLK_48M_PCLK_24M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
+ 
+ 		if (IS_ENABLED(CONFIG_IEEE802154_RAW_MODE) ||
+ 			IS_ENABLED(CONFIG_NET_L2_OPENTHREAD)) {
+@@ -958,8 +965,6 @@ static int b9x_set_channel(const struct device *dev, uint16_t channel)
+ 		b9x->current_channel = channel;
+ 		if (b9x->is_started) {
+ 			rf_set_chn(B9X_LOGIC_CHANNEL_TO_PHYSICAL(channel));
+-			rf_set_txmode();
+-			rf_set_rxmode();
+ 		}
+ 	}
+ 
+@@ -1020,6 +1025,11 @@ static int b9x_start(const struct device *dev)
+ 	b9x_disable_pm(dev);
+ 	/* check if RF is already started */
+ 	if (!b9x->is_started) {
++
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++		cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_96M_HCLK_48M_PCLK_24M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
++
+ #ifdef CONFIG_DYNAMIC_INTERRUPTS
+ 		irq_connect_dynamic(DT_INST_IRQN(0), DT_INST_IRQ(0, priority),
+ 			(void (*)(const void *))b9x_rf_isr, DEVICE_DT_INST_GET(0), 0);
+@@ -1041,8 +1051,6 @@ static int b9x_start(const struct device *dev)
+ 		}
+ 		rf_set_irq_mask(FLD_RF_IRQ_RX | FLD_RF_IRQ_TX);
+ 		riscv_plic_irq_enable(DT_INST_IRQN(0) - CONFIG_2ND_LVL_ISR_TBL_OFFSET);
+-		rf_set_txmode();
+-		rf_set_rxmode();
+ 		b9x->is_started = true;
+ 	}
+ 
+@@ -1056,6 +1064,9 @@ static int b9x_stop(const struct device *dev)
+ 
+ 	/* check if RF is already stopped */
+ 	if (b9x->is_started) {
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++		cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_96M_HCLK_48M_PCLK_24M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
+ 		if (b9x->ack_sending) {
+ 			if (k_sem_take(&b9x->tx_wait, K_MSEC(B9X_TX_WAIT_TIME_MS)) != 0) {
+ 				b9x->ack_sending = false;
+@@ -1089,6 +1100,11 @@ static int b9x_tx(const struct device *dev,
+ 	int status = 0;
+ 	struct b9x_data *b9x = dev->data;
+ 
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++	cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_96M_HCLK_48M_PCLK_24M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
++
++
+ 	/* check for supported mode */
+ #if defined(CONFIG_NET_PKT_TIMESTAMP) && defined(CONFIG_NET_PKT_TXTIME)
+ 	if (mode != IEEE802154_TX_MODE_DIRECT &&
+@@ -1296,12 +1312,20 @@ static int b9x_tx(const struct device *dev,
+ 		b9x->event_handler(dev, IEEE802154_EVENT_TX_STARTED, (void *)frag);
+ 	}
+ 
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++	cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_16M_HCLK_16M_PCLK_16M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
++
+ 	/* wait for tx done */
+ 	if (k_sem_take(&b9x->tx_wait, K_MSEC(B9X_TX_WAIT_TIME_MS)) != 0) {
+ 		rf_set_rxmode();
+ 		status = -EIO;
+ 	}
+ 
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++	cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_16M_HCLK_16M_PCLK_16M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
++
+ 	/* wait for ACK if requested */
+ 	if (!status && (frag->data[0] & IEEE802154_FRAME_FCF_ACK_REQ_MASK) ==
+ 		IEEE802154_FRAME_FCF_ACK_REQ_ON) {
+@@ -1317,7 +1341,9 @@ static int b9x_tx(const struct device *dev,
+ 		b9x_mac_keys_frame_cnt_inc(b9x->mac_keys, key_id);
+ 	}
+ #endif /* CONFIG_IEEE802154_2015 */
+-
++#if defined(CONFIG_IEEE802154_B9X_OPTIMIZATION)
++	cclk_hclk_pclk_config(PLL_192M_DIV_CCLK_96M_HCLK_48M_PCLK_24M);
++#endif /* CONFIG_IEEE802154_B9X_OPTIMIZATION */
+ 	return status;
+ }
+ 
+diff --git a/dts/riscv/telink/telink_b92.dtsi b/dts/riscv/telink/telink_b92.dtsi
+index ed97d7581c2..175ec090532 100644
+--- a/dts/riscv/telink/telink_b92.dtsi
++++ b/dts/riscv/telink/telink_b92.dtsi
+@@ -73,7 +73,7 @@
+ 		power: power@80140180 {
+ 			compatible = "telink,b92-power";
+ 			reg = <0x80140180 0x40>;
+-			power-mode = "DCDC_1P4_LDO_2P0";
++			power-mode = "DCDC_1P4_DCDC_2P0";
+ 			vbat-type = "VBAT_MAX_VALUE_GREATER_THAN_3V6";
+ 			status = "okay";
+ 		};
+diff --git a/include/zephyr/fs/nvs.h b/include/zephyr/fs/nvs.h
+index 78c18606ce1..5dacc2189ed 100644
+--- a/include/zephyr/fs/nvs.h
++++ b/include/zephyr/fs/nvs.h
+@@ -23,6 +23,16 @@ extern "C" {
+  * @{
+  * @}
+  */
++struct nvs_lookup {
++	union {
++	struct {
++		uint32_t addr:20;
++		uint32_t id:12;
++	} bf;
++	uint32_t byte;
++	} flags;
++};
++
+ 
+ /**
+  * @brief Non-volatile Storage Data Structures
+@@ -56,7 +66,12 @@ struct nvs_fs {
+ 	const struct device *flash_device;
+ 	const struct flash_parameters *flash_parameters;
+ #if CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup lookup_cache[CONFIG_NVS_LOOKUP_CACHE_ARRAY_SIZE];
++	uint32_t lookup_idx;
++	#else
+ 	uint32_t lookup_cache[CONFIG_NVS_LOOKUP_CACHE_SIZE];
++	#endif
+ #endif
+ };
+ 
+diff --git a/include/zephyr/kernel.h b/include/zephyr/kernel.h
+index a89bdab0529..9cfb19d8cc3 100644
+--- a/include/zephyr/kernel.h
++++ b/include/zephyr/kernel.h
+@@ -5000,6 +5000,19 @@ struct k_mem_slab {
+ 		Z_MEM_SLAB_INITIALIZER(name, _k_mem_slab_buf_##name, \
+ 					WB_UP(slab_block_size), slab_num_blocks)
+ 
++
++#if CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION
++#define K_MEM_SLAB_DEFINE_BSS(name, slab_block_size, slab_num_blocks, slab_align) \
++	char __attribute__((section(".noinit"))) \
++	   __aligned(WB_UP(slab_align)) \
++	   _k_mem_slab_buf_##name[(slab_num_blocks) * WB_UP(slab_block_size)]; \
++
++#define K_MEM_SLAB_DEFINE_SET(name, slab_block_size, slab_num_blocks, slab_align) \
++	STRUCT_SECTION_ITERABLE(k_mem_slab, name) = \
++		Z_MEM_SLAB_INITIALIZER(name, _k_mem_slab_buf_##name, \
++					WB_UP(slab_block_size), slab_num_blocks)
++#endif /* CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
++
+ /**
+  * @brief Initialize a memory slab.
+  *
+diff --git a/include/zephyr/net/buf.h b/include/zephyr/net/buf.h
+index c39f3dd561c..716a01e8a06 100644
+--- a/include/zephyr/net/buf.h
++++ b/include/zephyr/net/buf.h
+@@ -1136,6 +1136,28 @@ extern const struct net_buf_data_cb net_buf_fixed_cb;
+ 					 _net_buf_##_name, _count, _ud_size,   \
+ 					 _destroy)
+ 
++
++#if CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION
++#define NET_BUF_POOL_FIXED_DEFINE_BSS(_name, _count, _data_size, _ud_size, _destroy)	\
++	_NET_BUF_ARRAY_DEFINE(_name, _count, _ud_size);			\
++	uint8_t	__attribute__((section(".bss")))			\
++	net_buf_data_##_name[_count][_data_size] __net_buf_align;	\
++
++#define NET_BUF_POOL_FIXED_DEFINE_SET(_name, _count, _data_size, _ud_size, _destroy)	\
++	static const struct net_buf_pool_fixed net_buf_fixed_##_name = {       \
++		.data_size = _data_size,                                       \
++		.data_pool = (uint8_t *)net_buf_data_##_name,                  \
++	};                                                                     \
++	static const struct net_buf_data_alloc net_buf_fixed_alloc_##_name = { \
++		.cb = &net_buf_fixed_cb,                                       \
++		.alloc_data = (void *)&net_buf_fixed_##_name,                  \
++	};                                                                     \
++	static STRUCT_SECTION_ITERABLE(net_buf_pool, _name) =                  \
++		NET_BUF_POOL_INITIALIZER(_name, &net_buf_fixed_alloc_##_name,  \
++					_net_buf_##_name, _count, _ud_size,   \
++					_destroy)
++#endif /* CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
++
+ /** @cond INTERNAL_HIDDEN */
+ extern const struct net_buf_data_cb net_buf_var_cb;
+ /** @endcond */
+diff --git a/kernel/idle.c b/kernel/idle.c
+index 2ad33693644..366f01d1b58 100644
+--- a/kernel/idle.c
++++ b/kernel/idle.c
+@@ -15,6 +15,14 @@
+ #include <ksched.h>
+ #include <kswap.h>
+ 
++#if defined(CONFIG_BT_B9X) && defined(CONFIG_SOC_RISCV_TELINK_B92)
++#include "b9x_bt.h"
++#elif defined(CONFIG_BT_TLX) && defined(CONFIG_SOC_RISCV_TELINK_TL321X)
++#include "tlx_bt.h"
++#elif defined(CONFIG_BT_TLX) && defined(CONFIG_SOC_RISCV_TELINK_TL721X)
++#include "tlx_bt.h"
++#endif
++
+ LOG_MODULE_DECLARE(os, CONFIG_KERNEL_LOG_LEVEL);
+ 
+ void z_pm_save_idle_exit(void)
+@@ -81,9 +89,18 @@ void idle(void *unused1, void *unused2, void *unused3)
+ 		 * which is essential for the kernel's scheduling
+ 		 * logic.
+ 		 */
+-		if (k_is_pre_kernel() || !pm_system_suspend(_kernel.idle)) {
++# if ((defined(CONFIG_BT_B9X) && defined(CONFIG_SOC_RISCV_TELINK_B92)) || \
++	 (defined(CONFIG_BT_TLX) && defined(CONFIG_SOC_RISCV_TELINK_TL321X)) || \
++	 (defined(CONFIG_BT_TLX) && defined(CONFIG_SOC_RISCV_TELINK_TL721X)))
++		extern uint32_t blc_ll_checkBleRfFsmIsBusy(void);
++
++		if (blc_ll_checkBleRfFsmIsBusy() && tl_bt_controller_state()) {
+ 			k_cpu_idle();
+-		}
++		} else
++#endif
++			if (k_is_pre_kernel() || !pm_system_suspend(_kernel.idle)) {
++				k_cpu_idle();
++			}
+ #else
+ 		k_cpu_idle();
+ #endif
+diff --git a/soc/riscv/riscv-privilege/telink_b9x/soc.c b/soc/riscv/riscv-privilege/telink_b9x/soc.c
+index 27e31585c1d..54e305e3443 100644
+--- a/soc/riscv/riscv-privilege/telink_b9x/soc.c
++++ b/soc/riscv/riscv-privilege/telink_b9x/soc.c
+@@ -170,9 +170,15 @@ static int soc_b9x_init(void)
+ 		break;
+ #endif
+ 
++#if CONFIG_SOC_RISCV_TELINK_B91
+ 	case CLK_96MHZ:
+ 		CCLK_96M_HCLK_48M_PCLK_24M;
+ 		break;
++#elif CONFIG_SOC_RISCV_TELINK_B92
++	case CLK_96MHZ:
++		CCLK_96M_HCLK_48M_PCLK_24M_MSPI_64M;
++		break;
++#endif
+ 	}
+ 
+ 	/* Init Machine Timer source clock: 32 KHz RC */
+@@ -242,9 +248,15 @@ void soc_b9x_restore(void)
+ 		break;
+ #endif
+ 
++#if CONFIG_SOC_RISCV_TELINK_B91
+ 	case CLK_96MHZ:
+ 		CCLK_96M_HCLK_48M_PCLK_24M;
+ 		break;
++#elif CONFIG_SOC_RISCV_TELINK_B92
++	case CLK_96MHZ:
++		CCLK_96M_HCLK_48M_PCLK_24M_MSPI_64M;
++		break;
++#endif
+ 	}
+ }
+ 
+diff --git a/subsys/fs/nvs/Kconfig b/subsys/fs/nvs/Kconfig
+index de4f282ee98..7713fabe849 100644
+--- a/subsys/fs/nvs/Kconfig
++++ b/subsys/fs/nvs/Kconfig
+@@ -27,6 +27,22 @@ config NVS_LOOKUP_CACHE_SIZE
+ 	  Number of entries in Non-volatile Storage lookup cache.
+ 	  It is recommended that it be a power of 2.
+ 
++config NVS_LOOKUP_CACHE_ARRAY_SIZE
++	int "Non-volatile Storage lookup cache size"
++	default 128
++	range 1 65536
++	depends on NVS_LOOKUP_CACHE
++	help
++	  Number of entries in Non-volatile Storage lookup cache.
++	  It is recommended that it be a power of 2.
++
++config NVS_RAM_OPTIMIZATION
++	bool "Control RAM optimization for NVS lookup cache"
++	default n
++	depends on NVS_LOOKUP_CACHE
++	help
++	  Control this option to optimize RAM usuage for NVS by using a specialized RAM-based lookup cache.
++
+ module = NVS
+ module-str = nvs
+ source "subsys/logging/Kconfig.template.log_config"
+diff --git a/subsys/fs/nvs/nvs.c b/subsys/fs/nvs/nvs.c
+index 63703147bc4..184b675e26f 100644
+--- a/subsys/fs/nvs/nvs.c
++++ b/subsys/fs/nvs/nvs.c
+@@ -40,6 +40,71 @@ static inline size_t nvs_lookup_cache_pos(uint16_t id)
+ 	return pos % CONFIG_NVS_LOOKUP_CACHE_SIZE;
+ }
+ 
++#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++static inline struct nvs_lookup *nvs_lookup_cache_location(struct nvs_fs *fs, size_t pos)
++{
++	uint16_t idx = 0;
++	struct nvs_lookup *cache_entry = fs->lookup_cache;
++	struct nvs_lookup *const cache_end = &fs->lookup_cache[fs->lookup_idx];
++
++	for (; cache_entry < cache_end; ++cache_entry) {
++		if (cache_entry->flags.bf.id == pos) {
++			return cache_entry;
++		}
++		idx++;
++	}
++
++	return  (struct nvs_lookup *) NVS_LOOKUP_CACHE_NO_ADDR;
++}
++#endif
++
++#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++static int nvs_lookup_cache_rebuild(struct nvs_fs *fs)
++{
++	int rc;
++	uint32_t addr, ate_addr;
++	struct nvs_lookup *cache_entry;
++	struct nvs_ate ate;
++
++	memset(fs->lookup_cache, 0xff, sizeof(fs->lookup_cache));
++	addr = fs->ate_wra;
++	fs->lookup_idx = 0;
++	while (true) {
++		/* Make a copy of 'addr' as it will be advanced by nvs_pref_ate() */
++		ate_addr = addr;
++		rc = nvs_prev_ate(fs, &addr, &ate);
++
++		if (rc) {
++			return rc;
++		}
++		cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(ate.id));
++		if (ate.id != 0xFFFF && (unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR &&
++		    nvs_ate_valid(fs, &ate)) {
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++			cache_entry->flags.bf.addr = ate_addr;
++			cache_entry->flags.bf.id = nvs_lookup_cache_pos(ate.id);
++		}
++
++		if (addr == fs->ate_wra) {
++			break;
++		}
++	}
++
++	return 0;
++}
++
++static void nvs_lookup_cache_invalidate(struct nvs_fs *fs, uint32_t sector)
++{
++	uint32_t *cache_entry = (uint32_t *)fs->lookup_cache;
++	uint32_t *const cache_end = (uint32_t *)&fs->lookup_cache[fs->lookup_idx];
++
++	for (; cache_entry < cache_end; ++cache_entry) {
++		if (((*cache_entry >> ADDR_SECT_SHIFT)&0xf) == sector) {
++			*cache_entry = NVS_LOOKUP_CACHE_NO_ADDR;
++		}
++	}
++}
++#else
+ static int nvs_lookup_cache_rebuild(struct nvs_fs *fs)
+ {
+ 	int rc;
+@@ -85,6 +150,7 @@ static void nvs_lookup_cache_invalidate(struct nvs_fs *fs, uint32_t sector)
+ 		}
+ 	}
+ }
++#endif
+ 
+ #endif /* CONFIG_NVS_LOOKUP_CACHE */
+ 
+@@ -170,7 +236,21 @@ static int nvs_flash_ate_wrt(struct nvs_fs *fs, const struct nvs_ate *entry)
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
+ 	/* 0xFFFF is a special-purpose identifier. Exclude it from the cache */
+ 	if (entry->id != 0xFFFF) {
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs,
++						nvs_lookup_cache_pos(entry->id));
++
++		if ((unsigned int)(cache_entry) == NVS_LOOKUP_CACHE_NO_ADDR) {
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++		}
++
++		cache_entry->flags.bf.addr = fs->ate_wra;
++		cache_entry->flags.bf.id = nvs_lookup_cache_pos(entry->id);
++		LOG_DBG("kp_idx2 %d %x %x %x\n", fs->lookup_idx, fs->ate_wra,
++			nvs_lookup_cache_pos(entry->id), *(int *)cache_entry);
++		#else
+ 		fs->lookup_cache[nvs_lookup_cache_pos(entry->id)] = fs->ate_wra;
++		#endif
+ 	}
+ #endif
+ 	fs->ate_wra -= nvs_al_size(fs, sizeof(struct nvs_ate));
+@@ -630,11 +710,26 @@ static int nvs_gc(struct nvs_fs *fs)
+ 		}
+ 
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs,
++						nvs_lookup_cache_pos(gc_ate.id));
++		if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++			cache_entry  = &fs->lookup_cache[fs->lookup_idx++];
++			LOG_DBG("kp_idx1 %d %x %x\n", fs->lookup_idx, fs->ate_wra,
++						nvs_lookup_cache_pos(gc_ate.id));
++			wlk_addr = fs->ate_wra;
++			cache_entry->flags.bf.addr = fs->ate_wra;
++			cache_entry->flags.bf.id = nvs_lookup_cache_pos(gc_ate.id);
++		} else {
++			wlk_addr = cache_entry->flags.bf.addr;
++		}
++		#else
+ 		wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(gc_ate.id)];
+ 
+ 		if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 			wlk_addr = fs->ate_wra;
+ 		}
++		#endif
+ #else
+ 		wlk_addr = fs->ate_wra;
+ #endif
+@@ -868,9 +963,15 @@ static int nvs_startup(struct nvs_fs *fs)
+ 		 * So, temporarily, we set the lookup cache to the end of the fs.
+ 		 * The cache will be rebuilt afterwards
+ 		 **/
++		#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++		for (int i = 0; i < CONFIG_NVS_LOOKUP_CACHE_ARRAY_SIZE; i++) {
++			fs->lookup_cache[i].flags.bf.addr = fs->ate_wra;
++		}
++		#else
+ 		for (int i = 0; i < CONFIG_NVS_LOOKUP_CACHE_SIZE; i++) {
+ 			fs->lookup_cache[i] = fs->ate_wra;
+ 		}
++		#endif
+ #endif
+ 		rc = nvs_gc(fs);
+ 		goto end;
+@@ -1035,11 +1136,22 @@ ssize_t nvs_write(struct nvs_fs *fs, uint16_t id, const void *data, size_t len)
+ 
+ 	/* find latest entry with same id */
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(id));
++
++	if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++		wlk_addr = NVS_LOOKUP_CACHE_NO_ADDR;
++		goto no_cached_entry;
++	} else {
++		wlk_addr = cache_entry->flags.bf.addr;
++	}
++	#else
+ 	wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(id)];
+ 
+ 	if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 		goto no_cached_entry;
+ 	}
++	#endif
+ #else
+ 	wlk_addr = fs->ate_wra;
+ #endif
+@@ -1165,12 +1277,24 @@ ssize_t nvs_read_hist(struct nvs_fs *fs, uint16_t id, void *data, size_t len,
+ 	cnt_his = 0U;
+ 
+ #ifdef CONFIG_NVS_LOOKUP_CACHE
++	#ifdef CONFIG_NVS_RAM_OPTIMIZATION
++	struct nvs_lookup *cache_entry = nvs_lookup_cache_location(fs, nvs_lookup_cache_pos(id));
++
++	if ((unsigned int)cache_entry == NVS_LOOKUP_CACHE_NO_ADDR) {
++		wlk_addr = NVS_LOOKUP_CACHE_NO_ADDR;
++		rc = -ENOENT;
++		goto err;
++	} else {
++		wlk_addr = cache_entry->flags.bf.addr;
++	}
++	#else
+ 	wlk_addr = fs->lookup_cache[nvs_lookup_cache_pos(id)];
+ 
+ 	if (wlk_addr == NVS_LOOKUP_CACHE_NO_ADDR) {
+ 		rc = -ENOENT;
+ 		goto err;
+ 	}
++	#endif
+ #else
+ 	wlk_addr = fs->ate_wra;
+ #endif
+diff --git a/subsys/net/Kconfig b/subsys/net/Kconfig
+index a8b8f94c44b..ff68fc33d56 100644
+--- a/subsys/net/Kconfig
++++ b/subsys/net/Kconfig
+@@ -62,6 +62,13 @@ config NETWORKING
+ 	  This option enables generic link layer and networking support
+ 	  and is the basis for higher level protocols (e.g. IP protocols).
+ 
++
++config ZEPHYR_NETBUFFER_OPTIMIZATION
++	bool "Move the net buffer from iram to dram"
++	help
++	  This option enables the net buffer from iram to dram.
++
++
+ if NETWORKING
+ 
+ # Such option should not be configured manually but by device drivers
+diff --git a/subsys/net/ip/net_pkt.c b/subsys/net/ip/net_pkt.c
+index 7c3459692d8..51ccee0402e 100644
+--- a/subsys/net/ip/net_pkt.c
++++ b/subsys/net/ip/net_pkt.c
+@@ -117,15 +117,34 @@ LOG_MODULE_REGISTER(net_pkt, CONFIG_NET_PKT_LOG_LEVEL);
+ #error "Minimum value for CONFIG_NET_BUF_TX_COUNT is 1"
+ #endif
+ 
++#if CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION
++K_MEM_SLAB_DEFINE_BSS(rx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_RX_COUNT, 4);
++K_MEM_SLAB_DEFINE_BSS(tx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_TX_COUNT, 4);
++K_MEM_SLAB_DEFINE_SET(tx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_TX_COUNT, 4);
++K_MEM_SLAB_DEFINE_SET(rx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_RX_COUNT, 4);
++#else /* !CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
+ K_MEM_SLAB_DEFINE(rx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_RX_COUNT, 4);
+ K_MEM_SLAB_DEFINE(tx_pkts, sizeof(struct net_pkt), CONFIG_NET_PKT_TX_COUNT, 4);
++#endif /* CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
+ 
+ #if defined(CONFIG_NET_BUF_FIXED_DATA_SIZE)
+ 
++#if CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION
++NET_BUF_POOL_FIXED_DEFINE_BSS(rx_bufs, CONFIG_NET_BUF_RX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++NET_BUF_POOL_FIXED_DEFINE_BSS(tx_bufs, CONFIG_NET_BUF_TX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++NET_BUF_POOL_FIXED_DEFINE_SET(rx_bufs, CONFIG_NET_BUF_RX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++NET_BUF_POOL_FIXED_DEFINE_SET(tx_bufs, CONFIG_NET_BUF_TX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++#else /* !CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
++
+ NET_BUF_POOL_FIXED_DEFINE(rx_bufs, CONFIG_NET_BUF_RX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
+-			  CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
+ NET_BUF_POOL_FIXED_DEFINE(tx_bufs, CONFIG_NET_BUF_TX_COUNT, CONFIG_NET_BUF_DATA_SIZE,
+-			  CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++			CONFIG_NET_PKT_BUF_USER_DATA_SIZE, NULL);
++#endif /* CONFIG_ZEPHYR_NETBUFFER_OPTIMIZATION */
+ 
+ #else /* !CONFIG_NET_BUF_FIXED_DATA_SIZE */
+ 
+diff --git a/telink_patches/openthread_csma_backoff.patch b/telink_patches/openthread_csma_backoff.patch
+new file mode 100644
+index 00000000000..d898ea4d82a
+--- /dev/null
++++ b/telink_patches/openthread_csma_backoff.patch
+@@ -0,0 +1,131 @@
++diff --git a/src/core/mac/mac.cpp b/src/core/mac/mac.cpp
++index 6997fd01b..1e9903a3c 100644
++--- a/src/core/mac/mac.cpp
+++++ b/src/core/mac/mac.cpp
++@@ -54,6 +54,21 @@
++ #include "thread/thread_netif.hpp"
++ #include "thread/topology.hpp"
++
+++#if CONFIG_OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+++bool get_pm_standby_flag(void)
+++{
+++    bool pm_flag;
+++    #if CONFIG_SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+++    extern bool b9x_deep_sleep_retention;
+++    pm_flag = b9x_deep_sleep_retention;
+++    #elif CONFIG_SOC_SERIES_RISCV_TELINK_TLX_RETENTION
+++    extern bool tlx_deep_sleep_retention;
+++    pm_flag = tlx_deep_sleep_retention;
+++    #endif
+++    return pm_flag;
+++}
+++#endif
+++
++ namespace ot {
++ namespace Mac {
++
++@@ -601,6 +616,13 @@ void Mac::StartOperation(Operation aOperation)
++
++     if (mOperation == kOperationIdle)
++     {
+++#if CONFIG_OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+++    bool ot_deep_sleep_flag = !get_pm_standby_flag();
+++    if(ot_deep_sleep_flag){
+++            ot_deep_sleep_flag = false;
+++            PerformNextOperation();
+++    }else
+++#endif /* CONFIG_OPENTHREAD_CSMABACKOFF_OPTIMIZATION */
++         mOperationTask.Post();
++     }
++ }
++diff --git a/src/core/mac/sub_mac.cpp b/src/core/mac/sub_mac.cpp
++index 7d7ac1750..cad4cc48c 100644
++--- a/src/core/mac/sub_mac.cpp
+++++ b/src/core/mac/sub_mac.cpp
++@@ -358,8 +358,12 @@ Error SubMac::Send(void)
++ #if OPENTHREAD_CONFIG_MAC_ADD_DELAY_ON_NO_ACK_ERROR_BEFORE_RETRY
++     mRetxDelayBackOffExponent = kRetxDelayMinBackoffExponent;
++ #endif
++-
+++
+++#if CONFIG_OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+++    StartCsmaFirstNoBackoff();
+++#else
++     StartCsmaBackoff();
+++#endif
++
++ exit:
++     return error;
++@@ -454,6 +458,60 @@ exit:
++     return;
++ }
++
+++#if CONFIG_OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+++void SubMac::StartCsmaFirstNoBackoff(void)
+++{
+++    uint8_t backoffExponent = kCsmaMinBe + mCsmaBackoffs;
+++
+++#if !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+++    if (mTransmitFrame.mInfo.mTxInfo.mTxDelay != 0)
+++    {
+++        SetState(kStateCslTransmit);
+++
+++        if (ShouldHandleTransmitTargetTime())
+++        {
+++            if (Time(static_cast<uint32_t>(otPlatRadioGetNow(&GetInstance()))) <
+++                Time(mTransmitFrame.mInfo.mTxInfo.mTxDelayBaseTime) + mTransmitFrame.mInfo.mTxInfo.mTxDelay -
+++                    kCcaSampleInterval - kCslTransmitTimeAhead)
+++            {
+++                mTimer.StartAt(Time(mTransmitFrame.mInfo.mTxInfo.mTxDelayBaseTime) - kCcaSampleInterval -
+++                                   kCslTransmitTimeAhead,
+++                               mTransmitFrame.mInfo.mTxInfo.mTxDelay);
+++            }
+++            else // Transmit without delay
+++            {
+++                BeginTransmit();
+++            }
+++        }
+++        else
+++        {
+++            BeginTransmit();
+++        }
+++
+++        ExitNow();
+++    }
+++#endif // !OPENTHREAD_MTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
+++
+++    SetState(kStateCsmaBackoff);
+++
+++    VerifyOrExit(ShouldHandleCsmaBackOff(), BeginTransmit());
+++
+++    if (backoffExponent > kCsmaMaxBe)
+++    {
+++        backoffExponent = kCsmaMaxBe;
+++    }
+++
+++    if(otThreadGetDeviceRole(otInstanceInitSingle()) == OT_DEVICE_ROLE_CHILD)
+++        HandleTimer();
+++    else
+++    StartTimerForBackoff(backoffExponent);
+++
+++exit:
+++    return;
+++}
+++#endif
+++
+++
++ void SubMac::StartTimerForBackoff(uint8_t aBackoffExponent)
++ {
++     uint32_t backoff;
++diff --git a/src/core/mac/sub_mac.hpp b/src/core/mac/sub_mac.hpp
++index e56321058..f46579e39 100644
++--- a/src/core/mac/sub_mac.hpp
+++++ b/src/core/mac/sub_mac.hpp
++@@ -617,6 +617,7 @@ private:
++     void ProcessTransmitSecurity(void);
++     void SignalFrameCounterUsed(uint32_t aFrameCounter, uint8_t aKeyId);
++     void StartCsmaBackoff(void);
+++    void StartCsmaFirstNoBackoff(void);
++     void StartTimerForBackoff(uint8_t aBackoffExponent);
++     void BeginTransmit(void);
++     void SampleRssi(void);
+diff --git a/telink_patches/readme.md b/telink_patches/readme.md
+new file mode 100644
+index 00000000000..ae9f56f58d6
+--- /dev/null
++++ b/telink_patches/readme.md
+@@ -0,0 +1,22 @@
++# Patch List
++
++## openthread_csma_backoff.patch
++
++### Purpose
++This patch modifies the OpenThread stack to skip the initial CSMA-CA backoff when sending data requests. When used with the power-saving mode, it can help reduce power consumption in Thread mode.
++
++### How to Apply
++
++1. Navigate to the OpenThread module directory:
++
++```bash
++cd zephyrproject/modules/lib/openthread
++```
++
++2. Apply the patch file:
++
++```bash
++git apply ../../../zephyr/telink_patches/openthread_csma_backoff.patch
++```
++
++3. Rebuild your Zephyr application to ensure the patched code is included.
+diff --git a/west.yml b/west.yml
+index bb7b4f41e56..e8e952d3f8e 100644
+--- a/west.yml
++++ b/west.yml
+@@ -142,7 +142,7 @@ manifest:
+         - hal
+     - name: hal_telink
+       url: https://github.com/telink-semi/hal_telink
+-      revision: d91dedb76c034b3e89f3942b495b5327c05db5e5
++      revision: 72cff600a9a60d84761e6ece823b0725001a43b6
+       path: modules/hal/telink
+       groups:
+         - hal
