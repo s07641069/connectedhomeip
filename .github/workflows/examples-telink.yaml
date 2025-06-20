@@ -404,8 +404,8 @@ jobs:
               with:
                 gh-context: ${{ toJson(github) }}
 
-            # - name: Update Zephyr version 3.3.0 (develop_3.3) to specific revision (for developers purpose)
-            #   run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py 0b56f3a0b56d720ba5b4c1108ccda4ccc19c1932"
+            - name: Update Zephyr version 3.3.0 (develop_3.3) to specific revision (for developers purpose)
+              run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py a40561e7039c8546e38f5017a09d8cb1af0002f4"
 
             - name: Build tools required for Factory Data
               # Run test for master and all PRs
@@ -494,6 +494,15 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
+            - name: Build example Telink (tl321x) Dual-mode Lighting App with OTA (LZMA), Shell, Factory Data
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tl3218x-light-dual-mode-ota-compress-lzma-shell-factory-data' build"
+
+            - name: clean out build output (keep tools)
+              run: rm -rf ./out/telink*
+
             - name: Build example Telink (tl321x_retention) Light Switch App with OTA, Factory Data
               # Run test for master and all PRs
               run: |
@@ -503,11 +512,29 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
+            - name: Build example Telink (tl321x_retention) Dual-mode Light Switch App with OTA (LZMA), Factory Data
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tl3218x_retention-light-switch-dual-mode-ota-compress-lzma-factory-data' build"
+
+            - name: clean out build output (keep tools)
+              run: rm -rf ./out/telink*
+
             - name: Build example Telink (tl721x) Lighting App with OTA, Shell, Factory Data
               # Run test for master and all PRs
               run: |
                   ./scripts/run_in_build_env.sh \
                     "./scripts/build/build_examples.py --target 'telink-tl7218x-light-ota-shell-factory-data' build"
+
+            - name: clean out build output (keep tools)
+              run: rm -rf ./out/telink*
+
+            - name: Build example Telink (tl721x) Dual-mode Lighting App with OTA (LZMA), Shell, Factory Data
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tl7218x-light-dual-mode-ota-compress-lzma-shell-factory-data' build"
 
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
@@ -531,11 +558,38 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
+            - name: Build example Telink (tl721x_retention) Dual-mode Light Switch App with OTA (LZMA), Factory Data
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tl7218x_retention-light-switch-dual-mode-ota-compress-lzma-factory-data' build"
+
+            - name: clean out build output (keep tools)
+              run: rm -rf ./out/telink*
+
             - name: Build example Telink (B92) Light Switch App with OTA (LZMA), Shell, Factory Data
               # Run test for master and all PRs
               run: |
                   ./scripts/run_in_build_env.sh \
                     "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-switch-ota-compress-lzma-shell-factory-data' build"
+
+            - name: clean out build output (keep tools)
+              run: rm -rf ./out/telink*
+
+            - name: Build example Telink (B92) Dual-mode Light Switch App with OTA, Shell, Factory Data, 4Mb flash
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-switch-dual-mode-ota-shell-factory-data-4mb' build"
+
+            - name: clean out build output
+              run: rm -rf ./out/telink*
+
+            - name: Build example Telink (B92) Dual-mode Lighting App with OTA, Shell, Factory Data, 4Mb flash
+              # Run test for master and all PRs
+              run: |
+                  ./scripts/run_in_build_env.sh \
+                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-dual-mode-ota-shell-factory-data-4mb' build"
 
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
