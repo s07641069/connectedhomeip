@@ -52,7 +52,7 @@
 #include <zephyr/fs/nvs.h>
 #include <zephyr/settings/settings.h>
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
 uint8_t sBoot_zb = 0;
 user_para_t user_para;
 #endif
@@ -74,7 +74,7 @@ constexpr uint32_t kIdentifyFinishOffRateMs     = 50;
 constexpr uint32_t kIdentifyChannelChangeRateMs = 1000;
 constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
 const struct device * flash_para_dev = USER_PARTITION_DEVICE;
 const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
 constexpr int kDnssTimeout           = 60000;
@@ -140,7 +140,7 @@ public:
 AppCallbacks sCallbacks;
 } // namespace
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
 void FactoryResetExtHandler(void)
 {
     // Erase the user parameters partition to reset mode settings
@@ -183,7 +183,7 @@ class AppFabricTableDelegate : public FabricTable::Delegate
                 {
                     ChipLogError(DeviceLayer, "Storage clearance failed: %d", status);
                 }
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
                 printk("Erasing user parameters and resetting to Zigbee mode");
                 FactoryResetExtHandler();
                 chip::Server::GetInstance().ScheduleFactoryReset();
@@ -235,7 +235,7 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
 void SwitchBackToZigbee()
 {
     uint8_t switch_flag = USER_MATTER_BACK_ZB;
@@ -263,7 +263,7 @@ void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
 
 CHIP_ERROR AppTaskCommon::StartApp(void)
 {
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
     /*
      * If the device boots from Zigbee, set a flag and adjust user parameters.
      * Then start a timer to ensure Dnss initialization completes within
@@ -663,7 +663,7 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         k_timer_stop(&sFactoryResetTimer);
         sFactoryResetCntr = 0;
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
         printk("Factory reset triggered by button; reverting to Zigbee mode\n");
         FactoryResetExtHandler();
 #endif
@@ -832,7 +832,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
             Server::GetInstance().GetFailSafeContext().ForceFailSafeTimerExpiry();
         }
         break;
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
     case DeviceEventType::kCommissioningComplete: {
         uint8_t val = USER_MATTER_PAIR_VAL;
         sBoot_zb    = 0;
@@ -870,7 +870,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
 #endif
 
-#if CONFIG_DUAL_MODE_SWTICH
+#if CONFIG_DUAL_MODE
         if (sBoot_zb)
         {
             k_timer_stop(&sDnssTimer);

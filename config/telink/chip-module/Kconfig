@@ -247,3 +247,8 @@ config CHIP_USE_MARS_SENSOR
 	bool "Use Mars board sensor"
 	depends on SOC_RISCV_TELINK_B9X && (BOARD_TLSR9518ADK80D || BOARD_TLSR9518ADK80D_RETENTION)
 	default n
+
+config TELINK_ZB_PARTITION_ADDR
+	hex "Zigbee partition address"
+	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,zb_partition),0)
+	depends on DUAL_MODE
