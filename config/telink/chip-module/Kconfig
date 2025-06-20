@@ -259,3 +259,8 @@ config CHIP_USE_MARS_SENSOR
 config TFLM_FEATURE
 	bool "Enable the TFLM micro speech feature"
 	default n
+
+config TELINK_ZB_PARTITION_ADDR
+	hex "Zigbee partition address"
+	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,zb_partition),0)
+	depends on DUAL_MODE
