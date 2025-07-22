@@ -17,6 +17,9 @@
  */
 
 #include "AppTask.h"
+#if CONFIG_WATCHDOG
+#include <analog.h>
+#endif
 
 #include <lib/support/CHIPMem.h>
 #include <platform/CHIPDeviceLayer.h>
@@ -228,6 +231,15 @@ p_early_proc early_proc_cluster_f = early_proc_cluster;
 
 int main(void)
 {
+#if CONFIG_WATCHDOG
+#define MATTER_ANALOG_REG_WDT_ADR   0x3c
+#define MATTER_WDT_BY_CONTROL       BIT(0)
+    if (!(analog_read(MATTER_ANALOG_REG_WDT_ADR) & MATTER_WDT_BY_CONTROL))
+    {
+        printk("watchdog startup...\r\n");
+    }
+#endif
+
 #if APP_LIGHT_USER_MODE_EN
 #if CONFIG_STARTUP_OPTIMIZATE
 printk("[init_startup_para] cur_level:%d, timer_period:%d\n", 
