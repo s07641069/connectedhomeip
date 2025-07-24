@@ -137,9 +137,14 @@ endif()
 
 set(GLOBAL_BOOT_CONF_OVERLAY_FILE "${BOOT_CONF_OVERLAY_FILE} ${BOOT_USB_CONF_OVERLAY_FILE}")
 
-set(LOCAL_DTC_OVERLAY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/boards/${BASE_BOARD}.overlay")
-if(NOT EXISTS "${LOCAL_DTC_OVERLAY_FILE}")
-  message(STATUS "${LOCAL_DTC_OVERLAY_FILE} doesn't exist")
+if(PRJ_ROOT)
+  set(LOCAL_DTC_OVERLAY_FILE "${PRJ_ROOT}/boards/${BASE_BOARD}.overlay")
+  if(NOT EXISTS "${LOCAL_DTC_OVERLAY_FILE}")
+    message(STATUS "${LOCAL_DTC_OVERLAY_FILE} doesn't exist")
+    unset(LOCAL_DTC_OVERLAY_FILE)
+  endif()
+else()
+  message(STATUS "No PRJ_ROOT provided")
   unset(LOCAL_DTC_OVERLAY_FILE)
 endif()
 

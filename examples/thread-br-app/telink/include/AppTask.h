@@ -25,15 +25,16 @@ class AppTask : public AppTaskCommon
 public:
 
 private:
-    friend AppTask & GetAppTask(void);
-    friend class AppTaskCommon;
+	friend AppTask & GetAppTask(void);
+	friend class AppTaskCommon;
 
-    CHIP_ERROR Init(void);
+	CHIP_ERROR Init(void);
+	void LinkButtons(ButtonManager & buttonManager);
 
-    static AppTask sAppTask;
+	static AppTask sAppTask;
 };
 
 inline AppTask & GetAppTask(void)
 {
-    return AppTask::sAppTask;
+	return AppTask::sAppTask;
 }

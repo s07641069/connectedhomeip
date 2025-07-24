@@ -17,8 +17,8 @@
  */
 
 #include "AppTask.h"
+#include <ButtonManager.h>
 #include <app/server/Server.h>
-
 
 #include <app-common/zap-generated/attributes/Accessors.h>
 
@@ -28,7 +28,14 @@ AppTask AppTask::sAppTask;
 
 CHIP_ERROR AppTask::Init(void)
 {
-    InitCommonParts();
+	InitCommonParts();
 
-    return CHIP_NO_ERROR;
+	return CHIP_NO_ERROR;
+}
+
+void AppTask::LinkButtons(ButtonManager & buttonManager)
+{
+	ChipLogDetail(NotSpecified, "Register buttons");
+	buttonManager.addCallback(FactoryResetButtonEventHandler, 0, true);
+	buttonManager.addCallback(StartWiFiButtonEventHandler, 1, true);
 }
