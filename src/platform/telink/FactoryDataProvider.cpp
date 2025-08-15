@@ -176,27 +176,42 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
 {
     Crypto::P256ECDSASignature signature;
     Crypto::P256Keypair keypair;
+    CHIP_ERROR error = CHIP_NO_ERROR;
 
     VerifyOrReturnError(outSignBuffer.size() >= signature.Capacity(), CHIP_ERROR_BUFFER_TOO_SMALL);
     VerifyOrReturnError(mFactoryData.dac_cert.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
     VerifyOrReturnError(mFactoryData.dac_priv_key.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
-    uint8_t DACCert[1024] = {};
-    uint8_t DACPrivKey[1024] = {};
-    MutableByteSpan DACCertSpan(DACCert);
-    MutableByteSpan DACPrivKeySpan(DACPrivKey);
-
-    GetFactoryData(DACCertSpan.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
-    GetFactoryData(DACPrivKeySpan.data(), mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
+    // Get the dac cert from flash.
+    uint8_t * P_DACCert = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.dac_cert.len);
+    GetFactoryData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 
     // Extract public key from DAC cert.
-    ByteSpan dacCertSpan{ reinterpret_cast<uint8_t *>(DACCertSpan.data()), mFactoryData.dac_cert.len };
+    ByteSpan dacCertSpan{ reinterpret_cast<uint8_t *>(P_DACCert), mFactoryData.dac_cert.len };
     chip::Crypto::P256PublicKey dacPublicKey;
 
-    ReturnErrorOnFailure(chip::Crypto::ExtractPubkeyFromX509Cert(dacCertSpan, dacPublicKey));
-    ReturnErrorOnFailure(
-        LoadKeypairFromRaw(ByteSpan(reinterpret_cast<uint8_t *>(DACPrivKeySpan.data()), mFactoryData.dac_priv_key.len),
-                           ByteSpan(dacPublicKey.Bytes(), dacPublicKey.Length()), keypair));
+    error = chip::Crypto::ExtractPubkeyFromX509Cert(dacCertSpan, dacPublicKey);
+    free(P_DACCert);
+    if (error != CHIP_NO_ERROR)
+    {
+        ChipLogError(DeviceLayer, "Failed extract pubkey from X509Cert");
+        return error;
+    }
+
+    // Get the dac priv key from flash.
+    uint8_t * P_DACPrivKey = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.dac_priv_key.len);
+    GetFactoryData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
+
+    // Load keypair from raw.
+    error = LoadKeypairFromRaw(ByteSpan(reinterpret_cast<uint8_t *>(P_DACPrivKey), mFactoryData.dac_priv_key.len),
+                                ByteSpan(dacPublicKey.Bytes(), dacPublicKey.Length()), keypair);
+    free(P_DACPrivKey);
+    if (error != CHIP_NO_ERROR)
+    {
+        ChipLogError(DeviceLayer, "Failed load keypair from raw");
+        return error;
+    }
+
     ReturnErrorOnFailure(keypair.ECDSA_sign_msg(messageToSign.data(), messageToSign.size(), signature));
 
     return CopySpanToMutableSpan(ByteSpan{ signature.ConstBytes(), signature.Length() }, outSignBuffer);
@@ -359,12 +374,11 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetEnableKey(MutableByteSpan &
     VerifyOrReturnError(mFactoryData.enable_key.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
     VerifyOrReturnError(enableKey.size() >= mFactoryData.enable_key.len / 2, CHIP_ERROR_BUFFER_TOO_SMALL);
 
-    uint8_t EnableKey[1024] = {};
-    MutableByteSpan EnableKeySpan(EnableKey);
-
-    GetFactoryData(EnableKeySpan.data(), mFactoryData.enable_key.data, mFactoryData.enable_key.len);
-    Encoding::HexToBytes((const char *) EnableKeySpan.data(), mFactoryData.enable_key.len, enableKey.data(),
+    uint8_t * P_EnableKey = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.enable_key.len);
+    GetFactoryData(P_EnableKey, mFactoryData.enable_key.data, mFactoryData.enable_key.len);
+    Encoding::HexToBytes((const char *) P_EnableKey, mFactoryData.enable_key.len, enableKey.data(),
                          enableKey.size());
+    free(P_EnableKey);
 
     enableKey.reduce_size(mFactoryData.enable_key.len / 2);
 
