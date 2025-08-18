@@ -43,7 +43,7 @@ CHIP_ERROR GetFactoryData(uint8_t * buf, const void * const data, const size_t l
     VerifyOrReturnError(data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
     const struct device * mFlashDevice = DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
-    uint32_t offset = (uint32_t)((uint8_t *)data - (uint8_t *)chip::DeviceLayer::mFactoryDataBuffer);
+    uint32_t offset                    = (uint32_t) ((uint8_t *) data - (uint8_t *) chip::DeviceLayer::mFactoryDataBuffer);
 
     int ret = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(factory_partition) + offset, buf, len);
     if (ret != 0)
@@ -57,7 +57,7 @@ CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_
 {
     VerifyOrReturnError(bufSize >= str.len + 1, CHIP_ERROR_BUFFER_TOO_SMALL);
 
-    if (GetFactoryData((uint8_t *)buf, str.data, str.len) != CHIP_NO_ERROR)
+    if (GetFactoryData((uint8_t *) buf, str.data, str.len) != CHIP_NO_ERROR)
     {
         return CHIP_ERROR_READ_FAILED;
     }
@@ -125,7 +125,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetCertificationDeclaration(Mu
     VerifyOrReturnError(outBuffer.size() >= mFactoryData.certificate_declaration.len, CHIP_ERROR_BUFFER_TOO_SMALL);
     VerifyOrReturnError(mFactoryData.certificate_declaration.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
-    GetFactoryData(outBuffer.data(), mFactoryData.certificate_declaration.data, mFactoryData.certificate_declaration.len)
+    GetFactoryData(outBuffer.data(), mFactoryData.certificate_declaration.data, mFactoryData.certificate_declaration.len);
 
     outBuffer.reduce_size(mFactoryData.certificate_declaration.len);
 
@@ -183,7 +183,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
     VerifyOrReturnError(mFactoryData.dac_priv_key.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
     // Get the dac cert from flash.
-    uint8_t * P_DACCert = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.dac_cert.len);
+    uint8_t * P_DACCert = (uint8_t *) malloc(sizeof(uint8_t) * mFactoryData.dac_cert.len);
     GetFactoryData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 
     // Extract public key from DAC cert.
@@ -199,12 +199,12 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
     }
 
     // Get the dac priv key from flash.
-    uint8_t * P_DACPrivKey = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.dac_priv_key.len);
+    uint8_t * P_DACPrivKey = (uint8_t *) malloc(sizeof(uint8_t) * mFactoryData.dac_priv_key.len);
     GetFactoryData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
 
     // Load keypair from raw.
     error = LoadKeypairFromRaw(ByteSpan(reinterpret_cast<uint8_t *>(P_DACPrivKey), mFactoryData.dac_priv_key.len),
-                                ByteSpan(dacPublicKey.Bytes(), dacPublicKey.Length()), keypair);
+                               ByteSpan(dacPublicKey.Bytes(), dacPublicKey.Length()), keypair);
     free(P_DACPrivKey);
     if (error != CHIP_NO_ERROR)
     {
@@ -374,10 +374,9 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetEnableKey(MutableByteSpan &
     VerifyOrReturnError(mFactoryData.enable_key.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
     VerifyOrReturnError(enableKey.size() >= mFactoryData.enable_key.len / 2, CHIP_ERROR_BUFFER_TOO_SMALL);
 
-    uint8_t * P_EnableKey = (uint8_t *)malloc(sizeof(uint8_t) * mFactoryData.enable_key.len);
+    uint8_t * P_EnableKey = (uint8_t *) malloc(sizeof(uint8_t) * mFactoryData.enable_key.len);
     GetFactoryData(P_EnableKey, mFactoryData.enable_key.data, mFactoryData.enable_key.len);
-    Encoding::HexToBytes((const char *) P_EnableKey, mFactoryData.enable_key.len, enableKey.data(),
-                         enableKey.size());
+    Encoding::HexToBytes((const char *) P_EnableKey, mFactoryData.enable_key.len, enableKey.data(), enableKey.size());
     free(P_EnableKey);
 
     enableKey.reduce_size(mFactoryData.enable_key.len / 2);
