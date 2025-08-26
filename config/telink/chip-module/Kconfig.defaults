@@ -292,6 +292,16 @@ config NET_IPV6_NBR_CACHE
     bool
     default n
 
+config NET_PKT_TXTIME
+    default y if OPENTHREAD_FTD
+
+config NET_PKT_TIMESTAMP
+    default y if OPENTHREAD_FTD
+
+config IEEE802154_2015
+    bool "support ssed device to add thread"
+    default y if OPENTHREAD_FTD
+
 config NET_MAX_CONN
     default 1
 
