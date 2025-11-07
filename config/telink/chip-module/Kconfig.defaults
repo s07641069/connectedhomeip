@@ -335,8 +335,9 @@ config OPENTHREAD_SLAAC
 config OPENTHREAD_MANUAL_START
     default y
 
+#temporary use -3 instead of 3, -3 is actullay 3db , wait driver update.
 config OPENTHREAD_DEFAULT_TX_POWER
-    default 3 if PM
+    default -3 if PM
     default 9
 
 config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS

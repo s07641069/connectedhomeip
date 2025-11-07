@@ -163,6 +163,12 @@ class AppFabricTableDelegate : public FabricTable::Delegate
                 ChipLogProgress(DeviceLayer, "Rebooting board");
                 sys_reboot(SYS_REBOOT_WARM);
             }
+            else
+            {
+                ChipLogProgress(DeviceLayer, "Do factory_reset and reboot");
+                chip::Server::GetInstance().ScheduleFactoryReset();
+                sys_reboot(SYS_REBOOT_WARM);
+            }
         }
     }
 };
