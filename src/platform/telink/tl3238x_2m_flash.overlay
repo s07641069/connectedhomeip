@@ -6,30 +6,70 @@
 		compatible = "fixed-partitions";
 		#address-cells = <1>;
 		#size-cells = <1>;
-
+// reserve 20k for software bootloader , 64k for mcuboot,need to disable log for mcuboot；		
 		boot_partition: partition@0 {
 			label = "mcuboot";
-			reg = <0x00000000 0xf000>;
+			reg = <0x00000000 0x15000>; 
 		};
-		slot0_partition: partition@f000 {
+// currently the reset flash is 0x1e1000- 0x15000() = 0x1cc000 = 1840k (the total of slot0,and slot1)
+// tralor = 20k
+// slot0_fw = (1840-20)/1.6/4*4 = 1136 (suppose as LZMA:60%)
+// slot0 area = 1136+20 = 1156(0x121000)
+		slot0_partition: partition@15000 {
 			label = "image-0";
-			reg = <0xf000 0xf1000>;
+			reg = <0x15000 0x121000>; // total slot0 is 1156k
 		};
-		factory_partition: partition@100000 {
-			label = "factory-data";
-			reg = <0x100000 0x1000>;
+// add information , increase part for matter & zigbee
+// suppose the matter application layer is 30k, zigbee is 60k
+// currently , basic matter fw is 813k, zigbee is 140k , so just suppose matter is 916k, and zigbee is 220, reserve 20k for matter ota trailor
+		slot0_matter_partition: partition@16000 {
+			label = "image-0-matter";
+			reg = <0x15000 0xe5000>; // suppose matter is 916k (0xe5000)
 		};
-		storage_partition: partition@101000 {
-			label = "storage";
-			reg = <0x101000 0xc000>;
+		slot0_zb_partition: partition@fa000 {
+			label = "image-0-zb";
+			reg = <0xfa000 0x37000>; // suppose zigbee is 220k (0x37000)
 		};
-		slot1_partition: partition@10d000 {
+		slot0_trailor_partition: partition@131000 {
+			label = "image-0-trailor";
+			reg = <0x131000 0x5000>; // suppose trailor is 20k
+		};
+// the total fw area is 1840k, and slot0 cost 1156, so the value is 1840 - 1156 = 684k (0xac000) */
+		slot1_partition: partition@136000 {
 			label = "image-1";
-			reg = <0x10d000 0xf1000>;
+			reg = <0x136000 0xab000>; 
+		};
+		user_rfu_partition: partition@1ed000 {
+ 			label = "user_rfu";
+			reg = <0x1e1000 0x3000>;
+ 		};
+        storage_partition: partition@1e4000 {
+			label = "matter-nvs";
+			reg = <0x1e4000 0x8000>; // matter nvs part , total is 32k.
+		};
+        zigbee_nvs_partition: partition@1ec000 {
+			label = "zigbee-nvs";
+			reg = <0x1ec000 0xc000>; // zigbee nvs part , total is 48k.
+		};
+		secure_partition: partition@1f8000 {
+ 			label = "secure";
+			reg = <0x1f8000 0x2000>; // secure info ,reserved for secure boot .if not use , can beused by other way .
+ 		};
+		dual_mode_partition: partition@1fa000 {
+ 			label = "dual-mode";
+			reg = <0x1fa000 0x2000>; // user:store the mode info and the key info part.same as public area for dual mode
+ 		};
+		dac_keypair_partition: partition@1fc000 {
+			label = "dac-keypair";
+			reg = <0x1fc000 0x1000>; // store dac and key pair.
+		};
+		factory_partition: partition@1fd000 {
+			label = "factory-data";
+			reg = <0x1fd000 0x1000>; // factory data info 
 		};
 		vendor_partition: partition@1fe000 {
 			label = "vendor-data";
-			reg = <0x1fe000 0x2000>;
+			reg = <0x1fe000 0x2000>; // mac and rf info.
 		};
 	};
 };
