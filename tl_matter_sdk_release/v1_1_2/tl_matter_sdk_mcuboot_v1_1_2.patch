@@ -1,0 +1,123 @@
+diff --git a/boot/zephyr/main.c b/boot/zephyr/main.c
+index 50b98702..7aa071fe 100644
+--- a/boot/zephyr/main.c
++++ b/boot/zephyr/main.c
+@@ -319,6 +319,57 @@ static void do_boot(struct boot_rsp *rsp)
+  * lock interrupts and jump there. This is the right thing to do for X86 and
+  * possibly other platforms.
+  */
++#if CONFIG_DUAL_MODE
++#include <ext_driver/ext_pm.h>
++#include <zephyr/device.h>
++#include <zephyr/storage/flash_map.h>
++
++#define USER_PARTITION		user_para_partition
++#define USER_PARTITION_DEVICE	FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET	FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE 	FIXED_PARTITION_SIZE(USER_PARTITION) 
++
++#define SLOT0_PARTITION		slot0_partition
++#define SLOT0_PARTITION_DEVICE	FIXED_PARTITION_DEVICE(SLOT0_PARTITION)
++#define SLOT0_PARTITION_OFFSET	FIXED_PARTITION_OFFSET(SLOT0_PARTITION)
++
++#if CONFIG_SOC_SERIES_RISCV_TELINK_TLX
++#define SLOT0_ZB_OFFSET     (0xF6000)
++#elif CONFIG_SOC_SERIES_RISCV_TELINK_B9X
++#define SLOT0_ZB_OFFSET     (0x154000)
++#endif
++
++#define USER_MATTER_PAIR_VAL    0x55  // jump to matter
++
++#define USER_INIT_VAL           0xff  // init state or others will go into zb 
++#define USER_ZB_SW_VAL          0xaa  // jump to matter,use XIP
++#define USER_MATTER_BACK_ZB     0xa0  // only commisiion fail will back to zb 
++
++#define ZB_FW_FLAG_OFFSET       0x20 //telink fw valid flag offset .
++
++const struct device * flash_para_dev = USER_PARTITION_DEVICE;
++const struct device * flash_slot0_dev = SLOT0_PARTITION_DEVICE;
++const uint8_t zb_fw_flag[4] = { 0x4b, 0x4e, 0x4c, 0x54 };
++uint8_t zb_slot0_flag[4];
++
++static void restore_all_irq_priorities(void)
++{
++    #if CONFIG_SOC_RISCV_TELINK_B92
++    #define PLIC_PRIO (0xe4000000)
++    #elif CONFIG_SOC_RISCV_TELINK_TL321X || CONFIG_SOC_RISCV_TELINK_TL721X
++    #define PLIC_PRIO (0xc4000000)
++    #endif  
++    #define PLIC_IRQS (CONFIG_NUM_IRQS - CONFIG_2ND_LVL_ISR_TBL_OFFSET)
++    volatile uint32_t *prio = (volatile uint32_t *)PLIC_PRIO;
++    int i;
++    for (i = 1; i < PLIC_IRQS; i++)
++    {
++        *prio = 1U;
++        prio++;
++    }
++}
++#endif /* CONFIG_DUAL_MODE */
++
+ static void do_boot(struct boot_rsp *rsp)
+ {
+     void *start;
+@@ -336,8 +387,47 @@ static void do_boot(struct boot_rsp *rsp)
+                      rsp->br_hdr->ih_hdr_size);
+ #endif
+ 
++#if CONFIG_DUAL_MODE
++    /* read the boot flag from the user partition to determine the boot behavior */
++    uint8_t boot_flag = 0;
++    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &boot_flag, 1);
++    printk("boot flag: 0x%x\n", boot_flag);
++
++    /* read the Zigbee firmware flag from the slot1 partition */
++    flash_read(flash_slot0_dev, SLOT0_ZB_OFFSET + ZB_FW_FLAG_OFFSET, zb_slot0_flag, sizeof(zb_slot0_flag));
++    if (memcmp(zb_slot0_flag, zb_fw_flag, sizeof(zb_fw_flag))){
++        /* default to Matter if Zigbee firmware flag not found */
++        printk("Zigbee firmware flag not found.\n");
++        start = (void *)(flash_base + rsp->br_image_off +
++                        rsp->br_hdr->ih_hdr_size);
++    } else {
++        if ( boot_flag == USER_MATTER_PAIR_VAL ) {
++            /* switch to Matter only if commissioned (paired) */
++            start = (void *)(flash_base + rsp->br_image_off +
++                        rsp->br_hdr->ih_hdr_size);
++        } else {
++            /* Otherwise, switch to Zigbee */
++            restore_all_irq_priorities();
++            irq_lock();
++            reg_irq_src0 = 0;
++            reg_irq_src1 = 0;
++            core_interrupt_disable();
++            start = (void *)(flash_base + SLOT0_ZB_OFFSET);
++        }
++    }
++
++    /* print the start address for debugging */
++    printk("start address: 0x%x\n", (uint32_t)start);
++#else
+     /* Lock interrupts and dive into the entry point */
+     irq_lock();
++#endif /* CONFIG_DUAL_MODE */
++
++#if CONFIG_WATCHDOG
++	const struct device *const wdt = DEVICE_DT_GET(DT_ALIAS(watchdog0));
++	wdt_disable(wdt);
++#endif /* CONFIG_WATCHDOG */
++
+     ((void (*)(void))start)();
+ }
+ #endif
+@@ -509,8 +599,12 @@ void main(void)
+     uint32_t reset_cause;
+ #endif
+ 
++#if CONFIG_WATCHDOG
++
++#else
+     MCUBOOT_WATCHDOG_SETUP();
+     MCUBOOT_WATCHDOG_FEED();
++#endif /* CONFIG_WATCHDOG */
+ 
+ #if !defined(MCUBOOT_DIRECT_XIP)
+     BOOT_LOG_INF("Starting bootloader");
