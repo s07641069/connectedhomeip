@@ -1,0 +1,1102 @@
+diff --git a/.github/workflows/examples-telink.yaml b/.github/workflows/examples-telink.yaml
+index a265b001ae..0b3edfe6ff 100644
+--- a/.github/workflows/examples-telink.yaml
++++ b/.github/workflows/examples-telink.yaml
+@@ -377,8 +377,8 @@ jobs:
+               with:
+                 gh-context: ${{ toJson(github) }}
+ 
+-            # - name: Update Zephyr version 3.3.0 (develop_3.3) to specific revision (for developers purpose)
+-            #   run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py 2f112696a24c8921bcb196a3c4b90c4f8a37f710"
++            - name: Update Zephyr version 3.3.0 (develop_3.3) to specific revision (for developers purpose)
++              run: scripts/run_in_build_env.sh "python3 scripts/tools/telink/update_zephyr.py 708e4e6da9a17f25747ceaa67d5ea68578de2de9"
+ 
+             - name: Build example Telink (B92 retention) Air Quality Sensor App
+               # Run test for master and s07641069 PRs
+@@ -499,6 +499,19 @@ jobs:
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
++            - name: Build example Telink (tl321x) Dual-mode Lighting App with OTA (LZMA), Shell, Factory Data
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tl3218x-light-dual-mode-ota-compress-lzma-shell-factory-data' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tl3218x light-app-dual-mode-ota-compress-lzma-shell-factory-data \
++                    out/telink-tl3218x-light-dual-mode-ota-compress-lzma-shell-factory-data/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output (keep tools)
++              run: rm -rf ./out/telink*
++
+             - name: Build example Telink (tl321x_retention) Light Switch App with OTA, Shell, Factory Data
+               # Run test for master and all PRs
+               run: |
+@@ -512,6 +525,19 @@ jobs:
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
++            - name: Build example Telink (tl321x_retention) Dual-mode Light Switch App with OTA (LZMA), Shell, Factory Data
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tl3218x_retention-light-switch-dual-mode-ota-compress-lzma-shell-factory-data' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tl3218x_retention light-switch-app-dual-mode-ota-compress-lzma-shell-factory-data \
++                    out/telink-tl3218x_retention-light-switch-dual-mode-ota-compress-lzma-shell-factory-data/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output (keep tools)
++              run: rm -rf ./out/telink*
++
+             - name: Build example Telink (tl721x) Lighting App with OTA, Shell, Factory Data
+               # Run test for master and all PRs
+               run: |
+@@ -525,6 +551,19 @@ jobs:
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
++            - name: Build example Telink (tl721x) Dual-mode Lighting App with OTA (LZMA), Shell, Factory Data
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tl7218x-light-dual-mode-ota-compress-lzma-shell-factory-data' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tl7218x light-app-dual-mode-ota-compress-lzma-shell-factory-data \
++                    out/telink-tl7218x-light-dual-mode-ota-compress-lzma-shell-factory-data/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output (keep tools)
++              run: rm -rf ./out/telink*
++
+             - name: Build example Telink (tl721x retention) Light Switch App with OTA (LZMA), Factory Data
+               # Run test for master and all PRs
+               run: |
+@@ -538,6 +577,19 @@ jobs:
+             - name: clean out build output (keep tools)
+               run: rm -rf ./out/telink*
+ 
++            - name: Build example Telink (tl721x_retention) Dual-mode Light Switch App with OTA (LZMA), Factory Data
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tl7218x_retention-light-switch-dual-mode-ota-compress-lzma-factory-data' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tl7218x_retention light-switch-app-dual-mode-ota-compress-lzma-factory-data \
++                    out/telink-tl7218x_retention-light-switch-dual-mode-ota-compress-lzma-factory-data/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output (keep tools)
++              run: rm -rf ./out/telink*
++
+             - name: Build example Telink (B92) Light Switch App with OTA (LZMA), Shell, Factory Data
+               # Run test for master and all PRs
+               run: |
+@@ -549,7 +601,33 @@ jobs:
+                     /tmp/bloat_reports/
+ 
+             - name: clean out build output
+-              run: rm -rf ./out
++              run: rm -rf ./out/telink*
++
++            - name: Build example Telink (B92) Dual-mode Light Switch App with OTA, Shell, Factory Data, 4Mb flash
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-switch-dual-mode-ota-shell-factory-data-4mb' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tlsr9528a light-switch-app-dual-mode-ota-shell-factory-data-4mb \
++                    out/telink-tlsr9528a-light-switch-dual-mode-ota-shell-factory-data-4mb/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output
++              run: rm -rf ./out/telink*
++
++            - name: Build example Telink (B92) Dual-mode Lighting App with OTA, Shell, Factory Data, 4Mb flash
++              # Run test for master and all PRs
++              run: |
++                  ./scripts/run_in_build_env.sh \
++                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a-light-dual-mode-ota-shell-factory-data-4mb' build"
++                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
++                    telink tlsr9528a light-app-dual-mode-ota-shell-factory-data-4mb \
++                    out/telink-tlsr9528a-light-dual-mode-ota-shell-factory-data-4mb/zephyr/zephyr.elf \
++                    /tmp/bloat_reports/
++
++            - name: clean out build output (keep tools)
++              run: rm -rf ./out/telink*
+ 
+             - name: Build example Telink (B92) Lock App with DFU
+               # Run test for master and s07641069 PRs
+diff --git a/config/telink/app/bootloader_dual.conf b/config/telink/app/bootloader_dual.conf
+new file mode 100644
+index 0000000000..73bcca8437
+--- /dev/null
++++ b/config/telink/app/bootloader_dual.conf
+@@ -0,0 +1,45 @@
++#
++#   Copyright (c) 2025 Project CHIP Authors
++#
++#   Licensed under the Apache License, Version 2.0 (the "License");
++#   you may not use this file except in compliance with the License.
++#   You may obtain a copy of the License at
++#
++#       http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS,
++#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++#   See the License for the specific language governing permissions and
++#   limitations under the License.
++#
++
++# Enable this option in case if restoring the slot0 partition is expected from slot1
++# partition in case if slot0 is not bootable or damaged
++CONFIG_BOOT_BOOTSTRAP=n
++
++# Enable this option in case if SWAP_MOVE logic need to be used
++CONFIG_BOOT_SWAP_USING_MOVE=y
++
++# Enable this option in case if SWAP_MOVE using scratch logic need to be used
++# Enabling this option expecting the availability of scratch partition in DTS
++CONFIG_BOOT_SWAP_USING_SCRATCH=n
++
++# Enable this option in case if the whole slot0 image need to be validated
++# With disabled option the only image magic is validated
++CONFIG_BOOT_VALIDATE_SLOT0=n
++
++# Required for Zephyr 3.3 and replased with CONFIG_BOOT_MAX_IMG_SECTORS_AUTO in new versions
++# Maximum number of image sectors supported by the bootloader.
++# Maximum signed image size: 512 * 4096 = 2M Bytes
++CONFIG_BOOT_MAX_IMG_SECTORS=512
++
++# MCUBOOT log levels are:
++#  - OFF, LOG_LEVEL_ERR_OFF
++#  - ERROR,  LOG_LEVEL_ERR
++#  - WARNING,  LOG_LEVEL_WRN
++#  - INFO,  LOG_LEVEL_INF
++#  - DEBUG, LOG_LEVEL_DBG
++CONFIG_MCUBOOT_LOG_LEVEL_INF=y
++
++CONFIG_PICOLIBC=y
+diff --git a/config/telink/app/bootloader_dual_compress_lzma.conf b/config/telink/app/bootloader_dual_compress_lzma.conf
+new file mode 100644
+index 0000000000..c8f30c0137
+--- /dev/null
++++ b/config/telink/app/bootloader_dual_compress_lzma.conf
+@@ -0,0 +1,47 @@
++#
++#   Copyright (c) 2025 Project CHIP Authors
++#
++#   Licensed under the Apache License, Version 2.0 (the "License");
++#   you may not use this file except in compliance with the License.
++#   You may obtain a copy of the License at
++#
++#       http://www.apache.org/licenses/LICENSE-2.0
++#
++#   Unless required by applicable law or agreed to in writing, software
++#   distributed under the License is distributed on an "AS IS" BASIS,
++#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++#   See the License for the specific language governing permissions and
++#   limitations under the License.
++#
++
++# Enable overwrite the primary slot with the upgrade image instead of swapping them.
++# This prevents the fallback recovery.
++CONFIG_BOOT_UPGRADE_ONLY=y
++
++# Enable this option in case if the whole slot0 image need to be validated
++# With disabled option the only image magic is validated
++CONFIG_BOOT_VALIDATE_SLOT0=n
++
++# Required for Zephyr 3.3 and replased with CONFIG_BOOT_MAX_IMG_SECTORS_AUTO in new versions
++# Maximum number of image sectors supported by the bootloader.
++# Maximum signed image size: 512 * 4096 = 2M Bytes
++CONFIG_BOOT_MAX_IMG_SECTORS=512
++
++# MCUBOOT log levels are:
++#  - OFF, LOG_LEVEL_ERR_OFF
++#  - ERROR,  LOG_LEVEL_ERR
++#  - WARNING,  LOG_LEVEL_WRN
++#  - INFO,  LOG_LEVEL_INF
++#  - DEBUG, LOG_LEVEL_DBG
++CONFIG_MCUBOOT_LOG_LEVEL_INF=y
++
++# LZMA used sys_heap based allocators
++CONFIG_COMMON_LIBC_MALLOC_ARENA_SIZE=78000
++
++# Enable build size optimizations
++CONFIG_SIZE_OPTIMIZATIONS=y
++
++# Enable support LZMA compression
++CONFIG_COMPRESS_LZMA=y
++
++CONFIG_PICOLIBC=y
+diff --git a/config/telink/chip-module/CMakeLists.txt b/config/telink/chip-module/CMakeLists.txt
+index cd6a21163b..4e5803a90c 100644
+--- a/config/telink/chip-module/CMakeLists.txt
++++ b/config/telink/chip-module/CMakeLists.txt
+@@ -181,13 +181,23 @@ add_dependencies(process_binaries ${ZEPHYR_FINAL_EXECUTABLE})
+ # ==============================================================================
+ 
+ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_RISCV_TELINK_B9X OR CONFIG_SOC_RISCV_TELINK_TLX))
++if (CONFIG_DUAL_MODE)
+     add_custom_target(build_mcuboot ALL
+         COMMAND
+         west build -b ${BASE_BOARD} -d build_mcuboot ${ZEPHYR_BASE}/../bootloader/mcuboot/boot/zephyr
+-            -- -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
++            -- -DCONFIG_DUAL_MODE=y -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
+         COMMAND
+         cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
+     )
++else()
++    add_custom_target(build_mcuboot ALL
++    COMMAND
++    west build -b ${BASE_BOARD} -d build_mcuboot ${ZEPHYR_BASE}/../bootloader/mcuboot/boot/zephyr
++        -- -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
++    COMMAND
++    cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
++    )
++endif()
+ endif()
+ 
+ # ==============================================================================
+diff --git a/config/telink/chip-module/Kconfig b/config/telink/chip-module/Kconfig
+index 3e5e287643..78f6818457 100644
+--- a/config/telink/chip-module/Kconfig
++++ b/config/telink/chip-module/Kconfig
+@@ -239,6 +239,7 @@ config CHIP_ENABLE_POWER_ON_FACTORY_RESET
+ config CHIP_TASK_STACK_SIZE
+ 	int
+ 	default 6192 if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_W91
++	default 5965 if (PM && (SOC_RISCV_TELINK_B92 || SOC_RISCV_TELINK_TL721X))
+ 	default 5352 if PM
+ 	default 8192
+ 
+@@ -246,3 +247,8 @@ config CHIP_USE_MARS_SENSOR
+ 	bool "Use Mars board sensor"
+ 	depends on SOC_RISCV_TELINK_B9X && (BOARD_TLSR9518ADK80D || BOARD_TLSR9518ADK80D_RETENTION)
+ 	default n
++
++config TELINK_ZB_PARTITION_ADDR
++	hex "Zigbee partition address"
++	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,zb_partition),0)
++	depends on DUAL_MODE
+diff --git a/config/telink/chip-module/Kconfig.defaults b/config/telink/chip-module/Kconfig.defaults
+index 0173594757..d4220c0aeb 100644
+--- a/config/telink/chip-module/Kconfig.defaults
++++ b/config/telink/chip-module/Kconfig.defaults
+@@ -77,8 +77,8 @@ config IDLE_STACK_SIZE
+ 
+ 
+ config ISR_STACK_SIZE
+-    default 576 if PM
+-    default 528 if SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_W91
++    default 576 if (PM || SOC_RISCV_TELINK_TL321X)
++    default 528 if SOC_RISCV_TELINK_W91
+ 
+ config SYSTEM_WORKQUEUE_STACK_SIZE
+     default 616 if PM
+@@ -87,6 +87,7 @@ config HEAP_MEM_POOL_SIZE
+     default 256 if ZEPHYR_VERSION_3_3
+     default 1280
+ 
++# need to enlarge to 21000 , to pass TC_RR_1.1
+ config COMMON_LIBC_MALLOC_ARENA_SIZE
+     default 20716 if SOC_SERIES_RISCV_TELINK_B9X_RETENTION || (SOC_RISCV_TELINK_TL321X && ZEPHYR_VERSION_3_3) || (SOC_RISCV_TELINK_TL721X && SOC_SERIES_RISCV_TELINK_TLX_RETENTION)
+     default 16384 if SOC_RISCV_TELINK_TL721X || (SOC_RISCV_TELINK_TL321X && !ZEPHYR_VERSION_3_3)
+@@ -178,7 +179,7 @@ config BT_DEVICE_NAME_GATT_WRITABLE
+ if SOC_RISCV_TELINK_B9X || SOC_RISCV_TELINK_TLX
+ 
+ config TL_BLE_CTRL_THREAD_STACK_SIZE
+-    default 648 if ZEPHYR_VERSION_3_3
++    default 708 if ZEPHYR_VERSION_3_3
+     default 680
+ 
+ config TL_BLE_CTRL_MASTER_MAX_NUM
+@@ -203,6 +204,7 @@ endif # BT
+ 
+ if BOARD_TLSR9528A_RETENTION || BOARD_TLSR9518ADK80D_RETENTION
+ config SOC_SERIES_RISCV_TELINK_B9X_NON_RETENTION_RAM_CODE
++    default n if (PM && BOARD_TLSR9528A_RETENTION)
+     default y if PM
+ 
+ config TELINK_B9X_MATTER_RETENTION_LAYOUT
+@@ -262,10 +264,26 @@ config TELINK_SOC_REBOOT_ON_FAULT
+ config NVS_LOOKUP_CACHE
+     default y
+ 
++# the nvs lookup cache size should be 2048 ,or the TC_RR1.0 will fail .
+ config NVS_LOOKUP_CACHE_SIZE
+     default 400  if SOC_RISCV_TELINK_TL321X
+     default 2048 if !PM
+ 
++config NVS_RAM_OPTIMIZATION
++    bool
++    default y if PM || SOC_RISCV_TELINK_TL321X
++    default n 
++
++# test on newest based code, need to enlarge to 512 which can pass TC_RR_1.1
++config NVS_LOOKUP_CACHE_ARRAY_SIZE
++    int "Non-volatile Storage lookup cache size"
++    default 512 if PM || SOC_RISCV_TELINK_TL321X
++
++config COMPRESS_LZMA
++    depends on CHIP_OTA_REQUESTOR && DUAL_MODE
++    default y if (SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_TL721X)
++    default n
++
+ # Set multiplicator of Name Value Storage (NVS) as 1 to reach NVS sector size 4KB
+ # nvs_sector_size = flash_page_size * mult = 4KB * 1 = 4KB
+ config SETTINGS_NVS_SECTOR_SIZE_MULT
+@@ -305,16 +323,32 @@ config CHIP_ENABLE_ICD_SUPPORT
+ config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
+     bool "Skip initial CSMA-CA backoff when sending data requests"
+     depends on CHIP_ENABLE_ICD_SUPPORT
++    default n if (SOC_SERIES_RISCV_TELINK_TLX_RETENTION && SOC_RISCV_TELINK_TL721X)
++    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
+     default n
+     help
+       Skip the first CSMA backoff period when sending data requests over IEEE 802.15.4.
+ 
++config ZEPHYR_NETBUFFER_OPTIMIZATION
++	bool "Place net buffer in DLM instead of ILM"
++	default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION || SOC_SERIES_RISCV_TELINK_B9X_RETENTION
++	default n
++	help
++	  This option enables storing the net buffer in DLM rather than ILM.
++
+ config IEEE802154_TLX_OPTIMIZATION
+     bool "Optimize 802.15.4 RF performance for TLX SoCs"
++    default y if SOC_SERIES_RISCV_TELINK_TLX_RETENTION
+     default n
+     help
+       Improve RF performance in IEEE 802.15.4 communication on TLX SoCs.
+ 
++config IEEE802154_B9X_OPTIMIZATION
++	bool "optimize the rf performance for b9x"
++	default n
++	help
++	  optimize the rf performance for b9x.
++
+ config OPENTHREAD_THREAD_STACK_SIZE
+     default 2400 if PM || SOC_RISCV_TELINK_TL321X
+ 
+@@ -339,10 +373,10 @@ config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS
+ endif # NET_L2_OPENTHREAD
+ 
+ config NET_TX_STACK_SIZE
+-    default 554 if PM || SOC_RISCV_TELINK_TL321X
++    default 584 if PM || SOC_RISCV_TELINK_TL321X
+ 
+ config NET_RX_STACK_SIZE
+-    default 554 if PM || SOC_RISCV_TELINK_TL321X
++    default 584 if PM || SOC_RISCV_TELINK_TL321X
+ 
+ # Disable certain parts of Zephyr IPv6 stack
+ config NET_IPV6_NBR_CACHE
+diff --git a/examples/platform/telink/common.cmake b/examples/platform/telink/common.cmake
+index 8db743b533..5acf24dc38 100644
+--- a/examples/platform/telink/common.cmake
++++ b/examples/platform/telink/common.cmake
+@@ -84,10 +84,18 @@ else()
+   unset(USB_CONF_OVERLAY_FILE)
+ endif()
+ 
+-if(${CONFIG_COMPRESS_LZMA} MATCHES y)
+-  set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader_compress_lzma.conf")
++if(${CONFIG_DUAL_MODE} MATCHES y)
++  if(${CONFIG_COMPRESS_LZMA} MATCHES y)
++    set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader_dual_compress_lzma.conf")
++  else()
++    set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader_dual.conf")
++  endif()
+ else()
+-  set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader.conf")
++  if(${CONFIG_COMPRESS_LZMA} MATCHES y)
++    set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader_compress_lzma.conf")
++  else()
++    set(BOOT_CONF_OVERLAY_FILE "${CHIP_ROOT}/config/telink/app/bootloader.conf")
++  endif()
+ endif()
+ if(NOT EXISTS "${BOOT_CONF_OVERLAY_FILE}")
+   message(FATAL_ERROR "${BOOT_CONF_OVERLAY_FILE} doesn't exist")
+@@ -122,7 +130,11 @@ if(NOT EXISTS "${GLOBAL_DTC_OVERLAY_FILE}")
+   unset(GLOBAL_DTC_OVERLAY_FILE)
+ endif()
+ 
+-set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_${FLASH_SIZE}_flash.overlay")
++if(${CONFIG_DUAL_MODE} MATCHES y)
++  set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_dual_${FLASH_SIZE}_flash.overlay")
++else()
++  set(FLASH_DTC_OVERLAY_FILE "${CHIP_ROOT}/src/platform/telink/${BASE_BOARD}_${FLASH_SIZE}_flash.overlay")
++endif()
+ if(NOT EXISTS "${FLASH_DTC_OVERLAY_FILE}")
+   message(STATUS "${FLASH_DTC_OVERLAY_FILE} doesn't exist")
+   unset(FLASH_DTC_OVERLAY_FILE)
+diff --git a/examples/platform/telink/common/include/AppTaskCommon.h b/examples/platform/telink/common/include/AppTaskCommon.h
+index 25e0e4c8da..72ffc90463 100644
+--- a/examples/platform/telink/common/include/AppTaskCommon.h
++++ b/examples/platform/telink/common/include/AppTaskCommon.h
+@@ -37,6 +37,37 @@
+ 
+ #include <credentials/examples/DeviceAttestationCredsExample.h>
+ 
++#if CONFIG_DUAL_MODE
++#include <zephyr/device.h>
++#include <zephyr/drivers/flash.h>
++#include <zephyr/storage/flash_map.h>
++#include <zephyr/sys/reboot.h>
++
++#define ZB_NVS_PARTITION zigbee_nvs_partition
++#define ZB_NVS_SEC_SIZE FIXED_PARTITION_SIZE(ZB_NVS_PARTITION)
++#define ZB_NVS_PARTITION_DEVICE FIXED_PARTITION_DEVICE(ZB_NVS_PARTITION)
++#define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
++
++#define USER_INIT_VAL 0xff
++#define USER_ZB_SW_VAL 0xaa
++#define USER_MATTER_PAIR_VAL 0x55
++#define USER_MATTER_BACK_ZB 0xa0 // only commisiion fail will back to zb
++#define USER_PARA_MAC_OFFSET 0x100
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++
++typedef struct
++{
++    uint8_t val;
++    uint8_t on_net;
++} user_para_t;
++
++extern user_para_t user_para;
++extern uint8_t sBoot_zb;
++#endif
++
+ #include <cstdint>
+ 
+ using namespace ::chip;
+@@ -100,6 +131,7 @@ protected:
+     virtual void LinkButtons(ButtonManager & buttonManager);
+ 
+     static void FactoryResetTimerTimeoutCallback(k_timer * timer);
++    static void DnssTimerTimeoutCallback(k_timer * timer);
+     static void FactoryResetTimerEventHandler(AppEvent * aEvent);
+     static void FactoryResetButtonEventHandler(void);
+     static void FactoryResetHandler(AppEvent * aEvent);
+diff --git a/examples/platform/telink/common/src/AppTaskCommon.cpp b/examples/platform/telink/common/src/AppTaskCommon.cpp
+index d898297670..e167555d0d 100644
+--- a/examples/platform/telink/common/src/AppTaskCommon.cpp
++++ b/examples/platform/telink/common/src/AppTaskCommon.cpp
+@@ -48,9 +48,15 @@
+ #include <app/clusters/ota-requestor/OTARequestorInterface.h>
+ #endif
+ 
++#include <app-common/zap-generated/attributes/Accessors.h>
+ #include <zephyr/fs/nvs.h>
+ #include <zephyr/settings/settings.h>
+ 
++#if CONFIG_DUAL_MODE
++uint8_t sBoot_zb = 0;
++user_para_t user_para;
++#endif
++
+ using namespace chip::app;
+ 
+ LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
+@@ -68,6 +74,13 @@ constexpr uint32_t kIdentifyFinishOffRateMs     = 50;
+ constexpr uint32_t kIdentifyChannelChangeRateMs = 1000;
+ constexpr uint32_t kIdentifyBreatheRateMs       = 1000;
+ 
++#if CONFIG_DUAL_MODE
++const struct device * flash_para_dev = USER_PARTITION_DEVICE;
++const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
++constexpr int kDnssTimeout           = 60000;
++static k_timer sDnssTimer;
++#endif
++
+ #if APP_SET_NETWORK_COMM_ENDPOINT_SEC
+ constexpr EndpointId kNetworkCommissioningEndpointSecondary = 0xFFFE;
+ #endif
+@@ -127,6 +140,16 @@ public:
+ AppCallbacks sCallbacks;
+ } // namespace
+ 
++#if CONFIG_DUAL_MODE
++void FactoryResetExtHandler(void)
++{
++    // Erase the user parameters partition to reset mode settings
++    flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
++    // Erase ZigBee NVS data during factory reset
++    flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
++}
++#endif
++
+ class AppFabricTableDelegate : public FabricTable::Delegate
+ {
+     void OnFabricRemoved(const FabricTable & fabricTable, FabricIndex fabricIndex)
+@@ -160,6 +183,11 @@ class AppFabricTableDelegate : public FabricTable::Delegate
+                 {
+                     ChipLogError(DeviceLayer, "Storage clearance failed: %d", status);
+                 }
++#if CONFIG_DUAL_MODE
++                printk("Erasing user parameters and resetting to Zigbee mode");
++                FactoryResetExtHandler();
++                chip::Server::GetInstance().ScheduleFactoryReset();
++#endif
+             }
+         }
+     }
+@@ -207,8 +235,53 @@ void AppTaskCommon::PowerOnFactoryReset(void)
+ }
+ #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
+ 
++#if CONFIG_DUAL_MODE
++void SwitchBackToZigbee()
++{
++    uint8_t switch_flag = USER_MATTER_BACK_ZB;
++    flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
++    sys_reboot(0);
++}
++
++void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
++{
++    if (!timer)
++    {
++        return;
++    }
++    /*
++     * If Dnss initialization takes longer than 60 seconds,
++     * the device will reboot and revert to Zigbee mode.
++     */
++    if (sBoot_zb)
++    {
++        printk("Matter: DnssTimer expired. Rebooting...\n");
++        SwitchBackToZigbee();
++    }
++}
++#endif
++
+ CHIP_ERROR AppTaskCommon::StartApp(void)
+ {
++#if CONFIG_DUAL_MODE
++    /*
++     * If the device boots from Zigbee, set a flag and adjust user parameters.
++     * Then start a timer to ensure Dnss initialization completes within
++     * a given timeframe.
++     */
++    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
++
++    /* If booting from Zigbee mode, set a flag and clean deprecated parameter sectors. */
++    if (user_para.val == USER_ZB_SW_VAL)
++    {
++        sBoot_zb = 1;
++
++        k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
++        k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
++        printk("Matter: Started DNS protection timer.");
++    }
++#endif
++
+     CHIP_ERROR err = GetAppTask().Init();
+ 
+     if (err != CHIP_NO_ERROR)
+@@ -590,6 +663,10 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
+         k_timer_stop(&sFactoryResetTimer);
+         sFactoryResetCntr = 0;
+ 
++#if CONFIG_DUAL_MODE
++        printk("Factory reset triggered by button; reverting to Zigbee mode\n");
++        FactoryResetExtHandler();
++#endif
+         chip::Server::GetInstance().ScheduleFactoryReset();
+     }
+ }
+@@ -747,6 +824,38 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+         }
+ #endif
+         break;
++    case DeviceEventType::kCHIPoBLEConnectionClosed:
++        if (Internal::BLEMgrImpl().NeedToResetFailSafeTimer())
++        {
++            LOG_INF("BLE disconnected during commissioning.");
++            Internal::BLEMgrImpl().ClearResetFailSafeTimerFlag();
++            Server::GetInstance().GetFailSafeContext().ForceFailSafeTimerExpiry();
++        }
++        break;
++#if CONFIG_DUAL_MODE
++    case DeviceEventType::kCommissioningComplete: {
++        uint8_t val = USER_MATTER_PAIR_VAL;
++        sBoot_zb    = 0;
++
++        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
++        flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
++        printk("Commissioning complete; Matter commissioned flag set.\n");
++    }
++    break;
++    case DeviceEventType::kFailSafeTimerExpired:
++        /* Reset to Zigbee mode if commissioning fails */
++        if (sBoot_zb)
++        {
++            printk("FailSafeTimer expired; Matter commissioning failed. Rebooting to Zigbee mode...\n");
++            SwitchBackToZigbee();
++        }
++        else
++        {
++            printk("FailSafeTimer expired; Matter commissioning failed.\n");
++        }
++        break;
++#endif
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     case DeviceEventType::kDnssdInitialized:
+ #if CONFIG_CHIP_OTA_REQUESTOR
+@@ -760,6 +869,14 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /*
+ #if CONFIG_CHIP_OTA_REQUESTOR
+         }
+ #endif
++
++#if CONFIG_DUAL_MODE
++        if (sBoot_zb)
++        {
++            k_timer_stop(&sDnssTimer);
++            printk("DnssTimer stopped; DNS-SD has been initialized.\n");
++        }
++#endif
+         break;
+     case DeviceEventType::kThreadStateChange:
+         sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
+diff --git a/scripts/build/build/targets.py b/scripts/build/build/targets.py
+index 4d317f3258..f2b4ca5444 100755
+--- a/scripts/build/build/targets.py
++++ b/scripts/build/build/targets.py
+@@ -815,6 +815,7 @@ def BuildTelinkTarget():
+     target.AppendModifier('rpc', enable_rpcs=True)
+     target.AppendModifier('factory-data', enable_factory_data=True)
+     target.AppendModifier('4mb', enable_4mb_flash=True)
++    target.AppendModifier('dual-mode', enable_dual_mode=True)
+     target.AppendModifier('mars', mars_board_config=True)
+     target.AppendModifier('usb', usb_board_config=True)
+     target.AppendModifier('compress-lzma', compress_lzma_config=True)
+diff --git a/scripts/build/builders/telink.py b/scripts/build/builders/telink.py
+index d48453bf08..26674df737 100644
+--- a/scripts/build/builders/telink.py
++++ b/scripts/build/builders/telink.py
+@@ -158,6 +158,7 @@ class TelinkBuilder(Builder):
+                  enable_rpcs: bool = False,
+                  enable_factory_data: bool = False,
+                  enable_4mb_flash: bool = False,
++                 enable_dual_mode: bool = False,
+                  mars_board_config: bool = False,
+                  usb_board_config: bool = False,
+                  compress_lzma_config: bool = False,
+@@ -173,6 +174,7 @@ class TelinkBuilder(Builder):
+         self.enable_rpcs = enable_rpcs
+         self.enable_factory_data = enable_factory_data
+         self.enable_4mb_flash = enable_4mb_flash
++        self.enable_dual_mode = enable_dual_mode
+         self.mars_board_config = mars_board_config
+         self.usb_board_config = usb_board_config
+         self.compress_lzma_config = compress_lzma_config
+@@ -216,6 +218,9 @@ class TelinkBuilder(Builder):
+         if self.enable_4mb_flash:
+             flags.append("-DFLASH_SIZE=4m")
+ 
++        if self.enable_dual_mode:
++            flags.append("-DCONFIG_DUAL_MODE=y")
++
+         if self.mars_board_config:
+             flags.append("-DTLNK_MARS_BOARD=y")
+ 
+diff --git a/scripts/build/testdata/all_targets_linux_x64.txt b/scripts/build/testdata/all_targets_linux_x64.txt
+index fef6686fce..92d35699ed 100644
+--- a/scripts/build/testdata/all_targets_linux_x64.txt
++++ b/scripts/build/testdata/all_targets_linux_x64.txt
+@@ -23,5 +23,5 @@ qpg-qpg6105-{light,light-switch,lock,persistent-storage,shell,thermostat}[-updat
+ realtek-rtl8777g-{all-clusters,light-switch,lighting,lock,ota-requestor,thermostat,window}
+ stm32-stm32wb5mm-dk-light
+ tizen-{arm,arm64}-{all-clusters,chip-tool,light,tests}[-asan][-coverage][-no-ble][-no-thread][-no-wifi][-ubsan][-with-ui]
+-telink-{tl3218x,tl3218x_retention,tl7218x,tl7218x_retention,tlsr9118bdk40d,tlsr9518adk80d,tlsr9528a,tlsr9528a_retention}-{air-quality-sensor,all-clusters,all-clusters-minimal,bridge,contact-sensor,light,light-switch,lock,ota-requestor,pump,pump-controller,shell,smoke-co-alarm,temperature-measurement,thermostat,window-covering}[-4mb][-compress-lzma][-dfu][-factory-data][-mars][-ota][-precompiled-ot][-rpc][-shell][-thread-analyzer][-usb]
++telink-{tl3218x,tl3218x_retention,tl7218x,tl7218x_retention,tlsr9118bdk40d,tlsr9518adk80d,tlsr9528a,tlsr9528a_retention}-{air-quality-sensor,all-clusters,all-clusters-minimal,bridge,contact-sensor,light,light-switch,lock,ota-requestor,pump,pump-controller,shell,smoke-co-alarm,temperature-measurement,thermostat,window-covering}[-4mb][-compress-lzma][-dfu][-dual-mode][-factory-data][-mars][-ota][-precompiled-ot][-rpc][-shell][-thread-analyzer][-usb]
+ openiotsdk-{lock,shell}[-mbedtls][-psa]
+diff --git a/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp b/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
+index 410766834a..c422b88853 100644
+--- a/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
++++ b/src/platform/OpenThread/GenericThreadStackManagerImpl_OpenThread.hpp
+@@ -66,6 +66,10 @@ extern "C" void otSysProcessDrivers(otInstance * aInstance);
+ extern "C" void otAppCliInit(otInstance * aInstance);
+ #endif
+ 
++#if defined CONFIG_IEEE802154_TLX_OPTIMIZATION
++bool isThreadCommissioned = false;
++#endif /* CONFIG_IEEE802154_TLX_OPTIMIZATION */
++
+ namespace chip {
+ namespace DeviceLayer {
+ namespace Internal {
+@@ -379,6 +383,14 @@ bool GenericThreadStackManagerImpl_OpenThread<ImplClass>::_IsThreadAttached()
+     curRole = otThreadGetDeviceRole(mOTInst);
+     Impl()->UnlockThreadStack();
+ 
++#if defined CONFIG_IEEE802154_TLX_OPTIMIZATION
++    if ((curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED))
++    {
++        if (isThreadCommissioned == false)
++            isThreadCommissioned = true;
++    }
++#endif /* CONFIG_IEEE802154_TLX_OPTIMIZATION */
++
+     return (curRole != OT_DEVICE_ROLE_DISABLED && curRole != OT_DEVICE_ROLE_DETACHED);
+ }
+ 
+diff --git a/src/platform/telink/BLEManagerImpl.cpp b/src/platform/telink/BLEManagerImpl.cpp
+index 00f5950ac0..993321bc77 100644
+--- a/src/platform/telink/BLEManagerImpl.cpp
++++ b/src/platform/telink/BLEManagerImpl.cpp
+@@ -508,9 +508,11 @@ CHIP_ERROR BLEManagerImpl::HandleGAPConnect(const ChipDeviceEvent * event)
+ CHIP_ERROR BLEManagerImpl::HandleGAPDisconnect(const ChipDeviceEvent * event)
+ {
+     const BleConnEventType * connEvent = &event->Platform.BleConnEvent;
++    const uint8_t hciResult            = connEvent->HciResult;
+ 
+-    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (reason 0x%02x)", connEvent->HciResult);
++    ChipLogProgress(DeviceLayer, "BLE GAP connection terminated (reason 0x%02x)", hciResult);
+ 
++    mNeedToResetFailSafeTimer = (hciResult == BT_HCI_ERR_REMOTE_USER_TERM_CONN || hciResult == BT_HCI_ERR_CONN_TIMEOUT);
+     mGAPConns--;
+ 
+     // If indications were enabled for this connection, record that they are now disabled and
+@@ -518,7 +520,7 @@ CHIP_ERROR BLEManagerImpl::HandleGAPDisconnect(const ChipDeviceEvent * event)
+     if (UnsetSubscribed(connEvent->BtConn))
+     {
+         CHIP_ERROR disconReason;
+-        switch (connEvent->HciResult)
++        switch (hciResult)
+         {
+         case BT_HCI_ERR_REMOTE_USER_TERM_CONN:
+             // Do not treat proper connection termination as an error and exit.
+diff --git a/src/platform/telink/BLEManagerImpl.h b/src/platform/telink/BLEManagerImpl.h
+index 700f54bdee..8624b4bd25 100644
+--- a/src/platform/telink/BLEManagerImpl.h
++++ b/src/platform/telink/BLEManagerImpl.h
+@@ -109,6 +109,7 @@ private:
+ #endif
+     bool mBLERadioInitialized;
+     bool mReadyToAttachThread;
++    bool mNeedToResetFailSafeTimer;
+ 
+     void DriveBLEState(void);
+     CHIP_ERROR PrepareAdvertisingRequest(void);
+@@ -168,6 +169,9 @@ public:
+     static ssize_t HandleC3Read(struct bt_conn * conn, const struct bt_gatt_attr * attr, void * buf, uint16_t len, uint16_t offset);
+ #endif
+ 
++    bool NeedToResetFailSafeTimer(void);
++    void ClearResetFailSafeTimerFlag(void);
++
+ #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+     // Switch context from BLE to Thread
+     void SwitchToIeee802154(void);
+@@ -212,6 +216,16 @@ inline BLEManagerImpl & BLEMgrImpl(void)
+     return BLEManagerImpl::sInstance;
+ }
+ 
++inline bool BLEManagerImpl::NeedToResetFailSafeTimer(void)
++{
++    return mNeedToResetFailSafeTimer;
++}
++
++inline void BLEManagerImpl::ClearResetFailSafeTimerFlag(void)
++{
++    mNeedToResetFailSafeTimer = false;
++}
++
+ inline BleLayer * BLEManagerImpl::_GetBleLayer()
+ {
+     return this;
+diff --git a/src/platform/telink/tl3218x_dual_2m_flash.overlay b/src/platform/telink/tl3218x_dual_2m_flash.overlay
+new file mode 100644
+index 0000000000..a7570c165b
+--- /dev/null
++++ b/src/platform/telink/tl3218x_dual_2m_flash.overlay
+@@ -0,0 +1,91 @@
++&flash {
++	reg = <0x20000000 0x200000>;
++
++	/delete-node/ partitions;
++	partitions {
++		compatible = "fixed-partitions";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		boot_partition: partition@0 {
++			label = "mcuboot";
++			// The bootloader is optimized to fit within 72 KB (0x12000).
++			// 4 KB (0x1000) are reserved for user data or future expansion.
++			reg = <0x00000000 0x12000>;
++		};
++		slot0_partition: partition@12000 {
++			label = "image-0";
++			// Starting at 0x12000, this partition reserves 912 KB for Matter,
++			// and an additional 248 KB for Zigbee, totaling 0x122000 in size.
++			reg = <0x12000 0x122000>;
++		};
++		zb_partition: partition@f6000 {
++			label = "image-zb";
++			// Zigbee partition
++			// End address should be same as of slot0 partition
++			reg = <0xf6000 0x3e000>;
++		};
++		slot1_partition: partition@134000 {
++			label = "image-1";
++			// Uses LZMA compression to reduce binary size.
++			// The combined space (920 KB + 248 KB) is reduced to ~60% (~712 KB).
++			// Zigbee NVS data will also reside here.
++			reg = <0x134000 0xb2000>;
++		};
++		zigbee_nvs_partition: partition@134000_1 {
++			label = "zigbee-nvs";
++			reg = <0x134000 0x1a000>; // zigbee nvs part , total is 104k.
++		};
++		storage_partition: partition@1e6000 {
++			label = "storage";
++			// NVS storage for Matter.
++			reg = <0x1e6000 0xb000>;
++		};
++		user_token_partition: partition@1f1000 {
++ 			label = "user-token";
++			// Stores token information. If unused, this partition can be removed.
++			reg = <0x1f1000 0x1000>;
++ 		};
++		user_para_partition: partition@1f2000 {
++ 			label = "user-para";
++			// Stores mode information and key data.
++			reg = <0x1f2000 0x1000>;
++ 		};
++		user_cluster_partition: partition@1f3000 {
++ 			label = "user-cluster";
++			//user_cluster: reserve 4k for user storage cluster para. proc transition part
++			reg = <0x1f3000 0x1000>;
++ 		};
++		stack_extend_partition: partition@1f4000 {
++ 			label = "stack_extend";
++			//reserved for matter stack extend proc，reserve 16k for extend.
++			reg = <0x1f4000 0x4000>;
++ 		};
++		secure_partition: partition@1f8000 {
++ 			label = "secure";
++			// Secure area reserved for secure boot.
++			// If not in use, it may be repurposed.
++			reg = <0x1f8000 0x1000>;
++ 		};
++		factory_partition: partition@1f9000 {
++			label = "factory-data";
++			// factory data
++			reg = <0x1f9000 0x1000>;
++		};
++		dac_keypair_partition: partition@1f9800 {
++			label = "dac-keypair";
++			// Stores DAC certificate and key pair (2 KB).
++			reg = <0x1f9800 0x800>;
++		};
++		user_rfu_partition: partition@1fa000 {
++ 			label = "user_rfu";
++			// Reserves 16 KB for user-specific extensions.
++			reg = <0x1fa000 0x4000>;
++ 		};
++		vendor_partition: partition@1fe000 {
++			label = "vendor-data";
++			// Holds MAC, ADC, or other vendor-specific data (8 KB).
++			reg = <0x1fe000 0x2000>;
++		};
++	};
++};
+diff --git a/src/platform/telink/tl7218x_dual_2m_flash.overlay b/src/platform/telink/tl7218x_dual_2m_flash.overlay
+new file mode 100644
+index 0000000000..a7570c165b
+--- /dev/null
++++ b/src/platform/telink/tl7218x_dual_2m_flash.overlay
+@@ -0,0 +1,91 @@
++&flash {
++	reg = <0x20000000 0x200000>;
++
++	/delete-node/ partitions;
++	partitions {
++		compatible = "fixed-partitions";
++		#address-cells = <1>;
++		#size-cells = <1>;
++
++		boot_partition: partition@0 {
++			label = "mcuboot";
++			// The bootloader is optimized to fit within 72 KB (0x12000).
++			// 4 KB (0x1000) are reserved for user data or future expansion.
++			reg = <0x00000000 0x12000>;
++		};
++		slot0_partition: partition@12000 {
++			label = "image-0";
++			// Starting at 0x12000, this partition reserves 912 KB for Matter,
++			// and an additional 248 KB for Zigbee, totaling 0x122000 in size.
++			reg = <0x12000 0x122000>;
++		};
++		zb_partition: partition@f6000 {
++			label = "image-zb";
++			// Zigbee partition
++			// End address should be same as of slot0 partition
++			reg = <0xf6000 0x3e000>;
++		};
++		slot1_partition: partition@134000 {
++			label = "image-1";
++			// Uses LZMA compression to reduce binary size.
++			// The combined space (920 KB + 248 KB) is reduced to ~60% (~712 KB).
++			// Zigbee NVS data will also reside here.
++			reg = <0x134000 0xb2000>;
++		};
++		zigbee_nvs_partition: partition@134000_1 {
++			label = "zigbee-nvs";
++			reg = <0x134000 0x1a000>; // zigbee nvs part , total is 104k.
++		};
++		storage_partition: partition@1e6000 {
++			label = "storage";
++			// NVS storage for Matter.
++			reg = <0x1e6000 0xb000>;
++		};
++		user_token_partition: partition@1f1000 {
++ 			label = "user-token";
++			// Stores token information. If unused, this partition can be removed.
++			reg = <0x1f1000 0x1000>;
++ 		};
++		user_para_partition: partition@1f2000 {
++ 			label = "user-para";
++			// Stores mode information and key data.
++			reg = <0x1f2000 0x1000>;
++ 		};
++		user_cluster_partition: partition@1f3000 {
++ 			label = "user-cluster";
++			//user_cluster: reserve 4k for user storage cluster para. proc transition part
++			reg = <0x1f3000 0x1000>;
++ 		};
++		stack_extend_partition: partition@1f4000 {
++ 			label = "stack_extend";
++			//reserved for matter stack extend proc，reserve 16k for extend.
++			reg = <0x1f4000 0x4000>;
++ 		};
++		secure_partition: partition@1f8000 {
++ 			label = "secure";
++			// Secure area reserved for secure boot.
++			// If not in use, it may be repurposed.
++			reg = <0x1f8000 0x1000>;
++ 		};
++		factory_partition: partition@1f9000 {
++			label = "factory-data";
++			// factory data
++			reg = <0x1f9000 0x1000>;
++		};
++		dac_keypair_partition: partition@1f9800 {
++			label = "dac-keypair";
++			// Stores DAC certificate and key pair (2 KB).
++			reg = <0x1f9800 0x800>;
++		};
++		user_rfu_partition: partition@1fa000 {
++ 			label = "user_rfu";
++			// Reserves 16 KB for user-specific extensions.
++			reg = <0x1fa000 0x4000>;
++ 		};
++		vendor_partition: partition@1fe000 {
++			label = "vendor-data";
++			// Holds MAC, ADC, or other vendor-specific data (8 KB).
++			reg = <0x1fe000 0x2000>;
++		};
++	};
++};
+diff --git a/src/platform/telink/tlsr9528a_dual_4m_flash.overlay b/src/platform/telink/tlsr9528a_dual_4m_flash.overlay
+new file mode 100644
+index 0000000000..06c9103faa
+--- /dev/null
++++ b/src/platform/telink/tlsr9528a_dual_4m_flash.overlay
+@@ -0,0 +1,86 @@
++&flash {
++	reg = <0x20000000 0x400000>;
++
++	/delete-node/ partitions;
++	partitions {
++		compatible = "fixed-partitions";
++		#address-cells = <1>;
++		#size-cells = <1>;
++		/delete-node/ partition@0;
++		/delete-node/ partition@20000;
++		/delete-node/ partition@88000;
++		/delete-node/ partition@f0000;
++		/delete-node/ partition@f4000;
++		/delete-node/ partition@fe000;
++		boot_partition: partition@0 {
++			label = "mcuboot";
++			reg = <0x00000000 0x14000>;
++		};
++		slot0_partition: partition@14000 {
++			label = "image-0";
++			reg = <0x14000 0x1a5000>;// 0x14000 is matter , 0x154000 is zigbee , 0x1b4000~0x1b9000 reserved for trailor and move sector, should be 20k
++		};
++		zb_partition: partition@154000 {
++			label = "image-zb";
++			// Zigbee partition
++			// End address should be same as of slot0 partition
++			reg = <0x154000 0x60000>;
++		};
++		slot1_partition: partition@1b9000 {
++			label = "image-1";
++			reg = <0x1b9000 0x1a5000>;
++		};
++		rfu_partition: partition@35e000 {
++ 			label = "rfu";
++			reg = <0x35e000 0x22000>; //reserved for next step flash protect to keep 3.5k,now use all protect 
++ 		};
++		storage_partition: partition@380000 {
++			label = "storage";
++			reg = <0x380000 0xb000>; // matter nvs part 
++		};
++		zigbee_nvs_partition: partition@38b000 {
++			label = "zigbee-nvs";
++			reg = <0x38b000 0x1a000>; // zigbee nvs part , total is 104k.
++		};
++		user_token_partition: partition@3a5000 {
++ 			label = "user-token";
++			reg = <0x3a5000 0x1000>; //user:store token info, for customer to config.
++ 		};
++		user_para_partition: partition@3a6000 {
++ 			label = "user-para";
++			reg = <0x3a6000 0x1000>; //user:store the mode info and the key info part.
++ 		};
++		user_rfu_partition: partition@3a7000 {
++ 			label = "user_rfu";
++			reg = <0x3a7000 0x19000>; //user_rfu: reserve 100k for user extend.
++ 		};
++		user_cluster_partition: partition@3c0000 {
++ 			label = "user-cluster";
++			reg = <0x3c0000 0x1000>; //user_cluster: reserve 4k for user storage cluster para.
++ 		};
++		stack_extend_partition: partition@3c1000 {
++ 			label = "stack_extend";
++			reg = <0x3c1000 0x35000>; //reserved for matter stack extend proc，about 212k.
++ 		};
++		dac_keypair_partition: partition@3f6000 {
++			label = "dac-keypair";
++			reg = <0x3f6000 0x1000>; //store dac and key pair.
++		};
++		factory_partition: partition@3f7000 {
++			label = "factory-data";
++			reg = <0x3f7000 0x1000>; // factory data info 
++		};
++		secure_partition: partition@3f8000 {
++ 			label = "secure";
++			reg = <0x3f8000 0x4000>; //secure info ,reserved for secure boot .if not use , can beused by other way .
++ 		};
++		vendor_rfu_partition: partition@3fc000 {
++			label = "vendor-rfu";
++			reg = <0x3fc000 0x2000>;// reserved for chip extend.
++		};
++		vendor_partition: partition@3fe000 {
++			label = "vendor-data";
++			reg = <0x3fe000 0x2000>;// mac and adc info.
++		};
++	};
++};
