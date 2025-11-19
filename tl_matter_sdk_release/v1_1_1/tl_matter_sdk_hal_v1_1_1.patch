@@ -1,0 +1,193 @@
+diff --git a/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c b/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
+index 76f4d48..64ce84c 100644
+--- a/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
++++ b/tlsr9/ble/vendor/controller/b9x/b9x_bt_flash.c
+@@ -29,6 +29,14 @@
+ #include <zephyr/storage/flash_map.h>
+ #include <zephyr/drivers/flash.h>
+ 
++#if CONFIG_DUAL_MODE
++#define USER_PARA_MAC_OFFSET	(0x100)
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++#endif /* CONFIG_DUAL_MODE */
++
+ #if CONFIG_TL_BLE_CTRL_MAC_TYPE_PUBLIC || CONFIG_TL_BLE_CTRL_MAC_FLASH
+ static const struct device *flash_device =
+ 	DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+@@ -110,6 +118,17 @@ _attribute_no_inline_ int b9x_bt_blc_mac_init(uint8_t *bt_mac)
+ 	temp_mac[8] = 0;
+ 	err = flash_write(flash_device, FIXED_PARTITION_OFFSET(vendor_partition)
+ 			+ B9X_BT_MAC_ADDR_OFFSET, temp_mac, BLE_ADDR_LEN + 3);
++#elif CONFIG_DUAL_MODE
++	uint8_t dummy_mac[BLE_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
++
++	/*Get the ramdom mac address from zb which will passed in the user-para sector */
++	err = flash_read(USER_PARTITION_DEVICE, USER_PARTITION_OFFSET
++			+ USER_PARA_MAC_OFFSET, bt_mac, BLE_ADDR_LEN);
++	if(memcmp(bt_mac, dummy_mac, sizeof(dummy_mac)) == 0){
++		// if mac address is empty, use random instead .
++		generateRandomNum(BLE_ADDR_LEN, bt_mac);
++	}
++	bt_mac[5] |= 0xC0; /* random static by default */
+ #else
+ 	generateRandomNum(BLE_ADDR_LEN, bt_mac);
+ 	/* The random static address will be generated on every reboot */
+diff --git a/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c b/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
+index 64065cb..7d964dd 100644
+--- a/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
++++ b/tlsr9/ble/vendor/controller/tlx/tlx_bt_flash.c
+@@ -28,6 +28,14 @@
+ #include <zephyr/storage/flash_map.h>
+ #include <zephyr/drivers/flash.h>
+ 
++#if CONFIG_DUAL_MODE
++#define USER_PARA_MAC_OFFSET	(0x100)
++#define USER_PARTITION user_para_partition
++#define USER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_PARTITION)
++#define USER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_PARTITION)
++#define USER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_PARTITION)
++#endif /* CONFIG_DUAL_MODE */
++
+ #if CONFIG_TL_BLE_CTRL_MAC_TYPE_PUBLIC || CONFIG_TL_BLE_CTRL_MAC_FLASH
+ static const struct device *flash_device =
+ 	DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+@@ -109,6 +117,17 @@ _attribute_no_inline_ int tlx_bt_blc_mac_init(uint8_t *bt_mac)
+ 	temp_mac[8] = 0;
+ 	err = flash_write(flash_device, FIXED_PARTITION_OFFSET(vendor_partition)
+ 			+ TLX_BT_MAC_ADDR_OFFSET, temp_mac, BLE_ADDR_LEN + 3);
++#elif CONFIG_DUAL_MODE
++	uint8_t dummy_mac[BLE_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
++
++	/*Get the ramdom mac address from zb which will passed in the user-para sector */
++	err = flash_read(USER_PARTITION_DEVICE, USER_PARTITION_OFFSET
++			+ USER_PARA_MAC_OFFSET, bt_mac, BLE_ADDR_LEN);
++	if(memcmp(bt_mac, dummy_mac, sizeof(dummy_mac)) == 0){
++		// if mac address is empty, use random instead .
++		generateRandomNum(BLE_ADDR_LEN, bt_mac);
++	}
++	bt_mac[5] |= 0xC0; /* random static by default */
+ #else
+ 	generateRandomNum(BLE_ADDR_LEN, bt_mac);
+ 	/* The random static address will be generated on every reboot */
+diff --git a/tlsr9/drivers/B92/clock.c b/tlsr9/drivers/B92/clock.c
+index d5438dd..671d37a 100644
+--- a/tlsr9/drivers/B92/clock.c
++++ b/tlsr9/drivers/B92/clock.c
+@@ -399,7 +399,7 @@ void clock_init(sys_pll_clk_e pll,
+  * @param[in]   cclk_hclk_pclk - frequency of CCLK/HCLK/PCLK.
+  * @return      none
+  */
+-void cclk_hclk_pclk_config(pll_div_cclk_hclk_pclk_e div)
++_attribute_ram_code_com_sec_noinline_ void cclk_hclk_pclk_config(pll_div_cclk_hclk_pclk_e div)
+ {
+ 	unsigned char cclk_div = div>>8;
+ 	unsigned char hclk_div = (div&0x00f0)>>4;
+diff --git a/tlsr9/drivers/B92/clock.h b/tlsr9/drivers/B92/clock.h
+index d7cabb5..fe63200 100644
+--- a/tlsr9/drivers/B92/clock.h
++++ b/tlsr9/drivers/B92/clock.h
+@@ -53,12 +53,12 @@
+  *  		the maximum speed needs to be tested at the highest and lowest voltage of the board,
+  *  		and the high and low temperature long-term stability test speed is no problem.
+  */
+-#define CCLK_16M_HCLK_16M_PCLK_16M			clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV12_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV1_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
+-#define CCLK_24M_HCLK_24M_PCLK_24M			clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV8_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV1_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
+-#define CCLK_32M_HCLK_32M_PCLK_16M			clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV6_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
+-#define CCLK_48M_HCLK_48M_PCLK_24M			clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV4_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
++#define CCLK_16M_HCLK_16M_PCLK_16M          clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV12_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV1_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
++#define CCLK_24M_HCLK_24M_PCLK_24M          clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV8_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV1_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
++#define CCLK_32M_HCLK_32M_PCLK_16M          clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV6_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
++#define CCLK_48M_HCLK_48M_PCLK_24M          clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV4_TO_CCLK, CCLK_DIV1_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
+ #define CCLK_96M_HCLK_48M_PCLK_24M			clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV2_TO_CCLK, CCLK_DIV2_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV4_TO_MSPI_CLK)
+-
++#define CCLK_96M_HCLK_48M_PCLK_24M_MSPI_64M clock_init(PLL_CLK_192M, PAD_PLL_DIV, PLL_DIV2_TO_CCLK, CCLK_DIV2_TO_HCLK, HCLK_DIV2_TO_PCLK, PLL_DIV3_TO_MSPI_CLK)
+ /**********************************************************************************************************************
+  *                                         global data type                                                           *
+  *********************************************************************************************************************/
+diff --git a/tlsr9/drivers/TL321X/flash.c b/tlsr9/drivers/TL321X/flash.c
+index 44547fa..76dd975 100644
+--- a/tlsr9/drivers/TL321X/flash.c
++++ b/tlsr9/drivers/TL321X/flash.c
+@@ -648,16 +648,21 @@ flash_capacity_e flash_get_capacity(unsigned int flash_mid)
+ }
+ 
+ /*******************************************************************************************************************
+- *									This function serves to 1m area flash protection
++ *									This function serves to flash protection
+  ******************************************************************************************************************/
+ #define FLASH_1M_ADR_OFFSET 		0x100000
++#define FLASH_1920K_ADR_OFFSET 		0x1e0000
+ #define FLASH_2M_ADR_OFFSET 		0x200000
+ #define FLASH_3M_ADR_OFFSET 		0x300000
+ #define FLASH_3M5_ADR_OFFSET 		0x380000
+ 
++#if CONFIG_DUAL_MODE
++#define FLASH_ADR_OFFSET_SELECT		FLASH_1920K_ADR_OFFSET
++#define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1920K
++#else
+ #define FLASH_ADR_OFFSET_SELECT		FLASH_1M_ADR_OFFSET
+-
+ #define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1M
++#endif /* CONFIG_DUAL_MODE */
+ 
+ void flash_protection_lock_init(void)
+ {
+diff --git a/tlsr9/drivers/TL321X/lib/include/flash_prot.h b/tlsr9/drivers/TL321X/lib/include/flash_prot.h
+index cdfaf8f..b49917c 100755
+--- a/tlsr9/drivers/TL321X/lib/include/flash_prot.h
++++ b/tlsr9/drivers/TL321X/lib/include/flash_prot.h
+@@ -75,6 +75,9 @@ typedef enum{
+     /* lock all Flash area, even system data and user data.
+      * Attention: More conditions need to be considered, such as system data(SMP pairing information or OTA data if OTA used)*/
+     FLASH_LOCK_ALL_AREA         =   4,
++
++    /* User can set 1920KB flash protect. */
++    FLASH_LOCK_FW_LOW_1920K     =   0x09,
+ }flash_app_lock_e;
+ 
+ 
+diff --git a/tlsr9/drivers/TL721X/flash.c b/tlsr9/drivers/TL721X/flash.c
+index 9a5b603..2ffecb9 100755
+--- a/tlsr9/drivers/TL721X/flash.c
++++ b/tlsr9/drivers/TL721X/flash.c
+@@ -679,16 +679,21 @@ flash_capacity_e  flash_get_capacity(unsigned int flash_mid)
+ }
+ 
+ /*******************************************************************************************************************
+- *									This function serves to 1m area flash protection
++ *									This function serves to flash protection
+  ******************************************************************************************************************/
+ #define FLASH_1M_ADR_OFFSET 		0x100000
++#define FLASH_1920K_ADR_OFFSET 		0x1e0000
+ #define FLASH_2M_ADR_OFFSET 		0x200000
+ #define FLASH_3M_ADR_OFFSET 		0x300000
+ #define FLASH_3M5_ADR_OFFSET 		0x380000
+ 
++#if CONFIG_DUAL_MODE
++#define FLASH_ADR_OFFSET_SELECT		FLASH_1920K_ADR_OFFSET
++#define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1920K
++#else
+ #define FLASH_ADR_OFFSET_SELECT		FLASH_1M_ADR_OFFSET
+-
+ #define FLASH_PROTECT_BLOCK_SIZE	FLASH_LOCK_FW_LOW_1M
++#endif /* CONFIG_DUAL_MODE */
+ 
+ void flash_protection_lock_init(void)
+ {
+diff --git a/tlsr9/drivers/TL721X/lib/include/flash_prot.h b/tlsr9/drivers/TL721X/lib/include/flash_prot.h
+index cdfaf8f..b49917c 100755
+--- a/tlsr9/drivers/TL721X/lib/include/flash_prot.h
++++ b/tlsr9/drivers/TL721X/lib/include/flash_prot.h
+@@ -75,6 +75,9 @@ typedef enum{
+     /* lock all Flash area, even system data and user data.
+      * Attention: More conditions need to be considered, such as system data(SMP pairing information or OTA data if OTA used)*/
+     FLASH_LOCK_ALL_AREA         =   4,
++
++    /* User can set 1920KB flash protect. */
++    FLASH_LOCK_FW_LOW_1920K     =   0x09,
+ }flash_app_lock_e;
+ 
+ 
