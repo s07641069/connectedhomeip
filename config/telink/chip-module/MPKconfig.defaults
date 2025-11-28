@@ -32,6 +32,10 @@ config DUAL_MODE
 		To extend, need to migrate to 
 		telink_tlx/Kconfig.soc later.
 
+config DEFERRED_ATTR_STORAGE
+	bool "Defer the storage time of attributes"
+	default y
+
 config TELINK_ZB_PARTITION_ADDR
 	hex "zigbee partition address"
 	default $(dt_node_reg_addr_hex,$(dt_nodelabel_path,slot0_zb_partition),0)

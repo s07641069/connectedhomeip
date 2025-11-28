@@ -79,10 +79,15 @@ config CHIP_OTA_IMAGE_BUILD
 	bool
 	default y if CHIP_OTA_REQUESTOR
 
+config DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
+	string "Default Zephyr signed image file name"
+	default "zephyr.signed.bin"
+	depends on CHIP_OTA_REQUESTOR
+
 config SIGNED_OTA_IMAGE_FILE_NAME
 	string "Zephyr signed image file name"
 	default "zephyr.signed.lzma.signed.bin" if COMPRESS_LZMA
-	default "zephyr.signed.bin"
+	default DEFAULT_SIGNED_OTA_IMAGE_FILE_NAME
 	depends on BOOTLOADER_MCUBOOT
 	help
 	  Provides the file name of the generated Zephyr signed image.
