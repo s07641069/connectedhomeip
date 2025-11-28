@@ -16,4 +16,5 @@
 mainmenu "Matter Telink Light Switch Example Application"
 
 rsource "../../../config/telink/chip-module/Kconfig.defaults"
+rsource "../../../config/telink/chip-module/MPKconfig.defaults"
 source "Kconfig.zephyr"

@@ -88,6 +88,7 @@ bool sIsNetworkEnabled      = false;
 bool sIsNetworkAttached     = false;
 bool sHaveBLEConnections    = false;
 
+#if CONFIG_DUAL_MODE
 #include <ext_driver/ext_pm.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
@@ -101,6 +102,7 @@ bool sHaveBLEConnections    = false;
 #define DUAL_MODE_PARTITION_DEVICE FIXED_PARTITION_DEVICE(DUAL_MODE_PARTITION)
 #define DUAL_MODE_PARTITION_OFFSET FIXED_PARTITION_OFFSET(DUAL_MODE_PARTITION)
 #define DUAL_MODE_PARTITION_SIZE FIXED_PARTITION_SIZE(DUAL_MODE_PARTITION)
+
 // init mode will jump to matter
 #define MODE_VAL_INIT 0xff
 
@@ -111,6 +113,7 @@ bool sHaveBLEConnections    = false;
 // after zb paired , it will go to zb, only if trigger action.
 #define MODE_VAL_ZB_PAIR 0xaa
 #define ACTION_SWITCH_MATTER 0x55
+
 void dual_mode_switch(int32_t op)
 {
     uint8_t boot_flag[2]                 = { 0xff, 0xff };
@@ -141,6 +144,7 @@ void dual_mode_switch(int32_t op)
         sys_reboot(SYS_REBOOT_WARM);
     }
 }
+#endif /* CONFIG_DUAL_MODE */
 
 #if APP_SET_DEVICE_INFO_PROVIDER
 chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
@@ -626,7 +630,11 @@ void AppTaskCommon::StartBleAdvButtonEventHandler(void)
 void AppTaskCommon::StartBleAdvHandler(AppEvent * aEvent)
 {
     LOG_INF("StartBleAdvHandler");
+
+#if CONFIG_DUAL_MODE
     dual_mode_switch(OPCODE_SWITCH_ZIGBEE);
+#endif /* CONFIG_DUAL_MODE */
+
     // Disable manual Matter service BLE advertising after device provisioning.
     if (sIsNetworkProvisioned)
     {
@@ -672,7 +680,9 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         sFactoryResetCntr = 0;
 
         chip::Server::GetInstance().ScheduleFactoryReset();
+#if CONFIG_DUAL_MODE
         dual_mode_switch(OPCODE_FACTORY_RESET);
+#endif /* CONFIG_DUAL_MODE */
     }
 }
 
@@ -820,6 +830,36 @@ void AppTaskCommon::TriggerMicroSpeechEventHandler(AppEvent * aEvent)
 }
 #endif
 
+void AppTaskCommon::OtaEventsHandler(const ChipDeviceEvent * event)
+{
+    switch (event->OtaStateChanged.newState)
+    {
+    case DeviceLayer::kOtaDownloadInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image download in progress\n");
+        break;
+    case DeviceLayer::kOtaDownloadComplete:
+        ChipLogProgress(DeviceLayer, "OTA image download complete\n");
+        break;
+    case DeviceLayer::kOtaDownloadFailed:
+        ChipLogProgress(DeviceLayer, "OTA image download failed\n");
+        break;
+    case DeviceLayer::kOtaDownloadAborted:
+        ChipLogProgress(DeviceLayer, "OTA image download aborted\n");
+        break;
+    case DeviceLayer::kOtaApplyInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image apply in progress\n");
+        break;
+    case DeviceLayer::kOtaApplyComplete:
+        ChipLogProgress(DeviceLayer, "OTA image apply complete\n");
+        break;
+    case DeviceLayer::kOtaApplyFailed:
+        ChipLogProgress(DeviceLayer, "OTA image apply failed\n");
+        break;
+    default:
+        break;
+    }
+}
+
 void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
 {
     switch (event->Type)
@@ -853,9 +893,11 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
             Server::GetInstance().GetFailSafeContext().ForceFailSafeTimerExpiry();
         }
         break;
+#if CONFIG_DUAL_MODE
     case DeviceEventType::kCommissioningComplete:
         dual_mode_switch(OPCODE_MATTER_PAIRED);
         break;
+#endif /* CONFIG_DUAL_MODE */
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
@@ -906,6 +948,11 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         UpdateStatusLED();
 #endif
         break;
+#if CONFIG_CHIP_OTA_REQUESTOR
+    case DeviceEventType::kOtaStateChanged:
+        GetAppTask().OtaEventsHandler(event);
+        break;
+#endif /* CONFIG_CHIP_OTA_REQUESTOR */
     default:
         break;
     }

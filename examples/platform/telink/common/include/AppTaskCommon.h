@@ -39,6 +39,7 @@
 
 #include <cstdint>
 
+#if CONFIG_DUAL_MODE
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
@@ -63,6 +64,7 @@
 #define ACTION_SWITCH_MATTER 0x55
 
 void dual_mode_switch(uint32_t op);
+#endif /* CONFIG_DUAL_MODE */
 
 using namespace ::chip;
 using namespace ::chip::app;
@@ -154,6 +156,10 @@ protected:
 #if CONFIG_TELINK_OTA_BUTTON_TEST
     static void TestOTAButtonEventHandler(void);
     static void TestOTAHandler(AppEvent * aEvent);
+#endif
+
+#if CONFIG_CHIP_OTA_REQUESTOR
+    void OtaEventsHandler(const ChipDeviceEvent * event);
 #endif
 
     static void ExampleActionButtonEventHandler(void);
