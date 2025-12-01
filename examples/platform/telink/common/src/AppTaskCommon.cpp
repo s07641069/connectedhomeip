@@ -34,12 +34,12 @@
 #include <DeviceInfoProviderImpl.h>
 #include <app/clusters/identify-server/identify-server.h>
 #include <app/clusters/ota-requestor/OTATestEventTriggerHandler.h>
-#include <app/server/Server.h>
-#include <app/util/attribute-storage.h>
-#include <app/util/endpoint-config-api.h>
 #include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/persistence/DefaultAttributePersistenceProvider.h>
 #include <app/persistence/DeferredAttributePersistenceProvider.h>
+#include <app/server/Server.h>
+#include <app/util/attribute-storage.h>
+#include <app/util/endpoint-config-api.h>
 #include <data-model-providers/codegen/Instance.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
@@ -122,64 +122,6 @@ DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttribut
                                                                  Span<DeferredAttribute>(gPersisters, ATTRIBUTES_ARRAY_SIZE),
                                                                  System::Clock::Milliseconds32(DEFERRED_STORAGE_TIME));
 
-#if CONFIG_DUAL_MODE
-#include <ext_driver/ext_pm.h>
-#include <zephyr/device.h>
-#include <zephyr/drivers/flash.h>
-#include <zephyr/storage/flash_map.h>
-
-#define OPCODE_FACTORY_RESET 0
-#define OPCODE_SWITCH_ZIGBEE 1 // include init state and matter paired state.
-#define OPCODE_MATTER_PAIRED 2
-
-#define DUAL_MODE_PARTITION dual_mode_partition
-#define DUAL_MODE_PARTITION_DEVICE FIXED_PARTITION_DEVICE(DUAL_MODE_PARTITION)
-#define DUAL_MODE_PARTITION_OFFSET FIXED_PARTITION_OFFSET(DUAL_MODE_PARTITION)
-#define DUAL_MODE_PARTITION_SIZE FIXED_PARTITION_SIZE(DUAL_MODE_PARTITION)
-
-// init mode will jump to matter
-#define MODE_VAL_INIT 0xff
-
-// after matter paired , it will go to matter, only if trigger action.
-#define MODE_VAL_MATTER_PAIR 0x55
-#define ACTION_SWITCH_ZIGBEE 0xaa
-
-// after zb paired , it will go to zb, only if trigger action.
-#define MODE_VAL_ZB_PAIR 0xaa
-#define ACTION_SWITCH_MATTER 0x55
-
-void dual_mode_switch(int32_t op)
-{
-    uint8_t boot_flag[2]                 = { 0xff, 0xff };
-    const struct device * flash_para_dev = DUAL_MODE_PARTITION_DEVICE;
-
-    flash_read(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, boot_flag, 2);
-
-    if (op == OPCODE_FACTORY_RESET)
-    {
-        boot_flag[0] = MODE_VAL_INIT;
-        boot_flag[1] = MODE_VAL_INIT;
-    }
-    else if (op == OPCODE_SWITCH_ZIGBEE)
-    {
-        boot_flag[1] = ACTION_SWITCH_ZIGBEE;
-    }
-    else if (op == OPCODE_MATTER_PAIRED)
-    {
-        boot_flag[0] = MODE_VAL_MATTER_PAIR;
-        boot_flag[1] = MODE_VAL_INIT;
-    }
-    flash_erase(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, 4096);
-    flash_write(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, boot_flag, sizeof(boot_flag));
-
-    // need to reboot ,switch to bootloader
-    if (op == OPCODE_SWITCH_ZIGBEE)
-    {
-        sys_reboot(SYS_REBOOT_WARM);
-    }
-}
-#endif /* CONFIG_DUAL_MODE */
-
 #if APP_SET_DEVICE_INFO_PROVIDER
 chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
 #endif
@@ -223,6 +165,44 @@ public:
 
 AppCallbacks sCallbacks;
 } // namespace
+
+#if CONFIG_DUAL_MODE
+#include <ext_driver/ext_pm.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
+
+void dual_mode_switch(int32_t op)
+{
+    uint8_t boot_flag[2]                 = { 0xff, 0xff };
+    const struct device * flash_para_dev = DUAL_MODE_PARTITION_DEVICE;
+
+    flash_read(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, boot_flag, 2);
+
+    if (op == OPCODE_FACTORY_RESET)
+    {
+        boot_flag[0] = MODE_VAL_INIT;
+        boot_flag[1] = MODE_VAL_INIT;
+    }
+    else if (op == OPCODE_SWITCH_ZIGBEE)
+    {
+        boot_flag[1] = ACTION_SWITCH_ZIGBEE;
+    }
+    else if (op == OPCODE_MATTER_PAIRED)
+    {
+        boot_flag[0] = MODE_VAL_MATTER_PAIR;
+        boot_flag[1] = MODE_VAL_INIT;
+    }
+    flash_erase(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, 4096);
+    flash_write(flash_para_dev, DUAL_MODE_PARTITION_OFFSET, boot_flag, sizeof(boot_flag));
+
+    // need to reboot ,switch to bootloader
+    if (op == OPCODE_SWITCH_ZIGBEE)
+    {
+        sys_reboot(SYS_REBOOT_WARM);
+    }
+}
+#endif /* CONFIG_DUAL_MODE */
 
 class AppFabricTableDelegate : public FabricTable::Delegate
 {
