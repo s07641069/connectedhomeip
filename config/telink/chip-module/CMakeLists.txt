@@ -168,16 +168,14 @@ endif()
 # ==============================================================================
 # Define 'process_binaries' target for collecting final binary to flash
 # ==============================================================================
-
-if(CONFIG_SOC_RISCV_TELINK_TL321X)
-set(SOC "TL321X")
-set(ZB_FW_OFFSET "912")
-elseif(CONFIG_SOC_RISCV_TELINK_B92)
-set(SOC "B92")
-set(ZB_FW_OFFSET "1280")
+if(CONFIG_SOC_RISCV_TELINK_TL323X)
+set(SOC "TL323X")
+set(ZB_FW_OFFSET "1000")
 endif()
-set(ZB_FILE_PATH "${ZEPHYR_BASE}/ZB_FW/${SOC}/concurrent_sampleLight.bin")
 set(BLOCK_SIZE "1024")
+set(SBOOT_FILE_PATH "${ZEPHYR_BASE}/Secure_Demo.bin")
+set(ZB_FILE_PATH "${ZEPHYR_BASE}/ZB_FW/${SOC}/concurrent_sampleLight.bin")
+math(EXPR SKIP_BYTES_DECIMAL "${CONFIG_MCUBOOT_START_OFFSET} / ${BLOCK_SIZE}" OUTPUT_FORMAT DECIMAL)
 
 add_custom_target(
     process_binaries ALL
@@ -201,13 +199,34 @@ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_RISCV_TELINK_B9X OR CONFIG_SOC_RIS
         west build -b ${BASE_BOARD} -d build_mcuboot ${ZEPHYR_BASE}/../bootloader/mcuboot/boot/zephyr
             -- -DOVERLAY_CONFIG=${GLOBAL_BOOT_CONF_OVERLAY_FILE} -DDTC_OVERLAY_FILE="${GLOBAL_BOOT_DTC_OVERLAY_FILE};${FLASH_DTC_OVERLAY_FILE};${USB_BOOT_DTC_OVERLAY_FILE};${MARS_BOOT_DTC_OVERLAY_FILE}"
         COMMAND
-        cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
+        dd if=${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/zephyr.bin of=${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin bs=${BLOCK_SIZE} skip=${SKIP_BYTES_DECIMAL} conv=notrunc
+        COMMAND
+        cp ${PROJECT_BINARY_DIR}/../modules/chip-module/build_mcuboot/zephyr/mcuboot_for_sign.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
     )
 
-    if(EXISTS ${ZB_FILE_PATH})
+    if (EXISTS ${SBOOT_FILE_PATH})
+        add_custom_target(merge_sboot ALL
+            COMMAND
+            dd if=/dev/zero bs=${BLOCK_SIZE} count=${SKIP_BYTES_DECIMAL} | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/bootloader_merged.bin
+            COMMAND
+            dd if=${ZEPHYR_BASE}/Secure_Demo.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin conv=notrunc
+            COMMAND
+            dd if=${PROJECT_BINARY_DIR}/mcuboot.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin bs=${BLOCK_SIZE} seek=${SKIP_BYTES_DECIMAL} conv=notrunc
+            COMMAND
+            cp ${PROJECT_BINARY_DIR}/bootloader_merged.bin ${PROJECT_BINARY_DIR}/mcuboot.bin
+        )
+        add_dependencies(merge_sboot build_mcuboot)
+        message(WARNING "merged secure boot to mcuboot..")
+    else()
+        message(WARNING "File ${SBOOT_FILE_PATH} does not exist. merge_sboot target will not be created.")
+    endif()
+
+    if (EXISTS ${ZB_FILE_PATH})
         add_custom_target(merge_zigbee ALL
             COMMAND
             dd if=/dev/zero bs=${BLOCK_SIZE} count=${ZB_FW_OFFSET} | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/dm_merged.bin
+            COMMAND
+            cp ${PROJECT_BINARY_DIR}/zephyr.bin ${PROJECT_BINARY_DIR}/zephyr.matter.bin # store matter app firmware
             COMMAND
             dd if=${PROJECT_BINARY_DIR}/zephyr.bin of=${PROJECT_BINARY_DIR}/dm_merged.bin conv=notrunc
             COMMAND
@@ -219,13 +238,10 @@ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_RISCV_TELINK_B9X OR CONFIG_SOC_RIS
             COMMAND
             west sign -t imgtool -p ${ZEPHYR_BASE}/../bootloader/mcuboot/scripts/imgtool.py -d ${PROJECT_BINARY_DIR}/.. -- --key ${ZEPHYR_BASE}/../bootloader/mcuboot/root-rsa-2048.pem
         )
-    else()
-        message(WARNING "File ${ZB_FILE_PATH} does not exist. merge_zigbee target will not be created.")
-    endif()
-
-    if(EXISTS ${ZB_FILE_PATH})
         add_dependencies(merge_zigbee ${ZEPHYR_FINAL_EXECUTABLE})
         add_dependencies(west_sign merge_zigbee)
+    else()
+        message(WARNING "File ${ZB_FILE_PATH} does not exist. merge_zigbee target will not be created.")
     endif()
 endif()
 
