@@ -99,7 +99,7 @@ config NET_IPV6_MLD
 
 config NET_IF_MCAST_IPV6_ADDR_COUNT
     default 8 if PM
-    default 15
+    default 47
 
 # Network buffers
 config NET_PKT_RX_COUNT
@@ -340,7 +340,7 @@ config OPENTHREAD_DEFAULT_TX_POWER
 
 config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS
     default 2 if PM
-    default 8
+    default 40
 
 endif # NET_L2_OPENTHREAD
 
@@ -364,7 +364,7 @@ config NET_PKT_TIMESTAMP
 
 config IEEE802154_2015
     bool "support ssed device to add thread"
-    default y if OPENTHREAD_FTD && ZEPHYR_VERSION_3_3
+    default y if OPENTHREAD_FTD
 
 config NET_MAX_CONN
     default 1 if !WIFI
