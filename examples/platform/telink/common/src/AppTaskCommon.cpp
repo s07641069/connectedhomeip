@@ -820,6 +820,26 @@ void AppTaskCommon::TriggerMicroSpeechEventHandler(AppEvent * aEvent)
 }
 #endif
 
+k_timer KOtaQueryImageTimer;
+constexpr int KOtaQueryImageTimeout = 120000; // for init will cost for about 120s
+void KOtaQueryImageTimerTimeoutCallback(k_timer * timer)
+{
+    InitBasicOTARequestor();
+    chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
+    if (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)
+    {
+        // Schedule a query. At the end of this query/update process the Default Provider timer is started
+        chip::DeviceLayer::SystemLayer().ScheduleLambda([requestor] { requestor->TriggerImmediateQuery(); });
+    }
+}
+
+void KOtaQueryImageTimer_proc(void)
+{
+    k_timer_init(&KOtaQueryImageTimer, &KOtaQueryImageTimerTimeoutCallback, nullptr);
+    k_timer_start(&KOtaQueryImageTimer, K_MSEC(KOtaQueryImageTimeout), K_NO_WAIT);
+    LOG_INF("=======KOtaQueryImageTimer start\n");
+}
+
 void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
 {
     switch (event->Type)
@@ -860,6 +880,22 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
         InitBasicOTARequestor();
+        {
+            /* metadata is only 1(debug firmware), 2(develop firmware)
+             * and null(product firmware), other values are illegal.
+             */
+            static uint8_t metadata                 = MATTER_FW_TYPE;
+            chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
+            if ((metadata == FW_TYPE_DEBUG) || (metadata == FW_TYPE_DEVELOP))
+            {
+                requestor->SetMetadataForProvider(chip::ByteSpan(&metadata, 1));
+            }
+            else
+            {
+                // metadata is is null(product firmare) as default.
+            }
+            KOtaQueryImageTimer_proc();
+        }
         if (GetRequestorInstance()->GetCurrentUpdateState() == Clusters::OtaSoftwareUpdateRequestor::OTAUpdateStateEnum::kIdle)
         {
 #endif
