@@ -41,3 +41,9 @@
 
 // Independent Factory Reset Button
 #define INDEPENDENT_FACTORY_RESET_BUTTON     0
+
+#define FW_TYPE_PRODUCT 0
+#define FW_TYPE_DEBUG 1
+#define FW_TYPE_DEVELOP 2
+
+#define MATTER_FW_TYPE FW_TYPE_PRODUCT
