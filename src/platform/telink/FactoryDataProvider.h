@@ -84,6 +84,8 @@ public:
     // ===== Members functions that implement the DeviceAttestationCredentialsProvider
     CHIP_ERROR GetCertificationDeclaration(MutableByteSpan & outBuffer) override;
     CHIP_ERROR GetFirmwareInformation(MutableByteSpan & out_firmware_info_buffer) override;
+    /* Be careful with this - there is a chance to compromise key (debug only) */
+    CHIP_ERROR GetDeviceAttestationCertPrivateKey(MutableByteSpan & outBuffer) override;
     CHIP_ERROR GetDeviceAttestationCert(MutableByteSpan & outBuffer) override;
     CHIP_ERROR GetProductAttestationIntermediateCert(MutableByteSpan & outBuffer) override;
     CHIP_ERROR SignWithDeviceAttestationKey(const ByteSpan & messageToSign, MutableByteSpan & outSignBuffer) override;

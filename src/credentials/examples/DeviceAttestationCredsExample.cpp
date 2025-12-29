@@ -36,10 +36,18 @@ class ExampleDACProvider : public DeviceAttestationCredentialsProvider
 public:
     CHIP_ERROR GetCertificationDeclaration(MutableByteSpan & out_cd_buffer) override;
     CHIP_ERROR GetFirmwareInformation(MutableByteSpan & out_firmware_info_buffer) override;
+    /* Be careful with this - there is a chance to compromise key (debug only) */
+    CHIP_ERROR GetDeviceAttestationCertPrivateKey(MutableByteSpan & out_dac_priv_key_buffer) override;
     CHIP_ERROR GetDeviceAttestationCert(MutableByteSpan & out_dac_buffer) override;
     CHIP_ERROR GetProductAttestationIntermediateCert(MutableByteSpan & out_pai_buffer) override;
     CHIP_ERROR SignWithDeviceAttestationKey(const ByteSpan & message_to_sign, MutableByteSpan & out_signature_buffer) override;
 };
+
+/* Be careful with this - there is a chance to compromise key */
+CHIP_ERROR ExampleDACProvider::GetDeviceAttestationCertPrivateKey(MutableByteSpan & out_dac_priv_key_buffer)
+{
+    return CopySpanToMutableSpan(DevelopmentCerts::kDacPrivateKey, out_dac_priv_key_buffer);
+}
 
 CHIP_ERROR ExampleDACProvider::GetDeviceAttestationCert(MutableByteSpan & out_dac_buffer)
 {

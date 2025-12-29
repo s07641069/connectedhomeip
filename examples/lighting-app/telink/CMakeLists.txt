@@ -61,7 +61,9 @@ target_sources(app PRIVATE
                ${TELINK_COMMON}/zephyr_ext/zephyr_key_matrix.c
                ${TELINK_COMMON}/zephyr_ext/zephyr_key_pool.c
                ${TELINK_COMMON}/zephyr_ext/zephyr_led_pool.c
-               ${TELINK_COMMON}/zephyr_ext/zephyr_ws2812.c)
+               ${TELINK_COMMON}/zephyr_ext/zephyr_ws2812.c
+               ${TELINK_COMMON}/util/src/x509Credentials.cpp
+               ${TELINK_COMMON}/zephyr_ext/mbedtls_x509_ext.c)
 
 if(CONFIG_TFLM_FEATURE)
   target_sources(app PRIVATE

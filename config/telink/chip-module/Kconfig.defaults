@@ -500,6 +500,9 @@ config MBEDTLS_PKCS5_C
 config MBEDTLS_KEY_EXCHANGE_ECDH_ECDSA_ENABLED
     default y
 
+config MBEDTLS_PEM_CERTIFICATE_FORMAT
+    default y
+
 if !ZEPHYR_VERSION_3_3
 config MBEDTLS_ENTROPY_POLL_ZEPHYR
     bool "Provide entropy data to Mbed TLS through entropy driver or random generator"

@@ -147,6 +147,20 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetFirmwareInformation(Mutable
     return CHIP_NO_ERROR;
 }
 
+/* Be careful with this - there is a chance to compromise key */
+template <class FlashFactoryData>
+CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetDeviceAttestationCertPrivateKey(MutableByteSpan & outBuffer)
+{
+    VerifyOrReturnError(outBuffer.size() >= mFactoryData.dac_priv_key.len, CHIP_ERROR_BUFFER_TOO_SMALL);
+    VerifyOrReturnError(mFactoryData.dac_priv_key.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
+
+    GetFactoryData(outBuffer.data(), mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
+
+    outBuffer.reduce_size(mFactoryData.dac_priv_key.len);
+
+    return CHIP_NO_ERROR;
+}
+
 template <class FlashFactoryData>
 CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetDeviceAttestationCert(MutableByteSpan & outBuffer)
 {

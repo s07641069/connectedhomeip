@@ -99,6 +99,7 @@ public:
 protected:
     CHIP_ERROR InitCommonParts(void);
     void PrintFirmwareInfo(void);
+    void PrintX509data(void);
 
     void DispatchEvent(AppEvent * event);
     void GetEvent(AppEvent * aEvent);

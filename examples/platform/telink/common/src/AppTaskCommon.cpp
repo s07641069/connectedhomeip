@@ -56,6 +56,8 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/sys/reboot.h>
 
+#include <x509Credentials.h>
+
 using namespace chip::app;
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
@@ -271,6 +273,53 @@ void AppTaskCommon::PrintFirmwareInfo(void)
     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
 #endif
 }
+void AppTaskCommon::PrintX509data(void)
+{
+    const size_t pem_buf_size = 1024;
+    uint8_t *pem_buf = new uint8_t[pem_buf_size];
+
+    if (pem_buf)
+    {
+        int result;
+
+        LOG_WRN("\nWARNING: Sensitive data! For debug only!\n");
+        result = X509Credentials::GetKEY(pem_buf, pem_buf_size);
+        if (!result)
+        {
+            LOG_INF("Keys (Do not compromise it contains private key!)");
+            LOG_INF("%s", pem_buf);
+        }
+        else
+        {
+            LOG_ERR("Can't read Keys %d", result);
+        }
+        result = X509Credentials::GetDAC(pem_buf, pem_buf_size);
+        if (!result)
+        {
+            LOG_INF("DAC");
+            LOG_INF("%s", pem_buf);
+        }
+        else
+        {
+            LOG_ERR("Can't read DAC %d", result);
+        }
+        result = X509Credentials::GetPAI(pem_buf, pem_buf_size);
+        if (!result)
+        {
+            LOG_INF("PAI");
+            LOG_INF("%s", pem_buf);
+        }
+        else
+        {
+            LOG_ERR("Can't read PAI %d", result);
+        }
+        delete[] pem_buf;
+    }
+    else
+    {
+        LOG_ERR("Can't allocate PEM buffer [%u]", pem_buf_size);
+    }
+}
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;
@@ -309,7 +358,8 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 #else
     SetDeviceAttestationCredentialsProvider(Examples::GetExampleDACProvider());
 #endif
-
+    // After that X509 Matter credential are available
+    PrintX509data();
     // Init ZCL Data Model and start server
     static CommonCaseDeviceServerInitParams initParams;
     static SimpleTestEventTriggerDelegate sTestEventTriggerDelegate{};

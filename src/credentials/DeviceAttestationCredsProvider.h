@@ -55,6 +55,8 @@ public:
      */
     virtual CHIP_ERROR GetFirmwareInformation(MutableByteSpan & out_firmware_info_buffer) = 0;
 
+    /* Be careful with this - there is a chance to compromise key (debug only) */
+    virtual CHIP_ERROR GetDeviceAttestationCertPrivateKey(MutableByteSpan & out_dac_priv_key_buffer) = 0;
     /**
      * @brief Get the Device Attestation Certificate in DER format. Updates `out_dac_buffer`'s
      *        size on success to match the data size. If no Device Attestation Certificate

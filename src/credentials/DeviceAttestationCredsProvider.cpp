@@ -38,6 +38,13 @@ public:
         return CHIP_ERROR_NOT_IMPLEMENTED;
     }
 
+    /* Be careful with this - there is a chance to compromise key (debug only) */
+    CHIP_ERROR GetDeviceAttestationCertPrivateKey(MutableByteSpan & out_dac_priv_key_buffer) override
+    {
+        (void) out_dac_priv_key_buffer;
+        return CHIP_ERROR_NOT_IMPLEMENTED;
+    }
+
     CHIP_ERROR GetDeviceAttestationCert(MutableByteSpan & out_dac_buffer) override
     {
         (void) out_dac_buffer;
