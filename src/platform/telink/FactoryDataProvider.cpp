@@ -62,7 +62,7 @@ CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_
 } // namespace
 
 namespace DeviceLayer {
-
+static constexpr uint32_t kFactoryDataOffset = 6;
 template <class FlashFactoryData>
 CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
 {

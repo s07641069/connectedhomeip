@@ -30,9 +30,11 @@
 namespace chip {
 namespace DeviceLayer {
 
-__attribute__((section(".bss"))) static uint8_t mFactoryDataBuffer[FIXED_PARTITION_SIZE(factory_partition)];
 #if CHIP_DEVICE_SECURE_PROGRAMMING
+__attribute__((section(".bss"))) static uint8_t * mFactoryDataBuffer = nullptr;
 __attribute__((section(".bss"))) static uint8_t mDACDataBuffer[FIXED_PARTITION_SIZE(dac_keypair_partition)];
+#else
+static uint8_t * mFactoryDataBuffer = nullptr;
 #endif
 
 struct InternalFlashFactoryData

@@ -191,7 +191,12 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
 }
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
+#if CONFIG_SOC_RISCV_TELINK_TL323X
+#include "efuse.h"
+#include "ske_basic.h"
+#else
 #include "aes.h"
+#endif
 
 bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
 {
@@ -206,8 +211,13 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
     }
     if (efuse_get_chip_id(chip_id))
     {
+#if CONFIG_SOC_RISCV_TELINK_TL323X
+        aes_decryption_be(chip_id, buffer + 2, dac_key_decrypt);
+        aes_decryption_be(chip_id, buffer + 18, dac_key_decrypt + 16);
+#else
         aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
         aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
+#endif
         factoryData->dac_priv_key.data = dac_key_decrypt;
     }
     else
