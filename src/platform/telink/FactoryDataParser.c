@@ -131,10 +131,16 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
         else if (strncmp("dac_cert", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_cert);
+            // LOG_INF("DAC cert len=%u", currentString.len);
+            // LOG_HEXDUMP_INF(currentString.value,
+            //             currentString.len,
+            //             "DAC CERT");
         }
         else if (strncmp("dac_key", (const char *) currentString.value, currentString.len) == 0)
         {
             res = res && zcbor_bstr_decode(states, (struct zcbor_string *) &factoryData->dac_priv_key);
+            // LOG_INF("DAC priv key decrypted, len=%u", currentString.len);
+            // LOG_HEXDUMP_INF(currentString.value, currentString.len, "DAC PRIV KEY");
         }
 #endif
         else if (strncmp("pai_cert", (const char *) currentString.value, currentString.len) == 0)
@@ -194,6 +200,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
 #if CONFIG_SOC_RISCV_TELINK_TL323X
 #include "efuse.h"
 #include "ske_basic.h"
+#include "ske_portable.h"
 #else
 #include "aes.h"
 #endif
@@ -209,15 +216,18 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
     {
         return false;
     }
-    if (efuse_get_chip_id(chip_id))
+    if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
     {
 #if CONFIG_SOC_RISCV_TELINK_TL323X
+        ske_dig_en();
         aes_decryption_be(chip_id, buffer + 2, dac_key_decrypt);
         aes_decryption_be(chip_id, buffer + 18, dac_key_decrypt + 16);
 #else
         aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
         aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
 #endif
+        // LOG_INF("[LoadDACCertAndKey]DAC priv key decrypted, len=%u", dac_priv_key_len);
+        // LOG_HEXDUMP_INF(dac_key_decrypt, dac_priv_key_len, "DAC PRIV KEY");
         factoryData->dac_priv_key.data = dac_key_decrypt;
     }
     else
@@ -235,6 +245,8 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
         return false;
     }
     factoryData->dac_cert.data = buffer + 102;
+    // LOG_INF("[LoadDACCertAndKey]DAC cert len=%u", dac_cert_len);
+    // LOG_HEXDUMP_INF(factoryData->dac_cert.data, factoryData->dac_cert.len, "DAC CERT");
 
     return true;
 }

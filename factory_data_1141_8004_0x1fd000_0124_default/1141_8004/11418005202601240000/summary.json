@@ -1,0 +1,21 @@
+{
+    "serial_num": "11418005202601240000",
+    "vendor_id": "0x1141",
+    "product_id": "0x8004",
+    "hw_ver": 1,
+    "version": 1,
+    "discriminator": "1986",
+    "spake2_it": 1000,
+    "passcode": "69371923",
+    "spake2_salt": "eWKXt44rHamvvdusv8QI8msuin7uPDT4hubUcqEi4qg=",
+    "spake2_verifier": "UUmygC0E5hqgq8L5p5Ichko6z8UjkkaluUki96eu6BUEhRlmopJw+3W2YHlPUp+03btARCnPpvt+E+t75kgK85S7QbQ0KUxBph97gT86phFRa4md8wPoQ/9DZoX7mcqqRA==",
+    "qrcode": "MT:4UW01KQS02O2BJ0RH10",
+    "manualcode": "15121942345",
+    "cert_pem": "/home/ubuntu/connectedhomeip/credentials/test/attestation/test-PAI-0x1141-cert.pem",
+    "cert_der": "/home/ubuntu/connectedhomeip/factory_data_1141_8004_0x1fd000_0124_default/1141_8004/11418005202601240000/internal/pai_cert.der",
+    "key_pem": "/home/ubuntu/connectedhomeip/credentials/test/attestation/test-PAI-0x1141-key.pem",
+    "dac_cert": "/home/ubuntu/connectedhomeip/factory_data_1141_8004_0x1fd000_0124_default/1141_8004/11418005202601240000/internal/DAC_cert.der",
+    "dac_priv_key": "/home/ubuntu/connectedhomeip/factory_data_1141_8004_0x1fd000_0124_default/1141_8004/11418005202601240000/internal/DAC_private_key.bin",
+    "dac_pub_key": "/home/ubuntu/connectedhomeip/factory_data_1141_8004_0x1fd000_0124_default/1141_8004/11418005202601240000/internal/DAC_public_key.bin",
+    "cert_dclrn": "/home/ubuntu/connectedhomeip/credentials/test/certification-declaration/Chip-Test-CD-0x1141-0x8004.der"
+}

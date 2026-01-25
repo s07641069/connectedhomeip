@@ -27,6 +27,8 @@
 #include <assert.h>
 #include <zephyr/logging/log.h>
 
+LOG_MODULE_DECLARE(app, CONFIG_MATTER_LOG_LEVEL);
+
 namespace chip {
 namespace {
 
@@ -49,6 +51,16 @@ void GetFactoryData(uint8_t * buf, const void * const data, const size_t len)
     assert(ret == 0);
 }
 
+void GetDACData(uint8_t * buf, const void * const data, const size_t len)
+{
+    assert(data != nullptr);
+    uint32_t offset = (uint32_t) ((uint8_t *) data - (uint8_t *) chip::DeviceLayer::mDACDataBuffer);
+
+    const struct device * mFlashDevice = DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+    int ret                            = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition) + offset, buf, len);
+    assert(ret == 0);
+}
+
 CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_t bufSize)
 {
     VerifyOrReturnError(bufSize >= str.len + 1, CHIP_ERROR_BUFFER_TOO_SMALL);
@@ -62,7 +74,9 @@ CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_
 } // namespace
 
 namespace DeviceLayer {
+#if CHIP_DEVICE_SECURE_PROGRAMMING
 static constexpr uint32_t kFactoryDataOffset = 6;
+#endif
 template <class FlashFactoryData>
 CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
 {
@@ -102,6 +116,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
     if (error != CHIP_NO_ERROR)
     {
         ChipLogError(DeviceLayer, "Failed to read factory data partition");
+        free(ptr); // Only free on failure
         return error;
     }
 
@@ -111,26 +126,45 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
     if (error != CHIP_NO_ERROR)
     {
         ChipLogError(DeviceLayer, "Failed to read DAC data partition");
+        free(ptr); // Only free on failure
         return error;
     }
 #endif
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
     if (!ParseFactoryData(factoryData + kFactoryDataOffset, factoryDataSize - kFactoryDataOffset, &mFactoryData))
+#else
+    if (!ParseFactoryData(factoryData, factoryDataSize, &mFactoryData))
+#endif
     {
         ChipLogError(DeviceLayer, "Failed to parse factory data");
+        free(ptr); // Only free on failure
         return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
     }
 
-    // Release the memory of mFactoryDataBuffer after complete parse
-    free(ptr);
+    LOG_INF("[ParseFactoryData - ParseFactoryData] DAC priv key len=%u", mFactoryData.dac_priv_key.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len, "DAC PRIV KEY");
+
+    LOG_INF("[ParseFactoryData - ParseFactoryData] DAC cert len=%u", mFactoryData.dac_cert.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_cert.data, mFactoryData.dac_cert.len, "DAC CERT");
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
     if (!LoadDACCertAndKey(dacData, &mFactoryData))
     {
         ChipLogError(DeviceLayer, "Failed to inject dac data");
+        free(ptr); // Only free on failure
         return CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND;
     }
+
+    LOG_INF("[ParseFactoryData-LoadDACCertAndKey] DAC priv key len=%u", mFactoryData.dac_priv_key.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len, "DAC PRIV KEY");
+
+    LOG_INF("[ParseFactoryData-LoadDACCertAndKey] DAC cert len=%u", mFactoryData.dac_cert.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_cert.data, mFactoryData.dac_cert.len, "DAC CERT");
 #endif
+
+    // Release the memory of mFactoryDataBuffer after complete parse
+    free(ptr);
 
     // Check if factory data version is correct
     if (mFactoryData.version != CONFIG_CHIP_FACTORY_DATA_VERSION)
@@ -175,7 +209,11 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetDeviceAttestationCert(Mutab
     VerifyOrReturnError(outBuffer.size() >= mFactoryData.dac_cert.len, CHIP_ERROR_BUFFER_TOO_SMALL);
     VerifyOrReturnError(mFactoryData.dac_cert.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+    GetDACData(outBuffer.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+#else
     GetFactoryData(outBuffer.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+#endif
 
     outBuffer.reduce_size(mFactoryData.dac_cert.len);
 
@@ -217,13 +255,26 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
         return CHIP_ERROR_NO_MEMORY;
     }
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+    GetDACData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+#else
     GetFactoryData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+#endif
+
+    LOG_INF("[SignWithDeviceAttestationKey] DAC cert len=%u", mFactoryData.dac_cert.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_cert.data, mFactoryData.dac_cert.len, "mFactoryData.dac_cert.data");
+    LOG_HEXDUMP_INF(P_DACCert, mFactoryData.dac_cert.len, "DAC CERT - P_DACCert");
 
     // Extract public key from DAC cert.
     ByteSpan dacCertSpan{ reinterpret_cast<uint8_t *>(P_DACCert), mFactoryData.dac_cert.len };
+    LOG_INF("[SignWithDeviceAttestationKey] DAC cert len=%u", dacCertSpan.size());
+    LOG_HEXDUMP_INF(dacCertSpan.data(), dacCertSpan.size(), "DAC CERT");
     chip::Crypto::P256PublicKey dacPublicKey;
 
     error = chip::Crypto::ExtractPubkeyFromX509Cert(dacCertSpan, dacPublicKey);
+    LOG_INF("[SignWithDeviceAttestationKey] DAC pub key len=%u", dacPublicKey.Length());
+    LOG_HEXDUMP_INF(dacPublicKey.Bytes(), dacPublicKey.Length(), "DAC PUB KEY");
+
     free(P_DACCert);
     if (error != CHIP_NO_ERROR)
     {
@@ -241,7 +292,16 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
         return CHIP_ERROR_NO_MEMORY;
     }
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+    // GetDACData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len); // will get encrypted priv key
+    memcpy(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
+#else
     GetFactoryData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
+#endif
+
+    LOG_INF("[SignWithDeviceAttestationKey] DAC priv key len=%u", mFactoryData.dac_priv_key.len);
+    LOG_HEXDUMP_INF(mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len, "mFactoryData.dac_priv_key.data");
+    LOG_HEXDUMP_INF(P_DACPrivKey, mFactoryData.dac_priv_key.len, "DAC CERT - P_DACPrivKey");
 
     // Load keypair from raw.
     error = LoadKeypairFromRaw(ByteSpan(reinterpret_cast<uint8_t *>(P_DACPrivKey), mFactoryData.dac_priv_key.len),

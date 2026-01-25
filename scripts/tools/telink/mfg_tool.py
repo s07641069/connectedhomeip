@@ -467,7 +467,7 @@ def write_device_unique_data(args, out_dirs, pai_cert):
                 nvs_memory_append('dac_cert', dac_cert_storage)
                 nvs_memory_append('dac_key', dac_key_storage)
             else:
-                logger.info("Secure programming verification enabled; DAC and its keys are not stored directly into factory data")
+                log.info("Secure programming verification enabled; DAC and its keys are not stored directly into factory data")
 
             nvs_memory_append('pai_cert', read_der_file(pai_cert['cert_der']))
 
@@ -517,7 +517,7 @@ def save_dac_cert_and_keys(dac_cert, dac_key, chip_id, file_path):
     print(f"DAC certificate and key have been saved to {file_path}")
 
 def generate_partition(args, dacs_cert, out_dirs):
-    logger.info('Generating partition image: offset: 0x{:X} size: 0x{:X}'.format(args.offset, args.size))
+    log.info('Generating partition image: offset: 0x{:X} size: 0x{:X}'.format(args.offset, args.size))
     cbor_data = cbor.dumps(NVS_MEMORY)
     # Create hex file
     if len(cbor_data) > args.size:
@@ -536,13 +536,13 @@ def generate_partition(args, dacs_cert, out_dirs):
     if args.secure_programming_verification:
         dac_cert_key_file_path = os.path.join(output_dir, 'dac_cert_key.bin')
         dac_cert_storage = read_der_file(dacs_cert[0])
-        logger.info("dac_cert_storaget (Hex): {}".format(dac_cert_storage.hex()))
+        log.info("dac_cert_storaget (Hex): {}".format(dac_cert_storage.hex()))
         dac_key_storage = read_key_bin_file(dacs_cert[1])
-        logger.info("dac_key_storage (Hex): {}".format(dac_key_storage.hex()))
+        log.info("dac_key_storage (Hex): {}".format(dac_key_storage.hex()))
         chip_id_bytes = bytes.fromhex(args.chip_id)
-        logger.info("chip_id_bytes (Hex): {}".format(chip_id_bytes.hex()))
+        log.info("chip_id_bytes (Hex): {}".format(chip_id_bytes.hex()))
         save_dac_cert_and_keys(dac_cert_storage, dac_key_storage, chip_id_bytes, dac_cert_key_file_path)
-        logger.info(f"DAC certificate and key have been saved to {dac_cert_key_file_path}")
+        log.info(f"DAC certificate and key have been saved to {dac_cert_key_file_path}")
 
     with open(os.sep.join([out_dirs['output'], 'pin_disc.csv']), 'r') as csvf:
         pin_disc_dict = csv.DictReader(csvf)
@@ -553,9 +553,9 @@ def generate_partition(args, dacs_cert, out_dirs):
         pid = args.product_id
         vid = args.vendor_id
 
-        logger.info("Discriminator = {}".format(discriminator))
-        logger.info("PID = 0x{:X}".format(pid))
-        logger.info("VID = 0x{:X}".format(vid))
+        log.info("Discriminator = {}".format(discriminator))
+        log.info("PID = 0x{:X}".format(pid))
+        log.info("VID = 0x{:X}".format(vid))
 
         # Convert Discriminator, PID, and VID to bytes
         discriminator_bytes = discriminator.to_bytes(2, byteorder='little')
@@ -574,7 +574,7 @@ def generate_partition(args, dacs_cert, out_dirs):
         with open(ext_bin_file_path, 'wb') as ext_bin_file:
             ext_bin_file.write(extended_data)
 
-        logger.info(f"Extended binary data written to {ext_bin_file_path}")
+        log.info(f"Extended binary data written to {ext_bin_file_path}")
 
 
 def generate_json_summary(args, out_dirs, pai_certs, dacs_cert, serial_num: str):
@@ -638,7 +638,7 @@ def add_additional_kv(args, serial_num):
 
     # Add the serial-num
     if args.disable_serial_num_storage:
-        logger.info("Secure programming verification enabled; skipping serial-num")       
+        log.info("Secure programming verification enabled; skipping serial-num")       
     else:
         nvs_memory_append('sn', serial_num)
 
@@ -753,11 +753,11 @@ def get_and_validate_args():
 
     if args.secure_programming_verification:
         if not args.chip_id:
-            logger.error("--chip-id is required when --secure-programming-verification is enabled.")
+            log.error("--chip-id is required when --secure-programming-verification is enabled.")
             sys.exit(1)
 
         if args.count > 1:
-            logger.error("--count cannot be greater than 1 when --secure-programming-verification is enabled.")
+            log.error("--count cannot be greater than 1 when --secure-programming-verification is enabled.")
             sys.exit(1)
 
     # Additional validation on chip-id format
@@ -767,7 +767,7 @@ def get_and_validate_args():
             if len(chip_id_bytes) != 16:
                 raise ValueError()
         except ValueError:
-            logger.error("--chip-id must be a valid 16-byte hex string (32 hex characters).")
+            log.error("--chip-id must be a valid 16-byte hex string (32 hex characters).")
             sys.exit(1)
 
     # Validate in-tree parameter
