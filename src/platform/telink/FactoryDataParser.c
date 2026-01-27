@@ -201,14 +201,21 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
 #include "efuse.h"
 #include "ske_basic.h"
 #include "ske_portable.h"
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
 #else
 #include "aes.h"
 #endif
 
-bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
+bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
 {
     size_t dac_priv_key_len;
     uint8_t chip_id[16] = { 0 };
+    /* get the dac key pair info form the flash directly*/
+    uint8_t buffer[34] = {0};
+    const struct device * mFlashDevice = DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
+    int ret = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition), buffer, sizeof(buffer));
+
     dac_priv_key_len    = buffer[0];
     dac_priv_key_len |= (uint16_t) buffer[1] << 8;
     factoryData->dac_priv_key.len = dac_priv_key_len;
@@ -216,7 +223,14 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
     {
         return false;
     }
+    #if 1
     if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+    #else
+    uint8_t chip_id_demo[16] = {  0xac,0x16,0x45,0xfb,    0x3f,0x60,0x62,0x7a,
+                                    0x00,0x00,0x00,0x00,    0x00,0x00,0x00,0x00};
+    memcpy(chip_id , chip_id_demo, sizeof(chip_id));
+    if(1)
+    #endif
     {
 #if CONFIG_SOC_RISCV_TELINK_TL323X
         ske_dig_en();
@@ -236,18 +250,25 @@ bool LoadDACCertAndKey(uint8_t * buffer, struct FactoryData * factoryData)
         return false;
     }
 
-    size_t dac_cert_len;
-    dac_cert_len = buffer[100];
-    dac_cert_len |= (uint16_t) buffer[101] << 8;
+    size_t dac_cert_len = 0;
+    flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition)+100, buffer, 2);
+    dac_cert_len = buffer[0];
+    dac_cert_len |= (uint16_t) buffer[1] << 8;
     factoryData->dac_cert.len = dac_cert_len;
     if (!factoryData->dac_cert.len)
     {
         return false;
     }
-    factoryData->dac_cert.data = buffer + 102;
+    factoryData->dac_cert.data =(uint8_t *) (0x20000000 + FIXED_PARTITION_OFFSET(dac_keypair_partition) + 102);
     // LOG_INF("[LoadDACCertAndKey]DAC cert len=%u", dac_cert_len);
     // LOG_HEXDUMP_INF(factoryData->dac_cert.data, factoryData->dac_cert.len, "DAC CERT");
 
+    /*just need to store verify zigbee code */
+#if 0
+    flash_write(mFlashDevice, FIXED_PARTITION_OFFSET(user_rfu_partition), factoryData, sizeof(struct FactoryData));
+    uint32_t flash_adr = (uint32_t )(base_buffer);
+    flash_write(mFlashDevice, FIXED_PARTITION_OFFSET(user_rfu_partition)+0x100, (&flash_adr), 4);
+#endif
     return true;
 }
 #endif

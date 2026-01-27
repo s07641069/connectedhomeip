@@ -51,16 +51,6 @@ void GetFactoryData(uint8_t * buf, const void * const data, const size_t len)
     assert(ret == 0);
 }
 
-void GetDACData(uint8_t * buf, const void * const data, const size_t len)
-{
-    assert(data != nullptr);
-    uint32_t offset = (uint32_t) ((uint8_t *) data - (uint8_t *) chip::DeviceLayer::mDACDataBuffer);
-
-    const struct device * mFlashDevice = DEVICE_DT_GET(DT_CHOSEN(zephyr_flash_controller));
-    int ret                            = flash_read(mFlashDevice, FIXED_PARTITION_OFFSET(dac_keypair_partition) + offset, buf, len);
-    assert(ret == 0);
-}
-
 CHIP_ERROR GetFactoryDataString(const FactoryDataString & str, char * buf, size_t bufSize)
 {
     VerifyOrReturnError(bufSize >= str.len + 1, CHIP_ERROR_BUFFER_TOO_SMALL);
@@ -120,16 +110,6 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
         return error;
     }
 
-#if CHIP_DEVICE_SECURE_PROGRAMMING
-    error = mFlashFactoryData.GetDACDataPartition(dacData, dacDataSize);
-
-    if (error != CHIP_NO_ERROR)
-    {
-        ChipLogError(DeviceLayer, "Failed to read DAC data partition");
-        free(ptr); // Only free on failure
-        return error;
-    }
-#endif
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
     if (!ParseFactoryData(factoryData + kFactoryDataOffset, factoryDataSize - kFactoryDataOffset, &mFactoryData))
@@ -149,7 +129,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::Init()
     LOG_HEXDUMP_INF(mFactoryData.dac_cert.data, mFactoryData.dac_cert.len, "DAC CERT");
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
-    if (!LoadDACCertAndKey(dacData, &mFactoryData))
+    if (!LoadDACCertAndKey(mFactoryDataBuffer , &mFactoryData))
     {
         ChipLogError(DeviceLayer, "Failed to inject dac data");
         free(ptr); // Only free on failure
@@ -210,7 +190,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetDeviceAttestationCert(Mutab
     VerifyOrReturnError(mFactoryData.dac_cert.data, CHIP_ERROR_PERSISTED_STORAGE_VALUE_NOT_FOUND);
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
-    GetDACData(outBuffer.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+    memcpy(outBuffer.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 #else
     GetFactoryData(outBuffer.data(), mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 #endif
@@ -256,7 +236,7 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
     }
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
-    GetDACData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
+    memcpy(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 #else
     GetFactoryData(P_DACCert, mFactoryData.dac_cert.data, mFactoryData.dac_cert.len);
 #endif
@@ -293,7 +273,6 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::SignWithDeviceAttestationKey(c
     }
 
 #if CHIP_DEVICE_SECURE_PROGRAMMING
-    // GetDACData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len); // will get encrypted priv key
     memcpy(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
 #else
     GetFactoryData(P_DACPrivKey, mFactoryData.dac_priv_key.data, mFactoryData.dac_priv_key.len);
