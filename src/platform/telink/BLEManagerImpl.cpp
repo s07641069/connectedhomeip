@@ -965,10 +965,21 @@ ssize_t BLEManagerImpl::HandleChipIDRead(struct bt_conn * conId, const struct bt
 {
     ChipLogDetail(DeviceLayer, "Read request received for CHIPoBLE Chip ID (ConnId 0x%02x)", bt_conn_index(conId));
     // Example chip_id data storage (replace with actual chip_id value)
-    // uint8_t chip_id_value[] = { 0x42, 0xe3, 0x03, 0xb4, 0xcf, 0x3c, 0xe6, 0x32, 0x36, 0x37, 0x36, 0x42, 0x50, 0x55, 0x76, 0xce };
-    uint8_t chip_id_value[16] = { 0 };
-    efuse_get_chip_id(chip_id_value);
-    return bt_gatt_attr_read(conId, attr, buf, len, offset, chip_id_value, sizeof(chip_id_value));
+    // uint8_t chip_id[] = { 0x42, 0xe3, 0x03, 0xb4, 0xcf, 0x3c, 0xe6, 0x32, 0x36, 0x37, 0x36, 0x42, 0x50, 0x55, 0x76, 0xce };
+    uint8_t chip_id[16] = { 0 };
+    // efuse_get_chip_id(chip_id);
+    uint8_t ieee_addr[8] = {0};
+
+    if (!efuse_get_ieee_addr(ieee_addr)) {
+        LOG_ERR("Failed to get chip ID.");
+        return false;
+    }
+    LOG_HEXDUMP_INF(ieee_addr, 8, "IEEE address");
+
+    memcpy(chip_id, ieee_addr, 8);
+    LOG_HEXDUMP_INF(chip_id, 16, "chip_id with IEEE address and zero padding");
+
+    return bt_gatt_attr_read(conId, attr, buf, len, offset, chip_id, sizeof(chip_id));
 }
 #endif
 

@@ -210,6 +210,7 @@ bool ParseFactoryData(uint8_t * buffer, uint16_t bufferSize, struct FactoryData 
 bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
 {
     size_t dac_priv_key_len;
+    uint8_t ieee_addr[8] = {0};
     uint8_t chip_id[16] = { 0 };
     /* get the dac key pair info form the flash directly*/
     uint8_t buffer[34] = {0};
@@ -224,7 +225,8 @@ bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
         return false;
     }
     #if 1
-    if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+    // if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+    if (efuse_get_ieee_addr(ieee_addr) == DRV_API_SUCCESS)
     #else
     uint8_t chip_id_demo[16] = {  0xac,0x16,0x45,0xfb,    0x3f,0x60,0x62,0x7a,
                                     0x00,0x00,0x00,0x00,    0x00,0x00,0x00,0x00};
@@ -232,6 +234,11 @@ bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
     if(1)
     #endif
     {
+        LOG_HEXDUMP_INF(ieee_addr, 8, "IEEE address");
+
+        memcpy(chip_id, ieee_addr, 8);
+        LOG_HEXDUMP_INF(chip_id, 16, "chip_id with IEEE address and zero padding");
+
 #if CONFIG_SOC_RISCV_TELINK_TL323X
         ske_dig_en();
         aes_decryption_be(chip_id, buffer + 2, dac_key_decrypt);
@@ -240,13 +247,15 @@ bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
         aes_decrypt(chip_id, buffer + 2, dac_key_decrypt);
         aes_decrypt(chip_id, buffer + 18, dac_key_decrypt + 16);
 #endif
-        // LOG_INF("[LoadDACCertAndKey]DAC priv key decrypted, len=%u", dac_priv_key_len);
-        // LOG_HEXDUMP_INF(dac_key_decrypt, dac_priv_key_len, "DAC PRIV KEY");
+
+        LOG_INF("[LoadDACCertAndKey]DAC priv key decrypted, len=%u", dac_priv_key_len);
+        LOG_HEXDUMP_INF(buffer + 2, dac_priv_key_len, "[LoadDACCertAndKey]Encrypted DAC PRIV KEY");
+        LOG_HEXDUMP_INF(dac_key_decrypt, dac_priv_key_len, "[LoadDACCertAndKey]DAC PRIV KEY");
         factoryData->dac_priv_key.data = dac_key_decrypt;
     }
     else
     {
-        LOG_ERR("Private key decryption failed.");
+        LOG_ERR("Failed to get chip ID.");
         return false;
     }
 
