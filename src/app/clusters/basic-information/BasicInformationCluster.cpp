@@ -163,8 +163,11 @@ inline CHIP_ERROR ReadManufacturingDate(DeviceInstanceInfoProvider * deviceInfoP
     uint16_t manufacturingYear;
     uint8_t manufacturingMonth;
     uint8_t manufacturingDayOfMonth;
+    #if CONFIG_SECURE_PROGRAMMING
     CHIP_ERROR status = deviceInfoProvider->GetManufacturingDateString(manufacturingDateString, sizeof(manufacturingDateString));
-
+    #else
+    CHIP_ERROR status = deviceInfoProvider->GetManufacturingDate(manufacturingYear, manufacturingMonth, manufacturingDayOfMonth);
+    #endif
     // TODO: Remove defaulting once proper runtime defaulting of unimplemented factory data is done
     if (status == CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND || status == CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE)
     {
