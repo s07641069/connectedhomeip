@@ -236,15 +236,8 @@ bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
     {
         return false;
     }
-    #if 1
-    // if (efuse_get_chip_id(chip_id) == DRV_API_SUCCESS)
+
     if (efuse_get_ieee_addr(ieee_addr) == DRV_API_SUCCESS)
-    #else
-    uint8_t chip_id_demo[16] = {  0xac,0x16,0x45,0xfb,    0x3f,0x60,0x62,0x7a,
-                                    0x00,0x00,0x00,0x00,    0x00,0x00,0x00,0x00};
-    memcpy(chip_id , chip_id_demo, sizeof(chip_id));
-    if(1)
-    #endif
     {
         LOG_HEXDUMP_INF(ieee_addr, 8, "IEEE address");
 
@@ -284,12 +277,6 @@ bool LoadDACCertAndKey(uint8_t * base_buffer , struct FactoryData * factoryData)
     // LOG_INF("[LoadDACCertAndKey]DAC cert len=%u", dac_cert_len);
     // LOG_HEXDUMP_INF(factoryData->dac_cert.data, factoryData->dac_cert.len, "DAC CERT");
 
-    /*just need to store verify zigbee code */
-#if 0
-    flash_write(mFlashDevice, FIXED_PARTITION_OFFSET(user_rfu_partition), factoryData, sizeof(struct FactoryData));
-    uint32_t flash_adr = (uint32_t )(base_buffer);
-    flash_write(mFlashDevice, FIXED_PARTITION_OFFSET(user_rfu_partition)+0x100, (&flash_adr), 4);
-#endif
     return true;
 }
 #endif
