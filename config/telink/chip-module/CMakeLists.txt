@@ -171,7 +171,10 @@ endif()
 # ==============================================================================
 if(CONFIG_SOC_RISCV_TELINK_TL323X)
 set(SOC "TL323X")
-set(ZB_FW_OFFSET "1000")
+set(ZB_FW_OFFSET "1152")
+else()
+set(SOC "TL9268M")
+set(ZB_FW_OFFSET "1940")
 endif()
 set(BLOCK_SIZE "1024")
 set(SBOOT_FILE_PATH "${ZEPHYR_BASE}/Secure_Demo.bin")
@@ -210,7 +213,7 @@ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_RISCV_TELINK_B9X OR CONFIG_SOC_RIS
             COMMAND
             dd if=/dev/zero bs=${BLOCK_SIZE} count=${SKIP_BYTES_DECIMAL} | tr '\\000' '\\377' > ${PROJECT_BINARY_DIR}/bootloader_merged.bin
             COMMAND
-            dd if=${ZEPHYR_BASE}/Secure_Demo.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin conv=notrunc
+            dd if=${SBOOT_FILE_PATH} of=${PROJECT_BINARY_DIR}/bootloader_merged.bin conv=notrunc
             COMMAND
             dd if=${PROJECT_BINARY_DIR}/mcuboot.bin of=${PROJECT_BINARY_DIR}/bootloader_merged.bin bs=${BLOCK_SIZE} seek=${SKIP_BYTES_DECIMAL} conv=notrunc
             COMMAND
