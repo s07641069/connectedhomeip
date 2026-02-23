@@ -57,7 +57,6 @@ CHIP_ERROR ThreadStackManagerImpl::StartNonConcurrentThreadManagement()
     ChipLogProgress(DeviceLayer, "Switch to Thread");
 
     TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(false);
-    ThreadStackMgrImpl().SetRadioBlocked(false);
     TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(true);
 
 #if !CHIP_DEVICE_CONFIG_SUPPORTS_CONCURRENT_CONNECTION

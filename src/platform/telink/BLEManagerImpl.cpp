@@ -335,7 +335,6 @@ CHIP_ERROR BLEManagerImpl::StartAdvertisingProcess(void)
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
         // Deinit Thread
         TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(false);
-        ThreadStackMgrImpl().SetRadioBlocked(true);
 #endif
 
         if (!BleLayer::IsInitialized())

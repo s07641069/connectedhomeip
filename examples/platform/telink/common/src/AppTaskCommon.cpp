@@ -681,8 +681,7 @@ void AppTaskCommon::StartThreadHandler(AppEvent * aEvent)
     LOG_INF("StartThreadHandler");
     if (!sIsNetworkProvisioned)
     {
-        ThreadStackMgrImpl().SetRadioBlocked(false);
-        ThreadStackMgrImpl().SetThreadEnabled(true);
+        TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(true);
         StartDefaultThreadNetwork();
     }
     else
