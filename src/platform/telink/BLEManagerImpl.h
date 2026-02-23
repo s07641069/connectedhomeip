@@ -26,7 +26,6 @@
 
 #if CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE
 
-#include <platform/NetworkCommissioning.h>
 #include <platform/Zephyr/BLEAdvertisingArbiter.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -38,8 +37,6 @@ namespace DeviceLayer {
 namespace Internal {
 
 using namespace chip::Ble;
-
-class InternalScanCallback;
 
 /**
  * Concrete implementation of the BLEManager singleton object for the Zephyr platforms.
@@ -122,8 +119,6 @@ private:
     CHIP_ERROR HandleTXCharComplete(const ChipDeviceEvent * event);
     CHIP_ERROR HandleBleConnectionClosed(const ChipDeviceEvent * event);
 
-    InternalScanCallback * mInternalScanCallback;
-
 #if CHIP_ENABLE_ADDITIONAL_DATA_ADVERTISING
     CHIP_ERROR PrepareC3CharData(void);
 #endif
@@ -159,22 +154,6 @@ public:
 
     bool NeedToResetFailSafeTimer(void);
     void ClearResetFailSafeTimerFlag(void);
-
-    CHIP_ERROR StartAdvertisingProcess(void);
-};
-
-class InternalScanCallback : public DeviceLayer::NetworkCommissioning::ThreadDriver::ScanCallback
-{
-public:
-    explicit InternalScanCallback(BLEManagerImpl * aBLEManagerImpl) { mBLEManagerImpl = aBLEManagerImpl; }
-    void OnFinished(NetworkCommissioning::Status err, CharSpan debugText,
-                    NetworkCommissioning::ThreadScanResponseIterator * networks)
-    {
-        TEMPORARY_RETURN_IGNORED mBLEManagerImpl->StartAdvertisingProcess();
-    };
-
-private:
-    BLEManagerImpl * mBLEManagerImpl;
 };
 
 /**
