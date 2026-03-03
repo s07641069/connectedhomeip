@@ -17,7 +17,7 @@
  */
 
 #pragma once
-
+#include <analog.h>
 #include "AppConfig.h"
 #include "AppEventCommon.h"
 
