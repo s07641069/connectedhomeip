@@ -256,4 +256,18 @@ if (CONFIG_CHIP_FACTORY_DATA_BUILD)
     telink_generate_factory_data()
 endif()
 
+# ==============================================================================
+# generate token.bin based on custom json data
+# The basic working directory in 'examples/lighting-app/telink/...'
+# ==============================================================================
+
+add_custom_target(gen_token_bin ALL
+    COMMAND
+    cd ${CHIP_ROOT}/examples/lighting-app/telink/ && python3 gen_token.py
+
+    COMMAND
+    mv ${CHIP_ROOT}/examples/lighting-app/telink/token.bin ${PROJECT_BINARY_DIR}/token.bin
+)
+add_dependencies(gen_token_bin ${ZEPHYR_FINAL_EXECUTABLE})
+
 endif() # CONFIG_CHIP
