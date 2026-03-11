@@ -283,3 +283,7 @@ endif
 config TFLM_FEATURE
 	bool "Enable the TFLM micro speech feature"
 	default n
+
+config DEFERRED_ATTR_STORAGE
+	bool "Defer the storage time of attributes"
+	default y
