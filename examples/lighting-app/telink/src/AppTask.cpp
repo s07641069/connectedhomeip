@@ -259,7 +259,7 @@ void AppTask::PowerOnFactoryReset(void)
 CHIP_ERROR AppTask::Init(void)
 {
     SetExampleButtonCallbacks(LightingActionEventHandler);
-    TEMPORARY_RETURN_IGNORED InitCommonParts();
+    ReturnErrorOnFailure(InitCommonParts());
 
     /*user mode means led control by the customer*/
 #if APP_LIGHT_USER_MODE_EN

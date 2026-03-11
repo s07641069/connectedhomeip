@@ -21,6 +21,9 @@
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 
+using namespace chip;
+using namespace ::chip::app::Clusters;
+
 namespace {
 k_timer sTemperatureMeasurementUpdateTimer;
 constexpr uint16_t kTemperatureMeasurementUpdateTimerPeriodMs = 5000; // 5s timer period
@@ -32,7 +35,7 @@ CHIP_ERROR AppTask::Init(void)
 {
     CHIP_ERROR err;
 
-    InitCommonParts();
+    ReturnErrorOnFailure(InitCommonParts());
 
     err = SensorMgr().Init();
     if (err != CHIP_NO_ERROR)
