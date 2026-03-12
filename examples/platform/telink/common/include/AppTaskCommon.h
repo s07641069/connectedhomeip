@@ -111,6 +111,7 @@ protected:
     virtual void LinkPwms(PwmManager & pwmManager);
     void InitButtons(void);
     virtual void LinkButtons(ButtonManager & buttonManager);
+    static void IndependentFactoryReset(void);
     static void DnssTimerTimeoutCallback(k_timer * timer);
     static void FactoryResetTimerTimeoutCallback(k_timer * timer);
     static void FactoryResetTimerEventHandler(AppEvent * aEvent);

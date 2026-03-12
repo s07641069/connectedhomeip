@@ -23,6 +23,8 @@
 #define APP_SET_DEVICE_INFO_PROVIDER 1
 #define APP_SET_NETWORK_COMM_ENDPOINT_SEC 0
 
+// Independent Factory Reset Button
+#define INDEPENDENT_FACTORY_RESET_BUTTON     0
 
 #define FW_TYPE_PRODUCT 0
 #define FW_TYPE_DEBUG 1

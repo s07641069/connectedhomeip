@@ -342,11 +342,33 @@ void AppTaskCommon::PrintFirmwareInfo(void)
     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
 #endif
 }
+
+
+#if INDEPENDENT_FACTORY_RESET_BUTTON
+void AppTaskCommon::IndependentFactoryReset(void)
+{
+    // Get Button Instance
+    ButtonManager & buttonManager = ButtonManager::getInstance();
+    // Button binding to factory_reset and add callback
+    buttonManager.addCallback(FactoryResetButtonEventHandler, 0, true);
+
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE  // Independent Button Mode
+    buttonManager.linkBackend(ButtonPool::getInstance());
+#else
+    buttonManager.linkBackend(ButtonMatrix::getInstance());
+#endif // CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+}
+#endif
+
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;
 
     PrintFirmwareInfo();
+
+#if INDEPENDENT_FACTORY_RESET_BUTTON
+    IndependentFactoryReset();  // Open the factory_reset button separately.
+#endif
 
     InitLeds();
     UpdateStatusLED();
