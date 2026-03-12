@@ -17,6 +17,7 @@
  */
 
 #include "AppTask.h"
+#include "AliroDelegate.h"
 #include "ButtonManager.h"
 #include "LEDManager.h"
 #include <LockManager.h>
@@ -35,6 +36,7 @@ using namespace ::chip::DeviceLayer::Internal;
 using namespace TelinkDoorLock::LockInitParams;
 
 AppTask AppTask::sAppTask;
+static AliroDelegate sAliroDelegate;
 
 CHIP_ERROR AppTask::Init(void)
 {
@@ -119,6 +121,9 @@ CHIP_ERROR AppTask::Init(void)
 
     // Disable auto-relock time feature.
     DoorLockServer::Instance().SetAutoRelockTime(kExampleEndpointId, 0);
+
+    // Register a Door Lock delegate to handle Aliro provisioning attributes/commands.
+    DoorLockServer::Instance().SetDelegate(kExampleEndpointId, &sAliroDelegate);
 
     return CHIP_NO_ERROR;
 }

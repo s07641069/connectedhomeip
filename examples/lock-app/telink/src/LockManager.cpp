@@ -33,6 +33,42 @@ using namespace ::chip::DeviceLayer::Internal;
 using namespace TelinkDoorLock::LockInitParams;
 
 #if LOCK_MANAGER_CONFIG_USE_NVM_CREDENTIAL_STORAGE
+namespace {
+
+constexpr size_t kAliroCredentialMaxSize = 65;
+
+struct AliroCredentialStorage
+{
+    DlCredentialStatus status = DlCredentialStatus::kAvailable;
+    chip::FabricIndex createdBy = 0;
+    chip::FabricIndex lastModifiedBy = 0;
+    size_t dataSize = 0;
+    uint8_t data[kAliroCredentialMaxSize] = { 0 };
+};
+
+AliroCredentialStorage sAliroIssuerKeys[APP_MAX_CREDENTIAL];
+AliroCredentialStorage sAliroEvictableEndpointKeys[APP_MAX_CREDENTIAL];
+AliroCredentialStorage sAliroNonEvictableEndpointKeys[APP_MAX_CREDENTIAL];
+
+AliroCredentialStorage * GetAliroStorage(CredentialTypeEnum type)
+{
+    switch (type)
+    {
+    case CredentialTypeEnum::kAliroCredentialIssuerKey:
+        return sAliroIssuerKeys;
+    case CredentialTypeEnum::kAliroEvictableEndpointKey:
+        return sAliroEvictableEndpointKeys;
+    case CredentialTypeEnum::kAliroNonEvictableEndpointKey:
+        return sAliroNonEvictableEndpointKeys;
+    default:
+        return nullptr;
+    }
+}
+
+} // namespace
+#endif
+
+#if LOCK_MANAGER_CONFIG_USE_NVM_CREDENTIAL_STORAGE
 __attribute__((section(".data"))) EmberAfPluginDoorLockUserInfo mCurrentLockUsers;
 
 __attribute__((section(".data"))) char mCurrentUserNames[DOOR_LOCK_MAX_USER_NAME_SIZE];
@@ -414,7 +450,15 @@ bool LockManager::IsValidCredentialIndex(uint16_t credentialIndex, CredentialTyp
 
 bool LockManager::IsValidCredentialType(CredentialTypeEnum type)
 {
-    return (to_underlying(type) < kNumCredentialTypes);
+    switch (type)
+    {
+    case CredentialTypeEnum::kAliroCredentialIssuerKey:
+    case CredentialTypeEnum::kAliroEvictableEndpointKey:
+    case CredentialTypeEnum::kAliroNonEvictableEndpointKey:
+        return true;
+    default:
+        return (to_underlying(type) < kNumCredentialTypes);
+    }
 }
 
 bool LockManager::IsValidWeekdayScheduleIndex(uint8_t scheduleIndex)
@@ -628,6 +672,35 @@ bool LockManager::GetCredential(chip::EndpointId endpointId, uint16_t credential
                     to_underlying(credentialType), credentialIndex);
 
 #if LOCK_MANAGER_CONFIG_USE_NVM_CREDENTIAL_STORAGE
+    if (GetAliroStorage(credentialType) != nullptr)
+    {
+        auto * storage = GetAliroStorage(credentialType);
+        auto & slot    = storage[credentialIndex];
+
+        credential.status           = slot.status;
+        credential.credentialType   = credentialType;
+        credential.createdBy        = slot.createdBy;
+        credential.lastModifiedBy   = slot.lastModifiedBy;
+        credential.creationSource   = DlAssetSource::kMatterIM;
+        credential.modificationSource = DlAssetSource::kMatterIM;
+
+        credential.credentialData = chip::ByteSpan{ slot.data, slot.dataSize };
+
+        ChipLogProgress(Zcl, "CredentialStatus: %d, CredentialIndex: %d ", (int) credential.status, credentialIndex);
+
+        if (DlCredentialStatus::kAvailable == credential.status)
+        {
+            ChipLogProgress(Zcl, "Found unoccupied credential ");
+        }
+        else
+        {
+            ChipLogProgress(Zcl, "Found occupied credential [type=%u,dataSize=%u]", to_underlying(credentialType),
+                            static_cast<unsigned int>(slot.dataSize));
+        }
+
+        return true;
+    }
+
     size_t outLen;
     EmberAfPluginDoorLockCredentialInfo lockCredentials;
     uint8_t lockCredentialsData[kMaxCredentialSize] = { 0 };
@@ -743,6 +816,30 @@ bool LockManager::SetCredential(chip::EndpointId endpointId, uint16_t credential
                     to_underlying(credentialStatus), to_underlying(credentialType), credentialData.size(), creator, modifier);
 
 #if LOCK_MANAGER_CONFIG_USE_NVM_CREDENTIAL_STORAGE
+    if (GetAliroStorage(credentialType) != nullptr)
+    {
+        auto * storage = GetAliroStorage(credentialType);
+        auto & slot    = storage[credentialIndex];
+
+        if (credentialStatus == DlCredentialStatus::kAvailable)
+        {
+            slot.status    = DlCredentialStatus::kAvailable;
+            slot.dataSize  = 0;
+            slot.createdBy = creator;
+            slot.lastModifiedBy = modifier;
+            return true;
+        }
+
+        VerifyOrReturnValue(credentialData.size() <= kAliroCredentialMaxSize, false);
+
+        memcpy(slot.data, credentialData.data(), credentialData.size());
+        slot.dataSize        = credentialData.size();
+        slot.status          = credentialStatus;
+        slot.createdBy       = creator;
+        slot.lastModifiedBy  = modifier;
+        return true;
+    }
+
     size_t outLen;
     EmberAfPluginDoorLockCredentialInfo lockCredentials;
     uint8_t lockCredentialsData[kMaxCredentialSize] = { 0 };
