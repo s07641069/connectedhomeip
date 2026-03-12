@@ -115,31 +115,33 @@ static void FactoryResetOnBoot(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
-#define MATTER_NVS_DEMO_EN  0
-#if  MATTER_NVS_DEMO_EN
+#define MATTER_NVS_DEMO_EN 0
+#if MATTER_NVS_DEMO_EN
 void matter_nvs_demo(void)
 {
-    static constexpr char kFactoryResetOnBootStoreKey[]       = "TelinkFactoryResetOnBootCnt";
-    uint32_t test_flag =0x55;
-    
-    if (chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Put(kFactoryResetOnBootStoreKey, &test_flag,
-                                                                        sizeof(test_flag)) != CHIP_NO_ERROR)
+    static constexpr char kFactoryResetOnBootStoreKey[] = "TelinkFactoryResetOnBootCnt";
+    uint32_t test_flag                                  = 0x55;
+
+    if (chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Put(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag)) !=
+        CHIP_NO_ERROR)
     {
         printk("FactoryResetOnBootCnt write fail\n");
     }
-                                                                       
-    test_flag =0xaa;
-    CHIP_ERROR FactoryResetOnBootErr = chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(
-        kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
-    if(FactoryResetOnBootErr != CHIP_NO_ERROR ){
+
+    test_flag = 0xaa;
+    CHIP_ERROR FactoryResetOnBootErr =
+        chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
+    if (FactoryResetOnBootErr != CHIP_NO_ERROR)
+    {
         printk("FactoryResetOnBootCnt get fail\n");
     }
-    printk("nvs read value is %x \n",test_flag);
+    printk("nvs read value is %x \n", test_flag);
     (void) chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Delete(kFactoryResetOnBootStoreKey);
-    test_flag =0xbb;
-    FactoryResetOnBootErr = chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(
-        kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
-    if(FactoryResetOnBootErr != CHIP_NO_ERROR ){
+    test_flag = 0xbb;
+    FactoryResetOnBootErr =
+        chip::DeviceLayer::PersistedStorage::KeyValueStoreMgr().Get(kFactoryResetOnBootStoreKey, &test_flag, sizeof(test_flag));
+    if (FactoryResetOnBootErr != CHIP_NO_ERROR)
+    {
         printk("FactoryResetOnBootCnt delete after read fail \n");
     }
 }
@@ -241,10 +243,10 @@ p_early_proc early_proc_cluster_f = early_proc_cluster;
 int main(void)
 {
 #if CONFIG_WATCHDOG_AUTO
-    /* Not modify by user */
-    #define MATTER_ANALOG_REG_WDT_ADR   (unsigned char)(0x3c)
-    #define MATTER_WDT_BY_CONTROL       BIT(0)
-    if (!(analog_read(MATTER_ANALOG_REG_WDT_ADR) & MATTER_WDT_BY_CONTROL))
+/* Not modify by user */
+#define MATTER_ANALOG_REG_WDT_ADR (0x3c)
+#define MATTER_WDT_BY_CONTROL BIT(0)
+    if (!(analog_read((unsigned char) MATTER_ANALOG_REG_WDT_ADR) & MATTER_WDT_BY_CONTROL))
     {
         printk("watchdog startup...\r\n");
     }
@@ -323,7 +325,7 @@ int main(void)
     goto exit;
 #endif /* CHIP_DEVICE_CONFIG_ENABLE_THREAD */
 
-#if  MATTER_NVS_DEMO_EN
+#if MATTER_NVS_DEMO_EN
     matter_nvs_demo();
 #endif
 

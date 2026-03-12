@@ -34,12 +34,12 @@
 #include <DeviceInfoProviderImpl.h>
 #include <app/clusters/identify-server/identify-server.h>
 #include <app/clusters/ota-requestor/OTATestEventTriggerHandler.h>
-#include <app/server/Server.h>
-#include <app/util/attribute-storage.h>
-#include <app/util/endpoint-config-api.h>
 #include <app/persistence/AttributePersistenceProviderInstance.h>
 #include <app/persistence/DefaultAttributePersistenceProvider.h>
 #include <app/persistence/DeferredAttributePersistenceProvider.h>
+#include <app/server/Server.h>
+#include <app/util/attribute-storage.h>
+#include <app/util/endpoint-config-api.h>
 #include <data-model-providers/codegen/Instance.h>
 #include <setup_payload/OnboardingCodesUtil.h>
 
@@ -49,11 +49,11 @@
 
 #include "AppConfig.h"
 #include <analog.h>
+#include <app-common/zap-generated/attributes/Accessors.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/reboot.h>
-#include <app-common/zap-generated/attributes/Accessors.h>
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_BT
 #include <DFUOverSMP.h>
@@ -100,9 +100,9 @@ bool sIsNetworkAttached     = false;
 bool sHaveBLEConnections    = false;
 
 const struct device * flash_para_dev = USER_PARTITION_DEVICE;
-const struct device * zb_para_dev = ZB_NVS_PARTITION_DEVICE;
+const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
 k_timer sDnssTimer;
-uint8_t sBoot_zb = 0;
+uint8_t sBoot_zb           = 0;
 constexpr int kDnssTimeout = 60000; // for init will cost for about 5s
 
 #if APP_SET_DEVICE_INFO_PROVIDER
@@ -179,112 +179,6 @@ public:
 
 AppCallbacks sCallbacks;
 } // namespace
-
-#if APP_LIGHT_USER_MODE_EN
-#if CONFIG_STARTUP_OPTIMIZATE
-const struct device *cluster_para_dev = USER_CLUSTER_PARTITION_DEVICE;
-
-uint32_t cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
-#define CLUSTER_PARA_LEN (sizeof(cluster_startup_para))
-#define USER_CLUSTER_PARTITION_END (    \
-    USER_CLUSTER_PARTITION_OFFSET + USER_CLUSTER_PARTITION_SIZE)
-
-void clear_cluster_para(void)
-{
-    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
-    cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
-}
-
-void init_cluster_partition(void)
-{
-    uint32_t i, cur_addr;
-    cluster_startup_para t_cmp;
-    cluster_startup_para t_cmp_back;
-    memset((void *)(&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
-
-    for (i = 0;; i++)
-    {
-        cur_addr = USER_CLUSTER_PARTITION_OFFSET + i * CLUSTER_PARA_LEN;
-        if (cur_addr >= USER_CLUSTER_PARTITION_END)
-        {
-            clear_cluster_para();
-            break;
-        }
-
-        flash_read(cluster_para_dev, cur_addr, &t_cmp, CLUSTER_PARA_LEN);
-        if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff
-        {
-            cluster_para_addr = cur_addr;
-            return;
-        }
-    }
-}
-
-int store_cluster_para(cluster_startup_para *data)
-{
-    if (data == NULL)
-    {
-        return -1;
-    }
-    if (cluster_para_addr >= (USER_CLUSTER_PARTITION_END - CLUSTER_PARA_LEN))
-    {
-        clear_cluster_para();
-    }
-
-    flash_write(cluster_para_dev, cluster_para_addr, data, CLUSTER_PARA_LEN);
-    cluster_para_addr += CLUSTER_PARA_LEN;
-    return 0;
-}
-
-int read_cluster_para(cluster_startup_para *data)
-{
-    if (data == NULL)
-    {
-        return -1;
-    }
-    if (cluster_para_addr >= USER_CLUSTER_PARTITION_END)
-    {
-        clear_cluster_para();
-        return -1;
-    }
-    if ((cluster_para_addr - CLUSTER_PARA_LEN) < USER_CLUSTER_PARTITION_OFFSET)
-    {
-        return -1;
-    }
-
-    cluster_startup_para t_cmp;
-    cluster_startup_para t_cmp_back;
-    memset((void *)(&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
-
-    flash_read(cluster_para_dev, (cluster_para_addr - CLUSTER_PARA_LEN), &t_cmp, CLUSTER_PARA_LEN);
-    if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff, error
-    {
-        clear_cluster_para();
-        return -1;
-    }
-    memcpy(data, &t_cmp, CLUSTER_PARA_LEN);
-    return 0;
-}
-#endif
-#endif
-
-/* Not modify reg addr by user */
-#define MATTER_ANALOG_REG_OTA_ADR   (unsigned char)(0x3b)
-#define MATTER_ANALOG_OTA_FLAG_VAL  0x55
-
-void AppTaskCommon::OtaSetAnaFlag(void)
-{
-    analog_write(MATTER_ANALOG_REG_OTA_ADR, MATTER_ANALOG_OTA_FLAG_VAL);
-}
-
-bool AppTaskCommon::OtaGetAnaFlag(void)
-{
-    if (analog_read(MATTER_ANALOG_REG_OTA_ADR) == MATTER_ANALOG_OTA_FLAG_VAL)
-    {
-        return true;
-    }
-    return false;
-}
 
 #if APP_LIGHT_USER_MODE_EN
 #if CONFIG_STARTUP_OPTIMIZATE
@@ -372,6 +266,24 @@ int read_cluster_para(cluster_startup_para * data)
 #endif /* CONFIG_STARTUP_OPTIMIZATE */
 #endif /* APP_LIGHT_USER_MODE_EN */
 
+/* Not modify reg addr by user */
+#define MATTER_ANALOG_REG_OTA_ADR (0x3b)
+#define MATTER_ANALOG_OTA_FLAG_VAL 0x55
+
+void AppTaskCommon::OtaSetAnaFlag(void)
+{
+    analog_write((unsigned char) MATTER_ANALOG_REG_OTA_ADR, MATTER_ANALOG_OTA_FLAG_VAL);
+}
+
+bool AppTaskCommon::OtaGetAnaFlag(void)
+{
+    if (analog_read((unsigned char) MATTER_ANALOG_REG_OTA_ADR) == MATTER_ANALOG_OTA_FLAG_VAL)
+    {
+        return true;
+    }
+    return false;
+}
+
 static void DoDelayedFactoryReset(struct k_work * work)
 {
     ChipLogProgress(DeviceLayer, "Erasing settings partition");
@@ -402,7 +314,9 @@ static void DoDelayedFactoryReset(struct k_work * work)
     {
         ChipLogProgress(DeviceLayer, "Rebooting board");
         sys_reboot(SYS_REBOOT_WARM);
-    }else{
+    }
+    else
+    {
         chip::Server::GetInstance().ScheduleFactoryReset();
     }
 }
@@ -474,7 +388,7 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
-light_para_t  light_para;
+light_para_t light_para;
 user_para_t user_para;
 unsigned char para_lightness = 0;
 CHIP_ERROR AppTaskCommon::StartApp(void)
@@ -482,17 +396,20 @@ CHIP_ERROR AppTaskCommon::StartApp(void)
     /* Proc ota boot flag , and erase flag */
     flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
     /* Boot from Zigbee , need to clean the user parameters sector first and set a flag */
-    if (user_para.val == USER_ZB_SW_VAL){
+    if (user_para.val == USER_ZB_SW_VAL)
+    {
         // if switch from zb , need to get all the cluster info from zb
-        flash_read(flash_para_dev, USER_PARTITION_OFFSET+sizeof(user_para), &light_para, sizeof(light_para));
-        //flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        flash_read(flash_para_dev, USER_PARTITION_OFFSET + sizeof(user_para), &light_para, sizeof(light_para));
+        // flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         sBoot_zb = 1;
         /* Ensure lightness is at least 2 to avoid display error on HomePod Mini */
-        if(light_para.level < 2){
+        if (light_para.level < 2)
+        {
             light_para.level = 2;
         }
         /* Pass the value to the init part to avoid gaps in pwm_pool init */
-        if(light_para.onoff){
+        if (light_para.onoff)
+        {
             para_lightness = light_para.level;
         }
         k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
@@ -557,8 +474,6 @@ void AppTaskCommon::PrintFirmwareInfo(void)
 #endif
 }
 
-
-
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;
@@ -566,7 +481,7 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
     PrintFirmwareInfo();
 
 #if INDEPENDENT_FACTORY_RESET_BUTTON
-    IndependentFactoryReset();  // Open the factory_reset button separately.
+    IndependentFactoryReset(); // Open the factory_reset button separately.
 #endif
 
     InitLeds();
@@ -908,7 +823,7 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
 
         // Erase user parameters partition and reset to Zigbee mode upon factory reset
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
-        // Need to erase zb nvs part 
+        // Need to erase zb nvs part
         flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
 #if APP_LIGHT_USER_MODE_EN
 #if CONFIG_STARTUP_OPTIMIZATE
@@ -937,8 +852,8 @@ void AppTaskCommon::FactoryResetTimerTimeoutCallback(k_timer * timer)
 
 void SwitchBackToZigbee()
 {
-    uint8_t switch_flag  = USER_MATTER_BACK_ZB;
-    flash_write(flash_para_dev,USER_PARTITION_OFFSET,&switch_flag,1);
+    uint8_t switch_flag = USER_MATTER_BACK_ZB;
+    flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
     sys_reboot(SYS_REBOOT_WARM);
 }
 
@@ -946,8 +861,9 @@ void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
 {
     printk("Matter: DnssTimer expired.\r\n");
     /*If initialization of Dnss takes longer than 90 seconds, the device will reboot and revert to Zigbee mode*/
-    if (sBoot_zb){
-         SwitchBackToZigbee();
+    if (sBoot_zb)
+    {
+        SwitchBackToZigbee();
     }
 }
 
@@ -1171,15 +1087,14 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
         break;
 
-     case DeviceEventType::kCommissioningComplete:
-     {
+    case DeviceEventType::kCommissioningComplete: {
         unsigned char val = USER_MATTER_PAIR_VAL;
 
-        /* just a demo to show how to change the cluster after commission , only in the zb switch and touchlink is paired*/
-        #if 0
+/* just a demo to show how to change the cluster after commission , only in the zb switch and touchlink is paired*/
+#if 0
         if(user_para.val == USER_ZB_SW_VAL && user_para.on_net ){
             Protocols::InteractionModel::Status status;
-            /* Switch from the touch link, need to restore previous values */ 
+            /* Switch from the touch link, need to restore previous values */
             status = Clusters::OnOff::Attributes::OnOff::Set(kExampleEndpointId, light_para.onoff);
             if (status != Protocols::InteractionModel::Status::Success)
             {
@@ -1190,7 +1105,7 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
                 LOG_ERR("Update brightness fail: %x", to_underlying(status));
             }
         }
-        #endif
+#endif
 
         /*clear zigbee switch flag*/
         sBoot_zb = 0;
@@ -1211,17 +1126,19 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         printk("Commissioning complete, set Matter commissionined flag");
         break;
     }
-    case DeviceEventType::kFailSafeTimerExpired:
-    {
+    case DeviceEventType::kFailSafeTimerExpired: {
         /* Erase and reset to Zigbee mode if commissioning fails */
-        if (sBoot_zb) {
+        if (sBoot_zb)
+        {
             printk("FailSafeTimer expired, Matter commissioning failed, rebooting to Zigbee mode.\r\n");
             SwitchBackToZigbee();
-        }else{
+        }
+        else
+        {
             printk("FailSafeTimer expired, Matter commissioning failed.\r\n");
-        } 
+        }
     }
-        break;
+    break;
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
@@ -1238,7 +1155,9 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
                 printk("set metadata start");
                 requestor->SetMetadataForProvider(chip::ByteSpan(&metadata, 1));
                 printk("set metadata end");
-            }else{
+            }
+            else
+            {
                 // metadata is is null(product firmare) as default.
             }
             KOtaQueryImageTimer_proc();
@@ -1253,7 +1172,8 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_CHIP_OTA_REQUESTOR
         }
 #endif
-        if(sBoot_zb){
+        if (sBoot_zb)
+        {
             k_timer_stop(&sDnssTimer);
             printk("Dnss Timer stopped, Matter commissioning kDnssdInitialized.\r\n");
         }
