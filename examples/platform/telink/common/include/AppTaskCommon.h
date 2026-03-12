@@ -54,6 +54,26 @@ inline constexpr uint8_t kButtonPushEvent      = 1;
 inline constexpr uint8_t kButtonReleaseEvent   = 0;
 } // namespace
 
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+#define USER_CLUSTER_PARTITION user_cluster_partition
+#define USER_CLUSTER_PARTITION_DEVICE FIXED_PARTITION_DEVICE(USER_CLUSTER_PARTITION)
+#define USER_CLUSTER_PARTITION_OFFSET FIXED_PARTITION_OFFSET(USER_CLUSTER_PARTITION)
+#define USER_CLUSTER_PARTITION_SIZE FIXED_PARTITION_SIZE(USER_CLUSTER_PARTITION)
+
+typedef struct
+{
+    uint8_t onoff;
+    uint8_t level;
+    uint8_t rfu[30];
+} cluster_startup_para;
+
+void init_cluster_partition(void);
+int store_cluster_para(cluster_startup_para * data);
+int read_cluster_para(cluster_startup_para * data);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+
 class LedManager;
 class PwmManager;
 class ButtonManager;

@@ -286,6 +286,92 @@ bool AppTaskCommon::OtaGetAnaFlag(void)
     return false;
 }
 
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+const struct device * cluster_para_dev = USER_CLUSTER_PARTITION_DEVICE;
+uint32_t cluster_para_addr             = USER_CLUSTER_PARTITION_OFFSET;
+#define CLUSTER_PARA_LEN (sizeof(cluster_startup_para))
+#define USER_CLUSTER_PARTITION_END (USER_CLUSTER_PARTITION_OFFSET + USER_CLUSTER_PARTITION_SIZE)
+
+void clear_cluster_para(void)
+{
+    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+    cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
+}
+
+void init_cluster_partition(void)
+{
+    uint32_t i, cur_addr;
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    for (i = 0;; i++)
+    {
+        cur_addr = USER_CLUSTER_PARTITION_OFFSET + i * CLUSTER_PARA_LEN;
+        if (cur_addr >= USER_CLUSTER_PARTITION_END)
+        {
+            clear_cluster_para();
+            break;
+        }
+
+        flash_read(cluster_para_dev, cur_addr, &t_cmp, CLUSTER_PARA_LEN);
+        if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff
+        {
+            cluster_para_addr = cur_addr;
+            return;
+        }
+    }
+}
+
+int store_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        return -1;
+    }
+    if (cluster_para_addr >= (USER_CLUSTER_PARTITION_END - CLUSTER_PARA_LEN))
+    {
+        clear_cluster_para();
+    }
+
+    flash_write(cluster_para_dev, cluster_para_addr, data, CLUSTER_PARA_LEN);
+    cluster_para_addr += CLUSTER_PARA_LEN;
+    return 0;
+}
+
+int read_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        return -1;
+    }
+    if (cluster_para_addr >= USER_CLUSTER_PARTITION_END)
+    {
+        clear_cluster_para();
+        return -1;
+    }
+    if ((cluster_para_addr - CLUSTER_PARA_LEN) < USER_CLUSTER_PARTITION_OFFSET)
+    {
+        return -1;
+    }
+
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    flash_read(cluster_para_dev, (cluster_para_addr - CLUSTER_PARA_LEN), &t_cmp, CLUSTER_PARA_LEN);
+    if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff, error
+    {
+        clear_cluster_para();
+        return -1;
+    }
+    memcpy(data, &t_cmp, CLUSTER_PARA_LEN);
+    return 0;
+}
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+
 static void DoDelayedFactoryReset(struct k_work * work)
 {
     ChipLogProgress(DeviceLayer, "Erasing settings partition");
@@ -334,6 +420,12 @@ class AppFabricTableDelegate : public FabricTable::Delegate
             flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
             /* Need to erase zb nvs part */
             flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+            // Need to erase cluster para part
+            flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
             printk("Erasing user parameters and resetting to Zigbee mode");
             k_work_schedule(&sDelayedFactoryResetWork, K_SECONDS(1));
         }
@@ -818,6 +910,12 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         // Need to erase zb nvs part 
         flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+        // Need to erase cluster para part
+        flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
         printk("Factory reset triggered by button, resetting to Zigbee mode");
 
         chip::Server::GetInstance().ScheduleFactoryReset();
@@ -1099,18 +1197,17 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         /*write commission suc flag*/
         flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
         flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
-
 #if APP_LIGHT_USER_MODE_EN
 #if CONFIG_STARTUP_OPTIMIZATE
         cluster_startup_para cluster_para;
         cluster_para.onoff = light_para.onoff;
         cluster_para.level = light_para.level;
-        if (store_cluster_para(&cluster_para) != 0) {
+        if (store_cluster_para(&cluster_para) != 0)
+        {
             printk("[ChipEventHandler] Fail store startup cluster para\n");
         }
-#endif
-#endif
-
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
         printk("Commissioning complete, set Matter commissionined flag");
         break;
     }

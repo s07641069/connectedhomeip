@@ -145,7 +145,98 @@ void matter_nvs_demo(void)
 }
 #endif
 
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+#include "AppTaskCommon.h"
 
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
+
+#include <PWMManager.h>
+#include <pwm.h>
+#include <zephyr/drivers/pwm.h>
+#include <zephyr_pwm_pool.h>
+
+struct k_timer PwmChangeTimer;
+static PWM_POOL_DEFINE(pwm_pool);
+struct pwm_pool_data * pwm_data             = &pwm_pool;
+static const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+
+#define ENUM_BLUE (PwmManager::EAppPwm_Blue)
+/* EAppPwm_Blue enum is 4, corresponds to channel 2 in dts */
+#define PWM_CHANNEL_BLUE ((uint32_t) ENUM_BLUE - 2)
+/* pwm channel 0 is BIT(8) in driver */
+#define PWM_CHANNEL_TO_BIT(CHANNEL) ((CHANNEL == 0) ? FLD_PWM0_EN : BIT(CHANNEL))
+#define BIT_PWM_CHANNEL_BLUE PWM_CHANNEL_TO_BIT(PWM_CHANNEL_BLUE)
+
+#define PWM_CHANGE_TOTAL_TIME_MS 400
+#define PWM_CHANGE_PRE_STEP_MS 8
+#define PWM_STEP_CNT_MAX (PWM_CHANGE_TOTAL_TIME_MS / PWM_CHANGE_PRE_STEP_MS)
+#define PWM_PULSE_CYCLE(period, level, cnt) ((period / (255 * PWM_STEP_CNT_MAX)) * (level) * (cnt))
+
+static uint32_t cnt          = 1;
+static uint8_t cur_level     = 0;
+static uint32_t timer_period = PWM_CHANGE_PRE_STEP_MS;
+
+static void init_startup_para(void)
+{
+    cluster_startup_para light_cluster_para;
+    if (read_cluster_para(&light_cluster_para) != 0)
+    {
+    }
+
+    if (light_cluster_para.onoff == 1)
+    {
+        cur_level = light_cluster_para.level;
+    }
+    else
+    { // OFF || ERROR
+        cur_level    = 0;
+        timer_period = 0;
+    }
+}
+
+static void PwmSetTimeoutCallback(struct k_timer * timer)
+{
+    if (!timer)
+    {
+        return;
+    }
+
+    pwm_set_dt(&pwm_data->out[ENUM_BLUE], pwm_data->out[ENUM_BLUE].period,
+               PWM_PULSE_CYCLE(pwm_data->out[ENUM_BLUE].period, cur_level, cnt));
+    pwm_set_start((pwm_en_e) (BIT_PWM_CHANNEL_BLUE));
+    if (cnt >= PWM_STEP_CNT_MAX)
+    {
+        k_timer_stop(timer);
+    }
+    cnt++;
+}
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+
+void early_proc_cluster(void)
+{
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+    unsigned char val;
+    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+    if (val == USER_MATTER_PAIR_VAL)
+    {
+        init_cluster_partition();
+        init_startup_para();
+        if (timer_period != 0)
+        {
+            k_timer_init(&PwmChangeTimer, &PwmSetTimeoutCallback, nullptr);
+            k_timer_start(&PwmChangeTimer, K_MSEC(timer_period), K_MSEC(timer_period));
+        }
+    }
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+}
+
+typedef void (*p_early_proc)(void);
+p_early_proc early_proc_cluster_f = early_proc_cluster;
 
 int main(void)
 {
@@ -158,6 +249,12 @@ int main(void)
         printk("watchdog startup...\r\n");
     }
 #endif /* CONFIG_WATCHDOG_AUTO */
+
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+    printk("[init_startup_para] cur_level:%d, timer_period:%d\n", cur_level, timer_period);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
 
 #if defined(CONFIG_USB_DEVICE_STACK) && !defined(CONFIG_CHIP_PW_RPC)
     usb_enable(NULL);

@@ -286,4 +286,8 @@ config TFLM_FEATURE
 
 config DEFERRED_ATTR_STORAGE
 	bool "Defer the storage time of attributes"
-	default y
+	default n
+
+config STARTUP_OPTIMIZATE
+	bool "Enable startup speed optimization"
+	default n
