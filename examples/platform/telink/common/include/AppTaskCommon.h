@@ -178,6 +178,24 @@ protected:
 #define ZB_NVS_START_ADR FIXED_PARTITION_OFFSET(ZB_NVS_PARTITION)
 #define ZB_NVS_SEC_SIZE FIXED_PARTITION_SIZE(ZB_NVS_PARTITION)
 
+
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+
+typedef struct
+{
+    uint8_t onoff;
+    uint8_t level;
+    uint8_t rfu[30];
+} cluster_startup_para;
+
+void init_cluster_partition(void);
+int store_cluster_para(cluster_startup_para *data);
+int read_cluster_para(cluster_startup_para *data);
+
+#endif
+#endif
+
 typedef struct{
     uint8_t val ;
     uint8_t on_net;
