@@ -188,7 +188,6 @@ message(STATUS "zb_start: ${zb_start}")
 
 math(EXPR zb_offset_bytes "${zb_start} - ${slot0_start}" OUTPUT_FORMAT DECIMAL)
 
-
 math(EXPR ZB_FW_OFFSET_DECIMAL "${zb_offset_bytes} / ${BLOCK_SIZE}" OUTPUT_FORMAT DECIMAL)
 message(STATUS "ZB_FW_OFFSET_DECIMAL: ${ZB_FW_OFFSET_DECIMAL}")
 
@@ -263,7 +262,7 @@ if (CONFIG_BOOTLOADER_MCUBOOT AND (CONFIG_SOC_RISCV_TELINK_B9X OR CONFIG_SOC_RIS
         )
         add_custom_target(west_sign ALL
             COMMAND
-            west sign -t imgtool -p ${ZEPHYR_BASE}/../bootloader/mcuboot/scripts/imgtool.py   -d ${PROJECT_BINARY_DIR}/.. --   --key ${ZEPHYR_BASE}/../bootloader/mcuboot/root-rsa-2048.pem --slot-size ${slot0_size}
+            west sign -t imgtool -p ${ZEPHYR_BASE}/../bootloader/mcuboot/scripts/imgtool.py   -d ${PROJECT_BINARY_DIR}/.. --   --key ${ZEPHYR_BASE}/../${CONFIG_MCUBOOT_SIGNATURE_KEY_FILE} --slot-size ${slot0_size}
         )
         add_dependencies(merge_zigbee ${ZEPHYR_FINAL_EXECUTABLE})
         add_dependencies(west_sign merge_zigbee)
