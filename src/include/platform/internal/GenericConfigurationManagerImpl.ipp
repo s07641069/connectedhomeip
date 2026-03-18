@@ -801,6 +801,13 @@ void GenericConfigurationManagerImpl<ConfigClass>::LogDeviceConfig()
         }
     }
 
+#if CONFIG_SECURE_PROGRAMMING
+    /* Add print: Modify Manufacturing Date Format. Delete if it is not needed */
+    char mfgDate[ConfigurationManager::kMaxManufacturingDateLength + 1];
+    err = deviceInstanceInfoProvider->GetManufacturingDateString(mfgDate, sizeof(mfgDate));
+    ChipLogProgress(DeviceLayer, "  Manufacturing Date String: %s", (err == CHIP_NO_ERROR) ? mfgDate : "(not set)");
+#endif
+
     {
         uint32_t deviceType;
         if (GetDeviceTypeId(deviceType) != CHIP_NO_ERROR)

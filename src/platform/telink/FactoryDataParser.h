@@ -40,6 +40,9 @@ struct FactoryData
     uint16_t date_year;
     uint8_t date_month;
     uint8_t date_day;
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+    struct FactoryDataString mfg_date_str;
+#endif
     uint16_t vendor_id;
     uint16_t product_id;
     struct FactoryDataString vendor_name;

@@ -424,6 +424,14 @@ CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetManufacturingDate(uint16_t 
     return CHIP_NO_ERROR;
 }
 
+#if CHIP_DEVICE_SECURE_PROGRAMMING
+template <class FlashFactoryData>
+CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetManufacturingDateString(char * buf, size_t bufSize)
+{
+    return GetFactoryDataString(mFactoryData.mfg_date_str, buf, bufSize);
+}
+#endif
+
 template <class FlashFactoryData>
 CHIP_ERROR FactoryDataProvider<FlashFactoryData>::GetHardwareVersion(uint16_t & hardwareVersion)
 {
