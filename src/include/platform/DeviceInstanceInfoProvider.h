@@ -145,7 +145,7 @@ public:
      */
     virtual CHIP_ERROR GetManufacturingDate(uint16_t & year, uint8_t & month, uint8_t & day) = 0;
 
-#if CONFIG_SECURE_PROGRAMMING
+#if defined(CONFIG_SECURE_PROGRAMMING) && CONFIG_SECURE_PROGRAMMING
     /**
      * @brief Obtain a manufacturing date string from the device's factory data.
      *
@@ -158,7 +158,7 @@ public:
      *          if access fails.
      */
     virtual CHIP_ERROR GetManufacturingDateString(char * buf, size_t bufSize) { return CHIP_ERROR_NOT_IMPLEMENTED; }
-#endif // CONFIG_SECURE_PROGRAMMING
+#endif
 
     /**
      * @brief Retrieve the optional vendor-specific suffix of the manufacturing date

@@ -801,7 +801,7 @@ void GenericConfigurationManagerImpl<ConfigClass>::LogDeviceConfig()
         }
     }
 
-#if CONFIG_SECURE_PROGRAMMING
+#if defined(CONFIG_SECURE_PROGRAMMING) && CONFIG_SECURE_PROGRAMMING
     /* Add print: Modify Manufacturing Date Format. Delete if it is not needed */
     char mfgDate[ConfigurationManager::kMaxManufacturingDateLength + 1];
     err = deviceInstanceInfoProvider->GetManufacturingDateString(mfgDate, sizeof(mfgDate));
