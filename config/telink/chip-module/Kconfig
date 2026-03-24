@@ -238,6 +238,12 @@ config CHIP_PERSISTENT_SUBSCRIPTIONS
 	# selecting experimental for this feature since there is an issue with multiple controllers.
 	select EXPERIMENTAL
 
+
+config SECURE_PROGRAMMING
+	bool "Enable reading DAC and keys from the DAC partition"
+	depends on CHIP_FACTORY_DATA
+	default n
+
 config EXPOSE_CHIP_ID_VIA_BLE
 	bool "Enable CHIP-ID via ble"
 	default n
