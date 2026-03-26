@@ -88,31 +88,6 @@ void i2c_demo_proc(void)
 }
 #endif
 
-#if (APP_LIGHT_MODE == APP_LIGHT_I2C)
-void i2c_demo_proc(void)
-{
-    const uint8_t tx_buf[23]= { 0xc0,0x63,0x3f,0x63,    0x63,0x63,0x22,0x22,
-                                0x00,0x00,0x00,0x00,    0x3f,0x3f,0x00,0x00,
-                                0x00,0x00,0xff,0xff,    0x2b,0x06,0xbe};
-    printk("i2c demo start \n.");
-    uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_FAST) | I2C_MODE_CONTROLLER;
-    /* get i2c device */
-    int rc;
-	const struct i2c_dt_spec i2c = I2C_DT_SPEC_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(ledcontrol_i2c));
-    if (!device_is_ready(i2c.bus)) {
-		printf("Device %s is not ready\n", i2c.bus->name);
-		return ;
-	}
-    rc = i2c_configure(i2c.bus, i2c_cfg);
-	if(rc != 0){
-		printf("Failed to configure i2c device\n");
-		return ;
-	}
-    i2c_write(i2c.bus, tx_buf+1, sizeof(tx_buf)-1,tx_buf[0]);
-    printk("i2c demo stop ,finish transfer\n");
-}
-#endif
-
 #if (APP_LIGHT_MODE == APP_LIGHT_ADC)
 void adc_demo_proc(void)
 {

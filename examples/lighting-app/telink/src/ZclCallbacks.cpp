@@ -17,6 +17,7 @@
  */
 
 #include "AppTask.h"
+#include "AppConfig.h"
 #include "ColorFormat.h"
 
 #include <app-common/zap-generated/attributes/Accessors.h>
