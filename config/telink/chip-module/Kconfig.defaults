@@ -98,7 +98,7 @@ config NET_IPV6_MLD
     default y
 
 config NET_IF_MCAST_IPV6_ADDR_COUNT
-    default 8 if PM
+    default 47 if PM
     default 15
 
 # Network buffers
@@ -341,7 +341,7 @@ config OPENTHREAD_DEFAULT_TX_POWER
     default 11
 
 config OPENTHREAD_IP6_MAX_EXT_MCAST_ADDRS
-    default 2 if PM
+    default 40 if PM
     default 8
 
 endif # NET_L2_OPENTHREAD
