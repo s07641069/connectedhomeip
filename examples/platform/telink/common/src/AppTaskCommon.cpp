@@ -101,8 +101,8 @@ bool sHaveBLEConnections    = false;
 
 const struct device * flash_para_dev = USER_PARTITION_DEVICE;
 const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
-uint8_t sBoot_zb           = 0;
-constexpr int kDnssTimeout = 60000; // for init will cost for about 5s
+uint8_t sBoot_zb                     = 0;
+constexpr int kDnssTimeout           = 60000; // for init will cost for about 5s
 #if !CONFIG_MCUMGR_TRANSPORT_BT
 /* Create sDnssTimer when dfu disable */
 static k_timer sDnssTimer;
@@ -485,7 +485,7 @@ void AppTaskCommon::IndependentFactoryReset(void)
     // Button binding to factory_reset and add callback
     buttonManager.addCallback(FactoryResetButtonEventHandler, 0, true);
 
-#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE  // Independent Button Mode
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE // Independent Button Mode
     buttonManager.linkBackend(ButtonPool::getInstance());
 #else
     buttonManager.linkBackend(ButtonMatrix::getInstance());
@@ -1142,9 +1142,9 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
         }
 #endif /* CONFIG_STARTUP_OPTIMIZATE */
 #endif /* APP_LIGHT_USER_MODE_EN */
-        printk("Commissioning complete, set Matter commissionined flag"); 
+        printk("Commissioning complete, set Matter commissionined flag");
     }
-        break;
+    break;
     case DeviceEventType::kFailSafeTimerExpired: {
         /* Erase and reset to Zigbee mode if commissioning fails */
         if (sBoot_zb)
