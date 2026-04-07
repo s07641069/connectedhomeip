@@ -351,8 +351,7 @@ config NET_TX_STACK_SIZE
     default 600 if PM || SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_TL323X
 
 config NET_RX_STACK_SIZE
-    default 2048 if SOC_RISCV_TELINK_W91
-    default 664 if PM || SOC_RISCV_TELINK_TL321X || SOC_RISCV_TELINK_TL323X
+    default 2048
 
 # Disable certain parts of Zephyr IPv6 stack
 config NET_IPV6_NBR_CACHE
