@@ -1006,7 +1006,6 @@ CHIP_ERROR BLEManagerImpl::HandleOperationalNetworkEnabled(const ChipDeviceEvent
 
         error = PlatformMgr().PostEvent(&attachEvent);
         VerifyOrExit(error == CHIP_NO_ERROR, ChipLogError(DeviceLayer, "PostEvent err: %" CHIP_ERROR_FORMAT, error.Format()));
-
     }
 
 exit:
