@@ -35,6 +35,13 @@
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/drivers/pwm.h>
+#include <zephyr_pwm_pool.h>
+
+#include <gpio.h>
+#include <i2c.h>
+#include <pwm.h>
 
 LOG_MODULE_DECLARE(app, CONFIG_CHIP_APP_LOG_LEVEL);
 using namespace chip::app::Clusters;
@@ -63,6 +70,91 @@ bool AppTask::IsTurnedOn() const
     return sfixture_on;
 }
 
+#if (CONFIG_TOKEN_PERIPHERALS)
+static PWM_POOL_DEFINE(pwm_pool);
+// all pins can configurable
+#define MAX_PWM_PINS 6
+
+#define PWM_MODE_LIGHT 0
+#define I2C_MODE_LIGHT 1
+
+typedef struct
+{
+    uint8_t id;
+    uint32_t pin;
+    uint32_t rate; // pwm rate
+} pwm_struct_t;
+
+typedef struct
+{
+    uint32_t mode;                      // zero is pwm mode ,one is i2c mode
+    pwm_struct_t pwm_pin[MAX_PWM_PINS]; // if token lost , the pin value will be PA0 and PA2,if any one is zero ,will jump
+    uint32_t sda;                       // if token lost , the value will be initial setting
+    uint32_t scl;                       // if token lost , the value will be initial setting
+} hw_token_t;
+
+hw_token_t hw_token = { PWM_MODE_LIGHT,
+                        { { 0, GPIO_PA0, 500 },
+                          { 1, GPIO_PC2, 600 },
+                          { 2, GPIO_PD0, 1000 },
+                          { 3, GPIO_PC3, 2000 },
+                          { 4, GPIO_PB0, 10000 },
+                          { 5, 0, 0 } }, // Sequential Array
+                        GPIO_PA0,
+                        GPIO_PA1 };
+
+void hw_token_pwm_init()
+{
+    struct pwm_pool_data * pwm_pool_token = &pwm_pool;
+
+    LOG_INF("hw_token_pwm_init: out_len=%zu", pwm_pool_token->out_len);
+    for (size_t i = 0; i < pwm_pool_token->out_len; i++)
+    {
+        const struct pwm_dt_spec * spec = &pwm_pool_token->out[i];
+        LOG_INF("  out[%zu]: dev=%s, channel=%u, period=%u, flags=%u",
+                i,
+                spec->dev ? spec->dev->name : "null",
+                spec->channel,
+                spec->period,
+                spec->flags);
+    }
+
+    // set all the pwm part
+    for (size_t i = 0; i < pwm_pool_token->out_len; i++)
+    {
+        // Sequential Array
+        uint8_t id    = pwm_pool_token->out[i].channel;
+        uint32_t pin  = hw_token.pwm_pin[id].pin;
+        uint32_t rate = hw_token.pwm_pin[id].rate;
+
+        LOG_INF("hw_token_pwm_init: i=%zu, id=%u, pin=0x%04x, rate=%u", i, id, (uint16_t) pin, rate);
+
+        if (pin == 0 || (id > (PWM5 - PWM0)))
+        {
+            LOG_INF("  skip i=%zu (pin==0 or id out of range)", i);
+            continue;
+        }
+
+        pwm_set_pinctrl((gpio_func_pin_e) pin, (gpio_func_e) (PWM0 + id));
+
+        int ret = pwm_set_dt(&pwm_pool_token->out[i], PWM_USEC(1000000 / rate), PWM_USEC(1000000 / rate) / 3);
+        LOG_INF("  pwm_set_dt i=%zu, ret=%d", i, ret);
+    }
+}
+
+void hw_token_i2c_init(int sda, int scl)
+{
+    /********************
+     *
+     *  void (*i2c_set_pin_t)(unsigned int sda_pin,unsigned int scl_pin);
+     * 	intial:
+     *        sdk: GPIO_PA0  scl:GPIO_PA1
+     */
+
+    i2c_set_p(sda, scl);
+}
+#endif
+
 #if (APP_LIGHT_MODE == APP_LIGHT_I2C)
 void i2c_demo_proc(void)
 {
@@ -72,24 +164,136 @@ void i2c_demo_proc(void)
     uint32_t i2c_cfg = I2C_SPEED_SET(I2C_SPEED_FAST) | I2C_MODE_CONTROLLER;
     /* get i2c device */
     int rc;
-    const struct i2c_dt_spec i2c = I2C_DT_SPEC_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(ledcontrol_i2c));
-    if (!device_is_ready(i2c.bus))
+    const struct i2c_dt_spec dev_i2c = I2C_DT_SPEC_GET(DT_COMPAT_GET_ANY_STATUS_OKAY(ledcontrol_i2c));
+
+    if (dev_i2c.bus == NULL) {
+        printk("Error: I2C controller pointer is NULL. Check your DeviceTree and Binding.\n");
+    } else {
+        printk("I2C Controller Name: %s\n", dev_i2c.bus->name);
+        
+        if (!device_is_ready(dev_i2c.bus)) {
+            /* If not ready, check the internal init result (0 is success) */
+            printk("Device is NOT ready! Init error code: %d\n", dev_i2c.bus->state->init_res);
+        } else {    
+            printk("Device is ready and initialized successfully.\n");
+        }
+    }
+
+    // 打印设备状态
+    printk("Device ptr: %p\n", dev_i2c.bus);
+    if (dev_i2c.bus) {
+        // 检查设备是否初始化成功（依赖内部 init 结果）
+        // state 指针在 Zephyr 中存储了初始化状态
+        printk("Device init status: %d\n", dev_i2c.bus->state->init_res);
+    }
+
+    if (!device_is_ready(dev_i2c.bus))
     {
-        printf("Device %s is not ready\n", i2c.bus->name);
+        printf("Device %s is not ready\n", dev_i2c.bus->name);
         return;
     }
-    rc = i2c_configure(i2c.bus, i2c_cfg);
+    rc = i2c_configure(dev_i2c.bus, i2c_cfg);
     if (rc != 0)
     {
         printf("Failed to configure i2c device\n");
         return;
     }
-    i2c_write(i2c.bus, tx_buf + 1, sizeof(tx_buf) - 1, tx_buf[0]);
+    i2c_write(dev_i2c.bus, tx_buf + 1, sizeof(tx_buf) - 1, tx_buf[0]);
     printk("i2c demo stop ,finish transfer\n");
 }
 #endif
 
 #if (APP_LIGHT_MODE == APP_LIGHT_ADC)
+#if (APP_TELINK_DRIVERS_ADC)
+//#include <analog.h>
+#include <adc.h>
+
+static k_timer AdcDriverTimer;
+static constexpr uint32_t kAdcDriverTimeoutMs = 50;
+
+volatile unsigned short adc_vol_mv_val;
+
+#define ADC_SAMPLE_NUM (8)
+unsigned short adc_sample_buffer[ADC_SAMPLE_NUM] __attribute__((aligned(4))) = { 0 };
+
+#define ADC_SAMPLE_FREQ            ADC_SAMPLE_FREQ_96K
+#define ADC_SAMPLE_NDMA_DELAY_TIME ((1000 / (6 * (2 << (ADC_SAMPLE_FREQ)))) + 1) //delay 2 sample cycle
+/**
+ * @brief This function serves to sort adc sample code and get average value.
+ * @return      adc_code_average    - the average value of adc sample code.
+ */
+unsigned short adc_sort_and_get_average_code(void)
+{
+    unsigned short adc_code_average = 0;
+    int            i, j;
+    unsigned short temp;
+    /**** insert Sort and get average value ******/
+    for (i = 1; i < ADC_SAMPLE_NUM; i++) {
+        if (adc_sample_buffer[i] < adc_sample_buffer[i - 1]) {
+            temp                 = adc_sample_buffer[i];
+            adc_sample_buffer[i] = adc_sample_buffer[i - 1];
+            /**
+         * add judgment condition "j>=0" in for loop,
+         * otherwise may have array out of bounds.
+         * changed by chaofan.20201230.
+     */
+            for (j = i - 1; j >= 0 && adc_sample_buffer[j] > temp; j--) {
+                adc_sample_buffer[j + 1] = adc_sample_buffer[j];
+            }
+            adc_sample_buffer[j + 1] = temp;
+        }
+    }
+
+    //get average value from raw data(abandon 1/4 small and 1/4 big data)
+    for (i = ADC_SAMPLE_NUM >> 2; i < (ADC_SAMPLE_NUM - (ADC_SAMPLE_NUM >> 2)); i++) {
+        adc_code_average += adc_sample_buffer[i] / (ADC_SAMPLE_NUM >> 1);
+    }
+    return adc_code_average;
+}
+
+/**
+ * @brief This function serves to get adc sample code by manual and convert to voltage value.
+ * @return      adc_vol_mv_average  - the average value of adc voltage value.
+ */
+unsigned short adc_get_voltage(void)
+{
+    unsigned short adc_vol_mv_average = 0;
+    unsigned short adc_code_average   = 0;
+    for (int i = 0; i < ADC_SAMPLE_NUM; i++) {
+        /**
+     * move the "2 sample cycle" wait operation before adc_get_code(),
+     * otherwise may have data lose due to no waiting when adc_power_on.
+     * changed by chaofan.20201230.
+     */
+        k_busy_wait(ADC_SAMPLE_NDMA_DELAY_TIME); //wait at least 2 sample cycle(f = 96K, T = 10.4us)
+        adc_sample_buffer[i] = adc_vbat_get_code();
+    }
+    adc_code_average   = adc_sort_and_get_average_code();
+    adc_vol_mv_average = adc_vbat_calculate_voltage(adc_code_average);
+    return adc_vol_mv_average;
+}
+
+void AdcDriverTimerCb(struct k_timer * dummy)
+{
+    adc_vol_mv_val = adc_get_voltage();
+    printk("%" PRId32, adc_vol_mv_val);
+    printk("\r\n");
+}
+
+static void telink_driver_adc_start(void)
+{
+    k_timer_init(&AdcDriverTimer, AdcDriverTimerCb, nullptr);
+    k_timer_start(&AdcDriverTimer, K_MSEC(kAdcDriverTimeoutMs), K_MSEC(kAdcDriverTimeoutMs));
+}
+
+static void telink_driver_adc_proc(void)
+{
+    adc_vbat_sample_init();
+    adc_vbat_power_on();
+
+    telink_driver_adc_start();
+}
+#else
 void adc_demo_proc(void)
 {
 /* Data of ADC io-channels specified in devicetree. */
@@ -166,6 +370,89 @@ void adc_demo_proc(void)
             printf(" = %" PRId32 " mV\n", val_mv);
         }
     }
+}
+#endif
+#endif
+
+#if (0)
+#include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
+
+// we need to add token partition in DTS
+//=========================================
+//--- a/src/platform/telink/tlsr9528a_4m_flash.overlay
+//  +++ b/src/platform/telink/tlsr9528a_4m_flash.overlay
+//  +       user_token_partition: partition@3a5000 {
+//  +       label = "user-token";
+//  +           reg = <0x3a5000 0x1000>; //user:store token info, for customer to config.
+//  +       };
+//  =========================================
+
+#define TOKEN_PARTITION user_token_partition
+#define TOKEN_PARTITION_DEVICE FIXED_PARTITION_DEVICE(TOKEN_PARTITION)
+#define TOKEN_PARTITION_OFFSET FIXED_PARTITION_OFFSET(TOKEN_PARTITION)
+#define TOKEN_PARTITION_SIZE FIXED_PARTITION_SIZE(TOKEN_PARTITION)
+
+#define OFFSET_BASIC_CLUSTER_MODEL_IDENTIFIER 0x00
+#define LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER 32
+
+#define OFFSET_BASIC_CLUSTER_HARDWARE_VER 0x40
+#define LENGHT_BASIC_CLUSTER_HARDWARE_VER 1
+
+#define OFFSET_BASIC_CLUSTER_PRODUCT_CODE 0x50
+#define LENGHT_BASIC_CLUSTER_PRODUCT_CODE 16
+
+#define OFFSET_READ_COUNT 0x400
+#define LENGHT_READ_COUNT 1
+
+const struct device * flash_token_dev = TOKEN_PARTITION_DEVICE;
+void token_flash_demo_proc(void)
+{
+
+    // read token infor form token bin
+    uint8_t tmp_model_identifier[LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER];
+    flash_read(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_MODEL_IDENTIFIER, tmp_model_identifier,
+               LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER);
+    LOG_HEXDUMP_INF(tmp_model_identifier, LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER, "flash_read:model_identifier:");
+
+    uint8_t tmp_hardware_ver[LENGHT_BASIC_CLUSTER_HARDWARE_VER];
+    flash_read(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_HARDWARE_VER, tmp_hardware_ver,
+               LENGHT_BASIC_CLUSTER_HARDWARE_VER);
+    LOG_HEXDUMP_INF(tmp_hardware_ver, LENGHT_BASIC_CLUSTER_HARDWARE_VER, "flash_read:tmp_hardware_ver:");
+
+    uint8_t tmp_product_code[LENGHT_BASIC_CLUSTER_PRODUCT_CODE];
+    flash_read(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_PRODUCT_CODE, tmp_product_code,
+               LENGHT_BASIC_CLUSTER_PRODUCT_CODE);
+    LOG_HEXDUMP_INF(tmp_product_code, LENGHT_BASIC_CLUSTER_PRODUCT_CODE, "flash_read:tmp_product_code:");
+
+    uint8_t tmp_read_count;
+    flash_read(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_READ_COUNT, &tmp_read_count, 1);
+    if (tmp_read_count == 0xff)
+        tmp_read_count = 0;
+    LOG_HEXDUMP_INF(&tmp_read_count, LENGHT_READ_COUNT, "flash_read:tmp_read_count:");
+
+    // erase token infor
+    flash_erase(flash_token_dev, TOKEN_PARTITION_OFFSET, TOKEN_PARTITION_SIZE);
+
+    // write token infor
+    flash_write(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_MODEL_IDENTIFIER, tmp_model_identifier,
+                LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER);
+    LOG_HEXDUMP_INF(tmp_model_identifier, LENGHT_BASIC_CLUSTER_MODEL_IDENTIFIER, "flash_write:model_identifier:");
+
+    flash_write(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_HARDWARE_VER, tmp_hardware_ver,
+                LENGHT_BASIC_CLUSTER_HARDWARE_VER);
+    LOG_HEXDUMP_INF(tmp_hardware_ver, LENGHT_BASIC_CLUSTER_HARDWARE_VER, "flash_write:tmp_hardware_ver:");
+
+    flash_write(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_BASIC_CLUSTER_PRODUCT_CODE, tmp_product_code,
+                LENGHT_BASIC_CLUSTER_PRODUCT_CODE);
+    LOG_HEXDUMP_INF(tmp_product_code, LENGHT_BASIC_CLUSTER_PRODUCT_CODE, "flash_write:tmp_product_code:");
+
+    tmp_read_count += 1;
+    flash_write(flash_token_dev, TOKEN_PARTITION_OFFSET + OFFSET_READ_COUNT, &tmp_read_count, 1);
+    if (tmp_read_count == 0xff)
+        tmp_read_count = 0;
+    LOG_HEXDUMP_INF(&tmp_read_count, LENGHT_READ_COUNT, "flash_write:tmp_read_count:");
 }
 #endif
 
@@ -263,6 +550,7 @@ CHIP_ERROR AppTask::Init(void)
 
     /*user mode means led control by the customer*/
 #if APP_LIGHT_USER_MODE_EN
+    //token_flash_demo_proc();
     /* switch from zigbee , which means uncommission state .*/
     if (user_para.val == USER_ZB_SW_VAL)
     {
@@ -278,17 +566,43 @@ CHIP_ERROR AppTask::Init(void)
     {
         // will not proc .
     }
+
+#if (!CONFIG_TOKEN_PERIPHERALS)
 #if (APP_LIGHT_MODE == APP_LIGHT_I2C)
     printk("app light mode is i2c\n");
     i2c_demo_proc(); // add i2c demo code to show the para part .
 #elif (APP_LIGHT_MODE == APP_LIGHT_ADC)
     printk("app light mode is adc\n");
+#if (APP_TELINK_DRIVERS_ADC) // CONFIG_ADC
+    telink_driver_adc_proc();
+#else
     adc_demo_proc(); // add adc demo code .
+#endif
 #elif (APP_LIGHT_MODE == APP_LIGHT_PWM)
     /*add pwm proc here */
     printk("app light mode is pwm\n");
 #else
     printk("Function expansion preset position\n");
+#endif
+#else
+    if (hw_token.mode == PWM_MODE_LIGHT)
+    {
+        /*add pwm proc here */
+        printk("app light mode is pwm\n");
+        hw_token_pwm_init();
+    }
+    else if (hw_token.mode == I2C_MODE_LIGHT)
+    {
+#if (CONFIG_I2C)
+        printk("app light mode is i2c\n");
+        hw_token_i2c_init(hw_token.sda, hw_token.scl);
+        i2c_demo_proc(); // add i2c demo code to show the para part .
+#endif
+    }
+    else
+    {
+        printk("ERROR:Function expansion preset position\n");
+    }
 #endif
 
 #else
