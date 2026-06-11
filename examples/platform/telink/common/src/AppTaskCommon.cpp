@@ -452,7 +452,7 @@ void PowerOnNetworkCheck(void)
     } else if (hasDataset && fabricNum == 0) {
         ChipLogProgress(DeviceLayer, "Thread dataset exists, but matter uncommissioned\n");
     } else {
-        ChipLogProgress(DeviceLayer, "Matter commissioned, but thread dataset lost\n");
+        return;
     }
     chip::Server::GetInstance().ScheduleFactoryReset();
 }
