@@ -26,6 +26,7 @@
 
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 #include "ThreadUtil.h"
+#include <lib/support/ThreadOperationalDataset.h>
 #elif CHIP_DEVICE_CONFIG_ENABLE_WIFI
 #include <platform/Zephyr/InetUtils.h>
 #include <platform/telink/wifi/TelinkWiFiDriver.h>
@@ -43,8 +44,6 @@
 #include <app/util/endpoint-config-api.h>
 #include <data-model-providers/codegen/Instance.h>
 #include <setup_payload/OnboardingCodesUtil.h>
-
-#include <lib/support/ThreadOperationalDataset.h>
 
 #if CONFIG_BOOTLOADER_MCUBOOT
 #include <OTAUtil.h>
@@ -437,7 +436,8 @@ void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
 }
 #endif
 
-void PowerOnNetworkCheck(void)
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+static void PowerOnNetworkCheck(void)
 {
     Thread::OperationalDataset curDataset;
     CHIP_ERROR err = DeviceLayer::ThreadStackMgrImpl().GetThreadProvision(curDataset);
@@ -456,6 +456,7 @@ void PowerOnNetworkCheck(void)
     }
     chip::Server::GetInstance().ScheduleFactoryReset();
 }
+#endif
 
 CHIP_ERROR AppTaskCommon::StartApp(void)
 {
@@ -629,8 +630,10 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
         return err;
     }
 
-    /* Check network state */
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
+    // TODO: Defer this validation until chip::Server is fully initialized to avoid crashes
     PowerOnNetworkCheck();
+#endif
 
     return CHIP_NO_ERROR;
 }
