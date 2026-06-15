@@ -454,7 +454,7 @@ static void PowerOnNetworkCheck(void)
     } else {
         return;
     }
-    chip::Server::GetInstance().ScheduleFactoryReset();
+    k_work_schedule(&sDelayedFactoryResetWork, K_SECONDS(2));
 }
 #endif
 
