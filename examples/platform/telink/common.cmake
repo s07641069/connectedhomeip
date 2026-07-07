@@ -195,3 +195,5 @@ zephyr_link_libraries(
   -Wl,--wrap,bt_is_ready
 )
 endif()
+
+zephyr_compile_options(-msmall-data-limit=0)
