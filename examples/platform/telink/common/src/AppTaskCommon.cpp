@@ -34,6 +34,9 @@
 #include <DeviceInfoProviderImpl.h>
 #include <app/clusters/identify-server/identify-server.h>
 #include <app/clusters/ota-requestor/OTATestEventTriggerHandler.h>
+#include <app/persistence/AttributePersistenceProviderInstance.h>
+#include <app/persistence/DefaultAttributePersistenceProvider.h>
+#include <app/persistence/DeferredAttributePersistenceProvider.h>
 #include <app/server/Server.h>
 #include <app/util/attribute-storage.h>
 #include <app/util/endpoint-config-api.h>
@@ -43,6 +46,14 @@
 #if CONFIG_BOOTLOADER_MCUBOOT
 #include <OTAUtil.h>
 #endif
+
+#include "AppConfig.h"
+#include <analog.h>
+#include <app-common/zap-generated/attributes/Accessors.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
+#include <zephyr/storage/flash_map.h>
+#include <zephyr/sys/reboot.h>
 
 #ifdef CONFIG_MCUMGR_TRANSPORT_BT
 #include <DFUOverSMP.h>
@@ -88,6 +99,15 @@ bool sIsNetworkEnabled      = false;
 bool sIsNetworkAttached     = false;
 bool sHaveBLEConnections    = false;
 
+const struct device * flash_para_dev = USER_PARTITION_DEVICE;
+const struct device * zb_para_dev    = ZB_NVS_PARTITION_DEVICE;
+uint8_t sBoot_zb                     = 0;
+constexpr int kDnssTimeout           = 60000; // for init will cost for about 5s
+#if !CONFIG_MCUMGR_TRANSPORT_BT
+/* Create sDnssTimer when dfu disable */
+static k_timer sDnssTimer;
+#endif /* !CONFIG_MCUMGR_TRANSPORT_BT */
+
 #if APP_SET_DEVICE_INFO_PROVIDER
 chip::DeviceLayer::DeviceInfoProviderImpl gExampleDeviceInfoProvider;
 #endif
@@ -106,6 +126,37 @@ Identify sIdentify = {
 };
 
 #endif
+
+/**
+ * @brief Set deferred attributes storage
+ *
+ * @see Define a custom attribute persister which makes actual write of the CurrentHue, CurrentSaturation, CurrentLevel attributes
+ * value to the non-volatile storage only when it has remained constant for 5 seconds. This is to reduce the flash wearout when the
+ * attribute changes frequently as a result of MoveToLevel command. DeferredAttribute object describes a deferred attribute, but
+ * also holds a buffer with a value to be written, so it must live so long as the DeferredAttributePersistenceProvider object.
+ *
+ * @param ATTRIBUTES_ARRAY_SIZE The lenght of the DeferredAttribute array
+ * @param DEFERRED_STORAGE_TIME The deferred time(ms) to store attributes
+ */
+#define ATTRIBUTES_ARRAY_SIZE (3U)
+#define DEFERRED_STORAGE_TIME (500U)
+
+DeferredAttribute gPersisters[] = {
+#if CONFIG_DEFERRED_ATTR_STORAGE
+    DeferredAttribute(
+        ConcreteAttributePath(kExampleEndpointId, Clusters::ColorControl::Id, Clusters::ColorControl::Attributes::CurrentHue::Id)),
+    DeferredAttribute(ConcreteAttributePath(kExampleEndpointId, Clusters::ColorControl::Id,
+                                            Clusters::ColorControl::Attributes::CurrentSaturation::Id)),
+    DeferredAttribute(
+        ConcreteAttributePath(kExampleEndpointId, Clusters::LevelControl::Id, Clusters::LevelControl::Attributes::CurrentLevel::Id))
+#endif // CONFIG_DEFERRED_ATTR_STORAGE
+};
+
+// Deferred persistence will be auto-initialized as soon as the default persistence is initialized
+DefaultAttributePersistenceProvider gSimpleAttributePersistence;
+DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttributePersistence,
+                                                                 Span<DeferredAttribute>(gPersisters, ATTRIBUTES_ARRAY_SIZE),
+                                                                 System::Clock::Milliseconds32(DEFERRED_STORAGE_TIME));
 
 // NOTE! This key is for test/certification only and should not be available in production devices!
 uint8_t sTestEventTriggerEnableKey[TestEventTriggerDelegate::kEnableKeyLength] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
@@ -131,6 +182,115 @@ public:
 
 AppCallbacks sCallbacks;
 } // namespace
+
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+cluster_startup_para g_light_cluster_para;
+
+const struct device * cluster_para_dev = USER_CLUSTER_PARTITION_DEVICE;
+uint32_t cluster_para_addr             = USER_CLUSTER_PARTITION_OFFSET;
+#define CLUSTER_PARA_LEN (sizeof(cluster_startup_para))
+#define USER_CLUSTER_PARTITION_END (USER_CLUSTER_PARTITION_OFFSET + USER_CLUSTER_PARTITION_SIZE)
+
+void clear_cluster_para(void)
+{
+    flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+    cluster_para_addr = USER_CLUSTER_PARTITION_OFFSET;
+}
+
+void init_cluster_partition(void)
+{
+    uint32_t i, cur_addr;
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    for (i = 0;; i++)
+    {
+        cur_addr = USER_CLUSTER_PARTITION_OFFSET + i * CLUSTER_PARA_LEN;
+        if (cur_addr >= USER_CLUSTER_PARTITION_END)
+        {
+            clear_cluster_para();
+            break;
+        }
+
+        flash_read(cluster_para_dev, cur_addr, &t_cmp, CLUSTER_PARA_LEN);
+        if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff
+        {
+            cluster_para_addr = cur_addr;
+            return;
+        }
+    }
+}
+
+int store_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        return -1;
+    }
+    if (cluster_para_addr >= (USER_CLUSTER_PARTITION_END - CLUSTER_PARA_LEN))
+    {
+        clear_cluster_para();
+    }
+
+    flash_write(cluster_para_dev, cluster_para_addr, data, CLUSTER_PARA_LEN);
+    cluster_para_addr += CLUSTER_PARA_LEN;
+    return 0;
+}
+
+int read_cluster_para(cluster_startup_para * data)
+{
+    if (data == NULL)
+    {
+        return -1;
+    }
+    if (cluster_para_addr >= USER_CLUSTER_PARTITION_END)
+    {
+        clear_cluster_para();
+        return -1;
+    }
+    if ((cluster_para_addr - CLUSTER_PARA_LEN) < USER_CLUSTER_PARTITION_OFFSET)
+    {
+        return -1;
+    }
+
+    cluster_startup_para t_cmp;
+    cluster_startup_para t_cmp_back;
+    memset((void *) (&t_cmp_back), 0xff, CLUSTER_PARA_LEN);
+
+    flash_read(cluster_para_dev, (cluster_para_addr - CLUSTER_PARA_LEN), &t_cmp, CLUSTER_PARA_LEN);
+    if (memcmp(&t_cmp, &t_cmp_back, CLUSTER_PARA_LEN) == 0) // read t_cmp is 0xff, error
+    {
+        clear_cluster_para();
+        return -1;
+    }
+    memcpy(data, &t_cmp, CLUSTER_PARA_LEN);
+    return 0;
+}
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+
+/* Not modify reg addr by user */
+#define MATTER_ANALOG_REG_OTA_ADR (0x3b)
+#define MATTER_ANALOG_OTA_FLAG_VAL (0x55)
+
+void AppTaskCommon::OtaSetAnaFlag(void)
+{
+    analog_write(MATTER_ANALOG_REG_OTA_ADR, MATTER_ANALOG_OTA_FLAG_VAL);
+}
+
+bool AppTaskCommon::OtaGetAnaFlag(void)
+{
+    if (analog_read(MATTER_ANALOG_REG_OTA_ADR) == MATTER_ANALOG_OTA_FLAG_VAL)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 
 static void DoDelayedFactoryReset(struct k_work * work)
 {
@@ -163,6 +323,10 @@ static void DoDelayedFactoryReset(struct k_work * work)
         ChipLogProgress(DeviceLayer, "Rebooting board");
         sys_reboot(SYS_REBOOT_WARM);
     }
+    else
+    {
+        chip::Server::GetInstance().ScheduleFactoryReset();
+    }
 }
 
 static k_work_delayable sDelayedFactoryResetWork = Z_WORK_DELAYABLE_INITIALIZER(DoDelayedFactoryReset);
@@ -173,7 +337,19 @@ class AppFabricTableDelegate : public FabricTable::Delegate
     {
         if (chip::Server::GetInstance().GetFabricTable().FabricCount() == 0)
         {
-            k_work_schedule(&sDelayedFactoryResetWork, K_SECONDS(2));
+            ChipLogProgress(DeviceLayer, "Performing erasing of settings partition");
+            /* Erase the user parameters partition to reset mode settings*/
+            flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+            /* Need to erase zb nvs part */
+            flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+            // Need to erase cluster para part
+            flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+            printk("Erasing user parameters and resetting to Zigbee mode");
+            k_work_schedule(&sDelayedFactoryResetWork, K_SECONDS(1));
         }
     }
 };
@@ -220,8 +396,35 @@ void AppTaskCommon::PowerOnFactoryReset(void)
 }
 #endif /* CONFIG_CHIP_ENABLE_POWER_ON_FACTORY_RESET */
 
+light_para_t light_para;
+user_para_t user_para;
+unsigned char para_lightness = 0;
 CHIP_ERROR AppTaskCommon::StartApp(void)
 {
+    /* Proc ota boot flag , and erase flag */
+    flash_read(flash_para_dev, USER_PARTITION_OFFSET, &user_para, sizeof(user_para));
+    /* Boot from Zigbee , need to clean the user parameters sector first and set a flag */
+    if (user_para.val == USER_ZB_SW_VAL)
+    {
+        // if switch from zb , need to get all the cluster info from zb
+        flash_read(flash_para_dev, USER_PARTITION_OFFSET + sizeof(user_para), &light_para, sizeof(light_para));
+        // flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        sBoot_zb = 1;
+        /* Ensure lightness is at least 2 to avoid display error on HomePod Mini */
+        if (light_para.level < 2)
+        {
+            light_para.level = 2;
+        }
+        /* Pass the value to the init part to avoid gaps in pwm_pool init */
+        if (light_para.onoff)
+        {
+            para_lightness = light_para.level;
+        }
+        k_timer_init(&sDnssTimer, &AppTask::DnssTimerTimeoutCallback, nullptr);
+        k_timer_start(&sDnssTimer, K_MSEC(kDnssTimeout), K_NO_WAIT);
+        printk("Matter: start timer to protect Dnss initialized \r\n");
+    }
+
     CHIP_ERROR err = GetAppTask().Init();
 
     if (err != CHIP_NO_ERROR)
@@ -278,18 +481,44 @@ void AppTaskCommon::PrintFirmwareInfo(void)
     LOG_DBG("\t HAL commit: %.8s%s %s", TELINK_HAL_COMMIT_HASH, TELINK_HAL_LOCAL_STATUS, TELINK_HAL_COMMIT_DATE);
 #endif
 }
+
+#if INDEPENDENT_FACTORY_RESET_BUTTON
+void AppTaskCommon::IndependentFactoryReset(void)
+{
+    // Get Button Instance
+    ButtonManager & buttonManager = ButtonManager::getInstance();
+    // Button binding to factory_reset and add callback
+    buttonManager.addCallback(FactoryResetButtonEventHandler, 0, true);
+
+#if CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE // Independent Button Mode
+    buttonManager.linkBackend(ButtonPool::getInstance());
+#else
+    buttonManager.linkBackend(ButtonMatrix::getInstance());
+#endif // CONFIG_CHIP_BUTTON_MANAGER_IRQ_MODE
+}
+#endif
+
 CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 {
     CHIP_ERROR err;
 
     PrintFirmwareInfo();
 
+/* if use user mode, should disable the hardware init to avoid conflict */
+#if APP_LIGHT_USER_MODE_EN
+
+#if INDEPENDENT_FACTORY_RESET_BUTTON
+    IndependentFactoryReset(); // Open the factory_reset button separately.
+#endif
+
+#else
     InitLeds();
     UpdateStatusLED();
 
     InitPwms();
 
     InitButtons();
+#endif
 
 #ifdef CONFIG_TFLM_FEATURE
     mThreadStateChangedEventCaptured = false;
@@ -326,6 +555,7 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
     VerifyOrDie(sTestEventTriggerDelegate.AddHandler(&sOtaTestEventTriggerHandler) == CHIP_NO_ERROR);
 #endif
     (void) initParams.InitializeStaticResourcesBeforeServerInit();
+    VerifyOrDie(gSimpleAttributePersistence.Init(initParams.persistentStorageDelegate) == CHIP_NO_ERROR);
 #if APP_SET_DEVICE_INFO_PROVIDER
     gExampleDeviceInfoProvider.SetStorageDelegate(initParams.persistentStorageDelegate);
     chip::DeviceLayer::SetDeviceInfoProvider(&gExampleDeviceInfoProvider);
@@ -334,6 +564,9 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
     initParams.appDelegate              = &sCallbacks;
     initParams.testEventTriggerDelegate = &sTestEventTriggerDelegate;
     ReturnErrorOnFailure(chip::Server::GetInstance().Init(initParams));
+
+    /* Add deferred storage attribute for provider */
+    app::SetAttributePersistenceProvider(&gDeferredAttributePersister);
 
     ConfigurationMgr().LogDeviceConfig();
     PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
@@ -617,6 +850,18 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         k_timer_stop(&sFactoryResetTimer);
         sFactoryResetCntr = 0;
 
+        // Erase user parameters partition and reset to Zigbee mode upon factory reset
+        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        // Need to erase zb nvs part
+        flash_erase(zb_para_dev, ZB_NVS_START_ADR, ZB_NVS_SEC_SIZE);
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+        // Need to erase cluster para part
+        flash_erase(cluster_para_dev, USER_CLUSTER_PARTITION_OFFSET, USER_CLUSTER_PARTITION_SIZE);
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+        printk("Factory reset triggered by button, resetting to Zigbee mode");
+
         chip::Server::GetInstance().ScheduleFactoryReset();
     }
 }
@@ -632,6 +877,23 @@ void AppTaskCommon::FactoryResetTimerTimeoutCallback(k_timer * timer)
     event.Type    = AppEvent::kEventType_Timer;
     event.Handler = FactoryResetTimerEventHandler;
     GetAppTask().PostEvent(&event);
+}
+
+void SwitchBackToZigbee()
+{
+    uint8_t switch_flag = USER_MATTER_BACK_ZB;
+    flash_write(flash_para_dev, USER_PARTITION_OFFSET, &switch_flag, 1);
+    sys_reboot(SYS_REBOOT_WARM);
+}
+
+void AppTaskCommon::DnssTimerTimeoutCallback(k_timer * timer)
+{
+    printk("Matter: DnssTimer expired.\r\n");
+    /*If initialization of Dnss takes longer than 90 seconds, the device will reboot and revert to Zigbee mode*/
+    if (sBoot_zb)
+    {
+        SwitchBackToZigbee();
+    }
 }
 
 void AppTaskCommon::FactoryResetTimerEventHandler(AppEvent * aEvent)
@@ -765,6 +1027,231 @@ void AppTaskCommon::TriggerMicroSpeechEventHandler(AppEvent * aEvent)
 }
 #endif
 
+void AppTaskCommon::OtaEventsHandler(const ChipDeviceEvent * event)
+{
+    switch (event->OtaStateChanged.newState)
+    {
+    case DeviceLayer::kOtaDownloadInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image download in progress\n");
+        break;
+    case DeviceLayer::kOtaDownloadComplete:
+        ChipLogProgress(DeviceLayer, "OTA image download complete\n");
+        break;
+    case DeviceLayer::kOtaDownloadFailed:
+        ChipLogProgress(DeviceLayer, "OTA image download failed\n");
+        break;
+    case DeviceLayer::kOtaDownloadAborted:
+        ChipLogProgress(DeviceLayer, "OTA image download aborted\n");
+        break;
+    case DeviceLayer::kOtaApplyInProgress:
+        ChipLogProgress(DeviceLayer, "OTA image apply in progress\n");
+        break;
+    case DeviceLayer::kOtaApplyComplete:
+        ChipLogProgress(DeviceLayer, "OTA image apply complete\n");
+        AppTaskCommon::OtaSetAnaFlag(); // set flag when ota apply complete.
+        break;
+    case DeviceLayer::kOtaApplyFailed:
+        ChipLogProgress(DeviceLayer, "OTA image apply failed\n");
+        break;
+    default:
+        break;
+    }
+}
+
+k_timer KOtaQueryImageTimer;
+constexpr int KOtaQueryImageTimeout = 120000; // for init will cost for about 120s
+void KOtaQueryImageTimerTimeoutCallback(k_timer * timer)
+{
+    LOG_INF("=======proc KOtaQueryImageTimerTimeoutCallback\n");
+    InitBasicOTARequestor();
+    chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
+    if (chip::Server::GetInstance().GetFabricTable().FabricCount() != 0)
+    {
+        // Schedule a query. At the end of this query/update process the Default Provider timer is started
+        chip::DeviceLayer::SystemLayer().ScheduleLambda([requestor] { requestor->TriggerImmediateQuery(); });
+        // GetRequestorInstance()->TriggerImmediateQuery();
+    }
+}
+
+int KOtaQueryImageTimer_proc(void)
+{
+    k_timer_init(&KOtaQueryImageTimer, &KOtaQueryImageTimerTimeoutCallback, nullptr);
+    k_timer_start(&KOtaQueryImageTimer, K_MSEC(KOtaQueryImageTimeout), K_NO_WAIT);
+    LOG_INF("=======KOtaQueryImageTimer start\n");
+
+    return 1;
+}
+
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+void AppTaskCommon::GetStartupClusterInfo(void)
+{
+    cluster_startup_para * p_para = &g_light_cluster_para;
+
+    // onoff cluster
+    Protocols::InteractionModel::Status status;
+    bool tmpOnOff;
+    status        = Clusters::OnOff::Attributes::OnOff::Get(1, &(tmpOnOff));
+    p_para->onOff = (uint8_t) tmpOnOff;
+    printk("[commissioning_cmp] onOff:%d \n", p_para->onOff);
+
+    DataModel::Nullable<chip::app::Clusters::OnOff::StartUpOnOffEnum> tmpStartUpOnOff;
+    status = Clusters::OnOff::Attributes::StartUpOnOff::Get(1, (tmpStartUpOnOff));
+    if (status == Protocols::InteractionModel::Status::Success && !tmpStartUpOnOff.IsNull())
+    {
+        p_para->startUpOnOff = (uint8_t) (tmpStartUpOnOff.Value());
+    }
+    else
+    {
+        p_para->startUpOnOff = 0xff;
+    }
+    printk("[commissioning_cmp] startUpOnOff:%d \n", p_para->startUpOnOff);
+
+    // level cluster
+    app::DataModel::Nullable<uint8_t> tmpCurrentLevel;
+    // Read brightness value
+    status = Clusters::LevelControl::Attributes::CurrentLevel::Get(1, (tmpCurrentLevel));
+    if (status == Protocols::InteractionModel::Status::Success && !tmpCurrentLevel.IsNull())
+    {
+        p_para->currentLevel = tmpCurrentLevel.Value();
+    }
+    else
+    {
+        p_para->currentLevel = 254;
+    }
+    printk("[commissioning_cmp] currentLevel:%d \n", p_para->currentLevel);
+
+    uint8_t tmpMinLevel;
+    status = Clusters::LevelControl::Attributes::MinLevel::Get(1, &(tmpMinLevel));
+    if (status != Protocols::InteractionModel::Status::Success)
+    {
+        p_para->minLevel = tmpMinLevel;
+    }
+    else
+    {
+        p_para->minLevel = 1;
+    }
+    printk("[commissioning_cmp] minLevel:%d \n", p_para->minLevel);
+
+    uint8_t tmpMaxLevel;
+    status = Clusters::LevelControl::Attributes::MaxLevel::Get(1, &(tmpMaxLevel));
+    if (status != Protocols::InteractionModel::Status::Success)
+    {
+        p_para->maxLevel = tmpMaxLevel;
+    }
+    else
+    {
+        p_para->maxLevel = 254;
+    }
+    printk("[commissioning_cmp] maxLevel:%d \n", p_para->maxLevel);
+
+    DataModel::Nullable<uint8_t> tmpStartUpCurrentLevel;
+    status = Clusters::LevelControl::Attributes::StartUpCurrentLevel::Get(1, (tmpStartUpCurrentLevel));
+    if (status == Protocols::InteractionModel::Status::Success && !tmpStartUpCurrentLevel.IsNull())
+    {
+        p_para->startUpCurrentLevel = tmpStartUpCurrentLevel.Value();
+    }
+    else
+    {
+        p_para->startUpCurrentLevel = 0xff;
+    }
+    printk("[commissioning_cmp] startUpCurrentLevel:%d \n", p_para->startUpCurrentLevel);
+
+    // color control cluster
+
+    // Read CurrentHue value
+    uint8_t tmpCurrentHue;
+    status = Clusters::ColorControl::Attributes::CurrentHue::Get(1, &(tmpCurrentHue));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->hsv.h = tmpCurrentHue;
+    }
+    printk("[commissioning_cmp] hsv.h:%d \n", p_para->hsv.h);
+
+    // Read CurrentSaturation value
+    uint8_t tmpCurrentSaturation;
+    status = Clusters::ColorControl::Attributes::CurrentSaturation::Get(1, &(tmpCurrentSaturation));
+     if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->hsv.s = tmpCurrentSaturation;
+    }
+    printk("[commissioning_cmp] hsv.s:%d \n", p_para->hsv.s);
+
+    // Read CurrentX value
+    uint16_t tmpCurrentX;
+    status = Clusters::ColorControl::Attributes::CurrentX::Get(1, &(tmpCurrentX));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->xy.x = tmpCurrentX;
+    }
+    printk("[commissioning_cmp] xy.x:%d \n", p_para->xy.x);
+
+    // Read CurrentY value
+    uint16_t tmpCurrentY;
+    status = Clusters::ColorControl::Attributes::CurrentY::Get(1, &(tmpCurrentY));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->xy.y = tmpCurrentY;
+    }
+    printk("[commissioning_cmp] xy.y:%d \n", p_para->xy.y);
+
+    // Read ColorTemperatureMireds value
+    uint16_t tmpColorTemperatureMireds;
+    status = Clusters::ColorControl::Attributes::ColorTemperatureMireds::Get(1, &(tmpColorTemperatureMireds));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->colorTemperatureMireds = tmpColorTemperatureMireds;
+    }
+    printk("[commissioning_cmp] colorTemperatureMireds:%d \n", p_para->colorTemperatureMireds);
+
+    //  Read ColorMode value
+    Clusters::ColorControl::ColorModeEnum tmpColorMode;
+    status = Clusters::ColorControl::Attributes::ColorMode::Get(1, &(tmpColorMode));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->colorMode = static_cast<uint8_t>(tmpColorMode);
+    }
+    printk("[commissioning_cmp] colorMode:%d \n", p_para->colorMode);
+
+    // Read EnhancedCurrentHue value
+    uint16_t tmpEnhancedCurrentHue;
+    status = Clusters::ColorControl::Attributes::EnhancedCurrentHue::Get(1, &(tmpEnhancedCurrentHue));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->enhancedCurrentHue = tmpEnhancedCurrentHue;
+    }
+    printk("[commissioning_cmp] enhancedCurrentHue:%d \n", p_para->enhancedCurrentHue);
+
+    //  Read EnhancedColorMode value
+    Clusters::ColorControl::EnhancedColorModeEnum tmpEnhancedColorMode;
+    status = Clusters::ColorControl::Attributes::EnhancedColorMode::Get(1, &(tmpEnhancedColorMode));
+    if(status == Protocols::InteractionModel::Status::Success)
+    {
+        p_para->enhancedColorMode = static_cast<uint8_t>(tmpEnhancedColorMode);
+    }
+    printk("[commissioning_cmp] enhancedColorMode:%d \n", p_para->enhancedColorMode);
+
+    //  Read StartUpColorTemperatureMireds value
+    DataModel::Nullable<uint16_t> tmpStartUpColorTemperatureMireds;
+    status = Clusters::ColorControl::Attributes::StartUpColorTemperatureMireds::Get(1, (tmpStartUpColorTemperatureMireds));
+    if (status == Protocols::InteractionModel::Status::Success && !tmpStartUpColorTemperatureMireds.IsNull())
+    {
+        p_para->startUpColorTemperatureMireds = tmpStartUpColorTemperatureMireds.Value();
+    }
+    else
+    {
+        p_para->startUpColorTemperatureMireds = 0xffff;
+    }
+    printk("[commissioning_cmp] startUpColorTemperatureMireds:%d \n", p_para->startUpColorTemperatureMireds);
+
+    if (store_cluster_para(p_para) != 0)
+    {
+        printk("[ChipEventHandler] Fail store startup cluster para\n");
+    }
+}
+#endif
+#endif
+
 void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* arg */)
 {
     switch (event->Type)
@@ -798,10 +1285,77 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
             Server::GetInstance().GetFailSafeContext().ForceFailSafeTimerExpiry();
         }
         break;
+
+    case DeviceEventType::kCommissioningComplete: {
+        unsigned char val = USER_MATTER_PAIR_VAL;
+
+/* just a demo to show how to change the cluster after commission , only in the zb switch and touchlink is paired*/
+#if 0
+        if(user_para.val == USER_ZB_SW_VAL && user_para.on_net ){
+            Protocols::InteractionModel::Status status;
+            /* Switch from the touch link, need to restore previous values */
+            status = Clusters::OnOff::Attributes::OnOff::Set(kExampleEndpointId, light_para.onoff);
+            if (status != Protocols::InteractionModel::Status::Success)
+            {
+                LOG_ERR("Update OnOff fail: %x", to_underlying(status));
+            }
+            status = Clusters::LevelControl::Attributes::CurrentLevel::Set(kExampleEndpointId, light_para.level);
+            {
+                LOG_ERR("Update brightness fail: %x", to_underlying(status));
+            }
+        }
+#endif
+
+        /*clear zigbee switch flag*/
+        sBoot_zb = 0;
+        /*write commission suc flag*/
+        flash_erase(flash_para_dev, USER_PARTITION_OFFSET, USER_PARTITION_SIZE);
+        flash_write(flash_para_dev, USER_PARTITION_OFFSET, &val, 1);
+#if APP_LIGHT_USER_MODE_EN
+#if CONFIG_STARTUP_OPTIMIZATE
+        GetStartupClusterInfo();
+#endif /* CONFIG_STARTUP_OPTIMIZATE */
+#endif /* APP_LIGHT_USER_MODE_EN */
+        printk("Commissioning complete, set Matter commissionined flag");
+    }
+    break;
+    case DeviceEventType::kFailSafeTimerExpired: {
+        /* Erase and reset to Zigbee mode if commissioning fails */
+        if (sBoot_zb)
+        {
+            printk("FailSafeTimer expired, Matter commissioning failed, rebooting to Zigbee mode.\r\n");
+            SwitchBackToZigbee();
+        }
+        else
+        {
+            printk("FailSafeTimer expired, Matter commissioning failed.\r\n");
+        }
+    }
+    break;
+
 #if CHIP_DEVICE_CONFIG_ENABLE_THREAD
     case DeviceEventType::kDnssdInitialized:
 #if CONFIG_CHIP_OTA_REQUESTOR
         InitBasicOTARequestor();
+
+        {
+            // metadata is only 1(debug firmware) and 2(develop firmware) and null(product firmware).
+            // other values are illegal.
+            static uint8_t metadata                 = MATTER_FW_TYPE;
+            chip::OTARequestorInterface * requestor = chip::GetRequestorInstance();
+            if ((metadata == FW_TYPE_DEBUG) || (metadata == FW_TYPE_DEVELOP))
+            {
+                printk("set metadata start");
+                requestor->SetMetadataForProvider(chip::ByteSpan(&metadata, 1));
+                printk("set metadata end");
+            }
+            else
+            {
+                // metadata is is null(product firmare) as default.
+            }
+            KOtaQueryImageTimer_proc();
+        }
+
         if (GetRequestorInstance()->GetCurrentUpdateState() == Clusters::OtaSoftwareUpdateRequestor::OTAUpdateStateEnum::kIdle)
         {
 #endif
@@ -811,6 +1365,11 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_CHIP_OTA_REQUESTOR
         }
 #endif
+        if (sBoot_zb)
+        {
+            k_timer_stop(&sDnssTimer);
+            printk("Dnss Timer stopped, Matter commissioning kDnssdInitialized.\r\n");
+        }
         break;
     case DeviceEventType::kThreadStateChange:
         sIsNetworkProvisioned = ConnectivityMgr().IsThreadProvisioned();
@@ -847,6 +1406,9 @@ void AppTaskCommon::ChipEventHandler(const ChipDeviceEvent * event, intptr_t /* 
 #if CONFIG_CHIP_ENABLE_APPLICATION_STATUS_LED
         UpdateStatusLED();
 #endif
+        break;
+    case DeviceEventType::kOtaStateChanged:
+        AppTaskCommon::OtaEventsHandler(event);
         break;
     default:
         break;

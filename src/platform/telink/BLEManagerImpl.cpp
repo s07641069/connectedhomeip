@@ -86,6 +86,10 @@ const bt_uuid_128 UUID128_CHIPoBLEChar_TX =
 const bt_uuid_128 UUID128_CHIPoBLEChar_C3 =
     BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0x63, 0x64);
 #endif
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+const bt_uuid_128 UUID128_CHIPoBLEChar_ChipID =
+    BT_UUID_INIT_128(0x04, 0x8F, 0x21, 0x83, 0x8A, 0x74, 0x7D, 0xB8, 0xF2, 0x45, 0x72, 0x87, 0x38, 0x02, 0xA1, 0x01);
+#endif
 
 bt_uuid_16 UUID16_CHIPoBLEService = BT_UUID_INIT_16(0xFFF6);
 
@@ -109,6 +113,12 @@ bt_gatt_attr sChipoBleAttributes[] = {
                                BT_GATT_CHRC_READ,
                                BT_GATT_PERM_READ,
                                BLEManagerImpl::HandleC3Read, nullptr, nullptr),
+#endif
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+        BT_GATT_CHARACTERISTIC(&UUID128_CHIPoBLEChar_ChipID.uuid,
+                               BT_GATT_CHRC_READ,
+                               BT_GATT_PERM_READ,
+                               BLEManagerImpl::HandleChipIDRead, nullptr, nullptr),
 #endif
 };
 
@@ -926,6 +936,20 @@ ssize_t BLEManagerImpl::HandleC3Read(struct bt_conn * conId, const struct bt_gat
 }
 #endif
 
+#if CHIP_DEVICE_EXPOSE_CHIP_ID_VIA_BLE
+#include <zephyr/drivers/hwinfo.h>
+ssize_t BLEManagerImpl::HandleChipIDRead(struct bt_conn * conId, const struct bt_gatt_attr * attr, void * buf, uint16_t len,
+                                         uint16_t offset)
+{
+    ChipLogDetail(DeviceLayer, "Read request received for CHIPoBLE Chip ID (ConnId 0x%02x)", bt_conn_index(conId));
+    // Example chip_id data storage (replace with actual chip_id value)
+    // uint8_t chip_id_value[] = { 0x42, 0xe3, 0x03, 0xb4, 0xcf, 0x3c, 0xe6, 0x32, 0x36, 0x37, 0x36, 0x42, 0x50, 0x55, 0x76, 0xce };
+    uint8_t chip_id_value[16] = { 0 };
+    efuse_get_chip_id(chip_id_value);
+    return bt_gatt_attr_read(conId, attr, buf, len, offset, chip_id_value, sizeof(chip_id_value));
+}
+#endif
+
 CHIP_ERROR BLEManagerImpl::HandleBleConnectionClosed(const ChipDeviceEvent * event)
 {
     // Deinit BLE
@@ -952,6 +976,14 @@ CHIP_ERROR BLEManagerImpl::HandleOperationalNetworkEnabled(const ChipDeviceEvent
     ChipLogDetail(DeviceLayer, "HandleOperationalNetworkEnabled");
 
     CHIP_ERROR error = CHIP_NO_ERROR;
+    if (!ThreadStackMgrImpl().IsReadyToAttach())
+    {
+        // Ignore operational-network notifications once the one-time BLE->Thread
+        // handoff is complete. Pure Thread-to-Thread switches should be handled
+        // by the Thread stack directly.
+        return CHIP_NO_ERROR;
+    }
+
     /* On first commissioning BLE disconnects before switching to Thread operational network.
        All subsequent Thread operational network changes are handled in a bit different way */
     if (!mReadyToAttachThread)
@@ -974,8 +1006,6 @@ CHIP_ERROR BLEManagerImpl::HandleOperationalNetworkEnabled(const ChipDeviceEvent
 
         error = PlatformMgr().PostEvent(&attachEvent);
         VerifyOrExit(error == CHIP_NO_ERROR, ChipLogError(DeviceLayer, "PostEvent err: %" CHIP_ERROR_FORMAT, error.Format()));
-
-        TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().CommitConfiguration();
     }
 
 exit:
@@ -1009,6 +1039,7 @@ void BLEManagerImpl::SwitchToIeee802154(void)
     // Init Thread
     ThreadStackMgrImpl().SetRadioBlocked(false);
     TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(true);
+    ThreadStackMgrImpl().SetReadyToAttach(false);
 }
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 

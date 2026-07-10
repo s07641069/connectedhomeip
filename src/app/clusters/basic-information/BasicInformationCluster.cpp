@@ -172,9 +172,13 @@ inline CHIP_ERROR ReadManufacturingDate(DeviceInstanceInfoProvider & deviceInfoP
     uint16_t manufacturingYear;
     uint8_t manufacturingMonth;
     uint8_t manufacturingDayOfMonth;
+#if CONFIG_SECURE_PROGRAMMING
+    CHIP_ERROR status = deviceInfoProvider.GetManufacturingDateString(manufacturingDateString, sizeof(manufacturingDateString));
+#else
     size_t totalManufacturingDateLen = 0;
     MutableCharSpan vendorSuffixSpan(manufacturingDateString + kMaxDateLength, sizeof(manufacturingDateString) - kMaxDateLength);
     CHIP_ERROR status = deviceInfoProvider.GetManufacturingDate(manufacturingYear, manufacturingMonth, manufacturingDayOfMonth);
+#endif
 
     // TODO: Remove defaulting once proper runtime defaulting of unimplemented factory data is done
     if (status == CHIP_DEVICE_ERROR_CONFIG_NOT_FOUND || status == CHIP_ERROR_UNSUPPORTED_CHIP_FEATURE)
@@ -182,11 +186,16 @@ inline CHIP_ERROR ReadManufacturingDate(DeviceInstanceInfoProvider & deviceInfoP
         manufacturingYear       = 2020;
         manufacturingMonth      = 1;
         manufacturingDayOfMonth = 1;
+#if !CONFIG_SECURE_PROGRAMMING
         vendorSuffixSpan.reduce_size(0);
+#endif
         status = CHIP_NO_ERROR;
     }
     ReturnErrorOnFailure(status);
 
+#if CONFIG_SECURE_PROGRAMMING
+    return aEncoder.Encode(CharSpan(manufacturingDateString, strnlen(manufacturingDateString, kMaxLen)));
+#else
     // Format is YYYYMMDD
     snprintf(manufacturingDateString, sizeof(manufacturingDateString), "%04u%02u%02u", manufacturingYear, manufacturingMonth,
              manufacturingDayOfMonth);
@@ -201,6 +210,7 @@ inline CHIP_ERROR ReadManufacturingDate(DeviceInstanceInfoProvider & deviceInfoP
     VerifyOrDie(totalManufacturingDateLen <= kMaxLen);
 
     return aEncoder.Encode(CharSpan(manufacturingDateString, totalManufacturingDateLen));
+#endif
 }
 
 inline CHIP_ERROR ReadUniqueID(DeviceLayer::ConfigurationManager & configManager, AttributeValueEncoder & aEncoder)

@@ -51,6 +51,7 @@ endif()
 target_sources(app PRIVATE
                src/AppTask.cpp
                src/ZclCallbacks.cpp
+               ${CHIP_ROOT}/src/app/persistence/DeferredAttributePersistenceProvider.cpp
                ${TELINK_COMMON}/common/src/mainCommon.cpp
                ${TELINK_COMMON}/common/src/AppTaskCommon.cpp
                ${TELINK_COMMON}/util/src/LEDManager.cpp
@@ -78,9 +79,25 @@ if(CONFIG_TFLM_FEATURE)
                  src/tflm/errno_stub.c)
 endif()
 
+if(CONFIG_DeviceType_DimmableLight)
 chip_configure_data_model(app
     ZAP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../lighting-common/lighting-app.zap
 )
+endif()
+
+if(CONFIG_DeviceType_ColorTemperatureLight)
+chip_configure_data_model(app
+    INCLUDE_SERVER
+    ZAP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../lighting-common/colortemperaturelight-lighting-app.zap
+)
+endif()
+
+if(CONFIG_DeviceType_ExtendedColorLight)
+chip_configure_data_model(app
+    INCLUDE_SERVER
+    ZAP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/../lighting-common/extendedcolorlight-lighting-app.zap
+)
+endif()
 
 if(CONFIG_PWM)
 	target_sources(app PRIVATE 
