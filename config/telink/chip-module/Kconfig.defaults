@@ -585,8 +585,4 @@ config THREAD_ANALYZER_LOG_LEVEL
     default 3 # info
     depends on THREAD_ANALYZER
 
-config THREAD_ANALYZER_RUN_UNLOCKED
-    default n
-    depends on THREAD_ANALYZER
-
 endif
