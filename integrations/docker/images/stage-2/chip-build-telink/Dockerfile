@@ -32,7 +32,7 @@ RUN set -x \
     && west update -o=--depth=1 -n -f smart \
     && west blobs fetch hal_telink \
     && scripts/utils/telink_w91_post_build $PWD ${N22_BIN_REVISION} 1 \
-    && ./modules/hal/telink/hal_v2/fetch_sdk.sh \
+    && ./../modules/hal/telink/hal_v2/fetch_sdk.sh \
     && : # last line
 
 FROM ghcr.io/project-chip/chip-build:${VERSION}
