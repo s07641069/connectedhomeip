@@ -448,6 +448,9 @@ void DnssdServer::StartServer()
     {
         mode = mCommissioningModeProvider->GetCommissioningMode();
     }
+
+    ChipLogDetail(Discovery, "DnssdServer::StartServer");
+
     return StartServer(mode);
 }
 
@@ -486,6 +489,8 @@ void DnssdServer::StopServer()
 void DnssdServer::StartServer(Dnssd::CommissioningMode mode)
 {
     TEMPORARY_RETURN_IGNORED DeviceLayer::PlatformMgr().AddEventHandler(OnPlatformEventWrapper, 0);
+
+    ChipLogDetail(Discovery, "DnssdServer::StartServer*");
 
     if (Dnssd::ServiceAdvertiser::Instance().Init(chip::DeviceLayer::UDPEndPointManager()) != CHIP_NO_ERROR)
     {

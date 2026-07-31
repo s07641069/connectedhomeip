@@ -434,6 +434,8 @@ Global<DiscoveryImplPlatform> DiscoveryImplPlatform::sManager;
 
 CHIP_ERROR DiscoveryImplPlatform::InitImpl()
 {
+    ChipLogProgress(Discovery, "DiscoveryImplPlatform::InitImpl");
+
     VerifyOrReturnError(mState == State::kUninitialized, CHIP_NO_ERROR);
     mState = State::kInitializing;
 
@@ -450,6 +452,8 @@ void DiscoveryImplPlatform::Shutdown()
 
 void DiscoveryImplPlatform::HandleDnssdInit(void * context, CHIP_ERROR initError)
 {
+    ChipLogProgress(Discovery, "DiscoveryImplPlatform::HandleDnssdInit");
+
     DiscoveryImplPlatform * publisher = static_cast<DiscoveryImplPlatform *>(context);
 
     if (initError == CHIP_NO_ERROR)
@@ -471,6 +475,8 @@ void DiscoveryImplPlatform::HandleDnssdInit(void * context, CHIP_ERROR initError
 
 void DiscoveryImplPlatform::HandleDnssdError(void * context, CHIP_ERROR error)
 {
+    ChipLogProgress(Discovery, "DiscoveryImplPlatform::HandleDnssdError");
+
     DiscoveryImplPlatform * publisher = static_cast<DiscoveryImplPlatform *>(context);
 
     if (error == CHIP_ERROR_FORCED_RESET)

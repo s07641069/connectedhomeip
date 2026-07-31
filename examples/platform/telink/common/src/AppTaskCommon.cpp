@@ -311,8 +311,9 @@ CHIP_ERROR AppTaskCommon::InitCommonParts(void)
 #else
     // ZAP/codegen applications use the generated data model.
     initParams.dataModelProvider = CodegenDataModelProviderInstance(initParams.persistentStorageDelegate);
+    LOG_INF("Server::Init+");
     ReturnErrorOnFailure(chip::Server::GetInstance().Init(initParams));
-
+    LOG_INF("Server::Init-");
     ConfigurationMgr().LogDeviceConfig();
     PrintOnboardingCodes(chip::RendezvousInformationFlags(chip::RendezvousInformationFlag::kBLE));
 

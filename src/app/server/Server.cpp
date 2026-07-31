@@ -562,14 +562,18 @@ CHIP_ERROR Server::Init(const ServerInitParams & initParams)
     }
     else if (initParams.advertiseCommissionableIfNoFabrics)
     {
+        ChipLogProgress(AppServer, "OpenBasicCommissioningWindow+");
         SuccessOrExit(err = mCommissioningWindowManager.OpenBasicCommissioningWindow(initParams.discoveryTimeout));
+        ChipLogProgress(AppServer, "OpenBasicCommissioningWindow-");
     }
 
     // TODO @bzbarsky-apple @cecille Move to examples
     // ESP32 examples have a custom logic for enabling DNS-SD
 #if !CHIP_DEVICE_LAYER_TARGET_ESP32 && (!CHIP_DEVICE_LAYER_TARGET_AMEBA || !CHIP_DEVICE_CONFIG_ENABLE_CHIPOBLE)
     // StartServer only enables commissioning mode if device has not been commissioned
+    ChipLogProgress(AppServer, "DnssdServer::StartServer()+");
     app::DnssdServer::Instance().StartServer();
+    ChipLogProgress(AppServer, "DnssdServer::StartServer()-");
 #endif
 
     caseSessionManagerConfig = {
