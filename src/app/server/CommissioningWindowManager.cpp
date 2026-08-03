@@ -542,7 +542,9 @@ CHIP_ERROR CommissioningWindowManager::StartAdvertisement()
     }
 
     // reset all advertising, switching to our new commissioning mode.
+    ChipLogProgress(AppServer, "CommissioningWindowManager::StartAdvertisement+");
     app::DnssdServer::Instance().StartServer();
+    ChipLogProgress(AppServer, "CommissioningWindowManager::StartAdvertisement-");
 
     return CHIP_NO_ERROR;
 }
