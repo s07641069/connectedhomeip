@@ -600,6 +600,7 @@ CHIP_ERROR DiscoveryImplPlatform::PublishService(const char * serviceType, TextE
 }
 
 #define PREPARE_RECORDS(Type)                                                                                                      \
+    ChipLogDetail(Discovery, "DiscoveryImplPlatform PREPARE_RECORDS inited=%u", IsInitialized());                                  \
     VerifyOrReturnError(IsInitialized(), CHIP_ERROR_INCORRECT_STATE);                                                              \
     TextEntry textEntries[Type##AdvertisingParameters::kTxtMaxNumber];                                                             \
     size_t textEntrySize = 0;                                                                                                      \
@@ -620,6 +621,8 @@ CHIP_ERROR DiscoveryImplPlatform::PublishService(const char * serviceType, TextE
 
 CHIP_ERROR DiscoveryImplPlatform::Advertise(const OperationalAdvertisingParameters & params)
 {
+    ChipLogDetail(Discovery, "DiscoveryImplPlatform::Advertise OperationalAdvertisingParameters");
+
     PREPARE_RECORDS(Operational);
 
     ADD_TXT_RECORD(SessionIdleInterval);
@@ -637,6 +640,8 @@ CHIP_ERROR DiscoveryImplPlatform::Advertise(const OperationalAdvertisingParamete
 
 CHIP_ERROR DiscoveryImplPlatform::Advertise(const CommissionAdvertisingParameters & params)
 {
+    ChipLogDetail(Discovery, "DiscoveryImplPlatform::Advertise CommissionAdvertisingParameters");
+
     PREPARE_RECORDS(Commission);
 
     ADD_TXT_RECORD(VendorProduct);

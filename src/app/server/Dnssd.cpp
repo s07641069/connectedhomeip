@@ -206,6 +206,8 @@ void DnssdServer::GetPrimaryOrFallbackMACAddress(MutableByteSpan & mac)
 /// Set MDNS operational advertisement
 CHIP_ERROR DnssdServer::AdvertiseOperational()
 {
+    ChipLogProgress(Discovery, "DnssdServer::AdvertiseOperational %p", mFabricTable);
+
     VerifyOrReturnError(mFabricTable != nullptr, CHIP_ERROR_INCORRECT_STATE);
 
     for (const FabricInfo & fabricInfo : *mFabricTable)

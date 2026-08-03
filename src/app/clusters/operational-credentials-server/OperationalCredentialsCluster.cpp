@@ -532,7 +532,8 @@ std::optional<DataModel::ActionReturnStatus> HandleAddNOC(CommandHandler * comma
     err = dnssdServer.AdvertiseOperational();
     if (err != CHIP_NO_ERROR)
     {
-        ChipLogError(AppServer, "Operational advertising failed: %" CHIP_ERROR_FORMAT, err.Format());
+        ChipLogError(AppServer, "HandleAddNOC "
+            "Operational advertising failed: %" CHIP_ERROR_FORMAT, err.Format());
     }
 
     reportChange = true;

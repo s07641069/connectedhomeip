@@ -95,7 +95,8 @@ void CommissioningWindowManager::OnPlatformEvent(const DeviceLayer::ChipDeviceEv
         CHIP_ERROR err = app::DnssdServer::Instance().AdvertiseOperational();
         if (err != CHIP_NO_ERROR)
         {
-            ChipLogError(AppServer, "Operational advertising failed: %" CHIP_ERROR_FORMAT, err.Format());
+            ChipLogError(AppServer,"{CommissioningWindowManager::OnPlatformEvent} "
+                "Operational advertising failed: %" CHIP_ERROR_FORMAT, err.Format());
         }
         else
         {
