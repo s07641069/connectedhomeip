@@ -230,10 +230,14 @@ DataModel::ActionReturnStatus GeneralCommissioningCluster::ReadAttribute(const D
         return encoder.Encode(outUpdateAcceptanceDeadline.Value());
     }
 #endif
-
+    case IsCommissioningWithoutPower::Id: {
+        bool isCommissioningWithoutPower = false;
+        // TODO: dummy implementation. Should refer to some DeviceLayer::PlatformMgr() API.
+        return encoder.Encode(isCommissioningWithoutPower);
+    }
     case RecoveryIdentifier::Id:
     case NetworkRecoveryReason::Id:
-    case IsCommissioningWithoutPower::Id:
+    // case IsCommissioningWithoutPower::Id:
         // TODO: implement the above - they are currently PROVISIONAL and not supported by AAI
     default:
         return Protocols::InteractionModel::Status::UnsupportedAttribute;
