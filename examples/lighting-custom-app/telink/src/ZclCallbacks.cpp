@@ -33,87 +33,35 @@ using namespace chip::app::Clusters;
 void MatterPostAttributeChangeCallback(const chip::app::ConcreteAttributePath & attributePath, uint8_t type, uint16_t size,
                                        uint8_t * value)
 {
-    static HsvColor_t hsv;
-    static XyColor_t xy;
-    ClusterId clusterId     = attributePath.mClusterId;
-    AttributeId attributeId = attributePath.mAttributeId;
-
-    if (clusterId == OnOff::Id && attributeId == OnOff::Attributes::OnOff::Id)
+    if (attributePath.mClusterId == DeltadelfinAnimationGradient::Id)
     {
-        ChipLogDetail(Zcl, "Cluster OnOff: attribute OnOff set to %u", *value);
-        GetAppTask().SetInitiateAction(*value ? AppTask::ON_ACTION : AppTask::OFF_ACTION,
-                                       static_cast<int32_t>(AppEvent::kEventType_DeviceAction), value);
-    }
-    else if (clusterId == LevelControl::Id && attributeId == LevelControl::Attributes::CurrentLevel::Id)
-    {
-        if (GetAppTask().IsTurnedOn())
+        switch (attributePath.mAttributeId)
         {
-            ChipLogDetail(Zcl, "Cluster LevelControl: attribute CurrentLevel set to %u", *value);
-            GetAppTask().SetInitiateAction(AppTask::LEVEL_ACTION, static_cast<int32_t>(AppEvent::kEventType_DeviceAction), value);
-        }
-        else
-        {
-            ChipLogDetail(Zcl, "LED is off. Try to use move-to-level-with-on-off instead of move-to-level");
-        }
-    }
-    else if (clusterId == ColorControl::Id)
-    {
-        /* Ignore several attributes that are currently not processed */
-        if ((attributeId == ColorControl::Attributes::RemainingTime::Id) ||
-            (attributeId == ColorControl::Attributes::EnhancedColorMode::Id) ||
-            (attributeId == ColorControl::Attributes::ColorMode::Id))
-        {
-            return;
-        }
+        case DeltadelfinAnimationGradient::Attributes::CurrentAnimation::Id:
+            if (size == sizeof(uint8_t))
+            {
+                uint8_t animation = *value;
+                ChipLogProgress(Zcl, "*** App CurrentAnimation changed: %u", animation);
+            }
+            break;
 
-        /* XY color space */
-        if (attributeId == ColorControl::Attributes::CurrentX::Id || attributeId == ColorControl::Attributes::CurrentY::Id)
-        {
-            if (attributeId == ColorControl::Attributes::CurrentX::Id)
+        case DeltadelfinAnimationGradient::Attributes::CurrentGradient::Id:
+            if (size == sizeof(uint8_t))
             {
-                xy.x = *reinterpret_cast<uint16_t *>(value);
+                uint8_t gradient = *value;
+                ChipLogProgress(Zcl, "*** App CurrentGradient changed: %u", gradient);
             }
-            else if (attributeId == ColorControl::Attributes::CurrentY::Id)
-            {
-                xy.y = *reinterpret_cast<uint16_t *>(value);
-            }
+            break;
 
-            ChipLogDetail(Zcl, "New XY color: %u|%u", xy.x, xy.y);
-            GetAppTask().SetInitiateAction(AppTask::COLOR_ACTION_XY, static_cast<int32_t>(AppEvent::kEventType_DeviceAction),
-                                           (uint8_t *) &xy);
-        }
-        /* HSV color space */
-        else if (attributeId == ColorControl::Attributes::CurrentHue::Id ||
-                 attributeId == ColorControl::Attributes::CurrentSaturation::Id ||
-                 attributeId == ColorControl::Attributes::EnhancedCurrentHue::Id)
-        {
-            if (attributeId == ColorControl::Attributes::EnhancedCurrentHue::Id)
+        case DeltadelfinAnimationGradient::Attributes::DisplayMode::Id:
+            if (size == sizeof(uint8_t))
             {
-                hsv.h = (uint8_t) (((*reinterpret_cast<uint16_t *>(value)) & 0xFF00) >> 8);
-                hsv.s = (uint8_t) ((*reinterpret_cast<uint16_t *>(value)) & 0xFF);
+                uint8_t mode = *value;
+                ChipLogProgress(Zcl, "*** App DisplayMode changed: %u", mode);
             }
-            else if (attributeId == ColorControl::Attributes::CurrentHue::Id)
-            {
-                hsv.h = *value;
-            }
-            else if (attributeId == ColorControl::Attributes::CurrentSaturation::Id)
-            {
-                hsv.s = *value;
-            }
-            ChipLogDetail(Zcl, "New HSV color: hue = %u| saturation = %u", hsv.h, hsv.s);
-            GetAppTask().SetInitiateAction(AppTask::COLOR_ACTION_HSV, static_cast<int32_t>(AppEvent::kEventType_DeviceAction),
-                                           (uint8_t *) &hsv);
-        }
-        /* Temperature Mireds color space */
-        else if (attributeId == ColorControl::Attributes::ColorTemperatureMireds::Id)
-        {
-            ChipLogDetail(Zcl, "New Temperature Mireds color = %u", *(uint16_t *) value);
-            GetAppTask().SetInitiateAction(AppTask::COLOR_ACTION_CT, static_cast<int32_t>(AppEvent::kEventType_DeviceAction),
-                                           value);
-        }
-        else
-        {
-            ChipLogDetail(Zcl, "Ignore ColorControl attribute (%u) that is not currently processed!", attributeId);
+            break;
+        default:
+            break;
         }
     }
 }
