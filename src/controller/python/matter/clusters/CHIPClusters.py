@@ -16591,6 +16591,106 @@ class ChipClusters:
             },
         },
     }
+    _DELTADELFIN_ANIMATION_GRADIENT_CLUSTER_INFO = {
+        "clusterName": "DeltadelfinAnimationGradient",
+        "clusterId": 0x117CFC00,
+        "commands": {
+            0x00000000: {
+                "commandId": 0x00000000,
+                "commandName": "SetAnimation",
+                "args": {
+                    "id": "int",
+                },
+            },
+            0x00000001: {
+                "commandId": 0x00000001,
+                "commandName": "SetGradient",
+                "args": {
+                    "id": "int",
+                    "transitionTimeMs": "int",
+                },
+            },
+            0x00000002: {
+                "commandId": 0x00000002,
+                "commandName": "SetDisplayMode",
+                "args": {
+                    "mode": "int",
+                },
+            },
+        },
+        "attributes": {
+            0x00000000: {
+                "attributeName": "DisplayMode",
+                "attributeId": 0x00000000,
+                "type": "int",
+                "reportable": True,
+                "writable": True,
+            },
+            0x00000001: {
+                "attributeName": "CurrentAnimation",
+                "attributeId": 0x00000001,
+                "type": "int",
+                "reportable": True,
+                "writable": True,
+            },
+            0x00000002: {
+                "attributeName": "CurrentGradient",
+                "attributeId": 0x00000002,
+                "type": "int",
+                "reportable": True,
+                "writable": True,
+            },
+            0x00000003: {
+                "attributeName": "AnimationCount",
+                "attributeId": 0x00000003,
+                "type": "int",
+                "reportable": True,
+            },
+            0x00000004: {
+                "attributeName": "GradientCount",
+                "attributeId": 0x00000004,
+                "type": "int",
+                "reportable": True,
+            },
+            0x00000005: {
+                "attributeName": "TransitionTimeMs",
+                "attributeId": 0x00000005,
+                "type": "int",
+                "reportable": True,
+                "writable": True,
+            },
+            0x0000FFF8: {
+                "attributeName": "GeneratedCommandList",
+                "attributeId": 0x0000FFF8,
+                "type": "int",
+                "reportable": True,
+            },
+            0x0000FFF9: {
+                "attributeName": "AcceptedCommandList",
+                "attributeId": 0x0000FFF9,
+                "type": "int",
+                "reportable": True,
+            },
+            0x0000FFFB: {
+                "attributeName": "AttributeList",
+                "attributeId": 0x0000FFFB,
+                "type": "int",
+                "reportable": True,
+            },
+            0x0000FFFC: {
+                "attributeName": "FeatureMap",
+                "attributeId": 0x0000FFFC,
+                "type": "int",
+                "reportable": True,
+            },
+            0x0000FFFD: {
+                "attributeName": "ClusterRevision",
+                "attributeId": 0x0000FFFD,
+                "type": "int",
+                "reportable": True,
+            },
+        },
+    }
     _UNIT_TESTING_CLUSTER_INFO = {
         "clusterName": "UnitTesting",
         "clusterId": 0xFFF1FC05,
@@ -17790,6 +17890,7 @@ class ChipClusters:
         0x00000802: _TLS_CLIENT_MANAGEMENT_CLUSTER_INFO,
         0x00000B06: _METER_IDENTIFICATION_CLUSTER_INFO,
         0x00000B07: _COMMODITY_METERING_CLUSTER_INFO,
+        0x117CFC00: _DELTADELFIN_ANIMATION_GRADIENT_CLUSTER_INFO,
         0xFFF1FC05: _UNIT_TESTING_CLUSTER_INFO,
         0xFFF1FC06: _FAULT_INJECTION_CLUSTER_INFO,
         0xFFF1FC20: _SAMPLE_MEI_CLUSTER_INFO,
@@ -17950,6 +18051,7 @@ class ChipClusters:
         "TlsClientManagement": _TLS_CLIENT_MANAGEMENT_CLUSTER_INFO,
         "MeterIdentification": _METER_IDENTIFICATION_CLUSTER_INFO,
         "CommodityMetering": _COMMODITY_METERING_CLUSTER_INFO,
+        "DeltadelfinAnimationGradient": _DELTADELFIN_ANIMATION_GRADIENT_CLUSTER_INFO,
         "UnitTesting": _UNIT_TESTING_CLUSTER_INFO,
         "FaultInjection": _FAULT_INJECTION_CLUSTER_INFO,
         "SampleMei": _SAMPLE_MEI_CLUSTER_INFO,

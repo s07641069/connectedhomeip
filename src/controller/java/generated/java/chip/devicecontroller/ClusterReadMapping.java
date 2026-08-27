@@ -21790,6 +21790,131 @@ public class ClusterReadMapping {
      
        return result;
     }
+    private static Map<String, InteractionInfo> readDeltadelfinAnimationGradientInteractionInfo() {
+       Map<String, InteractionInfo> result = new LinkedHashMap<>();Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientDisplayModeCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientDisplayModeAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readDisplayModeAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientDisplayModeCommandParams
+        );
+        result.put("readDisplayModeAttribute", readDeltadelfinAnimationGradientDisplayModeAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientCurrentAnimationCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientCurrentAnimationAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readCurrentAnimationAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientCurrentAnimationCommandParams
+        );
+        result.put("readCurrentAnimationAttribute", readDeltadelfinAnimationGradientCurrentAnimationAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientCurrentGradientCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientCurrentGradientAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readCurrentGradientAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientCurrentGradientCommandParams
+        );
+        result.put("readCurrentGradientAttribute", readDeltadelfinAnimationGradientCurrentGradientAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientAnimationCountCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientAnimationCountAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readAnimationCountAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientAnimationCountCommandParams
+        );
+        result.put("readAnimationCountAttribute", readDeltadelfinAnimationGradientAnimationCountAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientGradientCountCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientGradientCountAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readGradientCountAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientGradientCountCommandParams
+        );
+        result.put("readGradientCountAttribute", readDeltadelfinAnimationGradientGradientCountAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientTransitionTimeMsCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientTransitionTimeMsAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readTransitionTimeMsAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientTransitionTimeMsCommandParams
+        );
+        result.put("readTransitionTimeMsAttribute", readDeltadelfinAnimationGradientTransitionTimeMsAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientGeneratedCommandListCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientGeneratedCommandListAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readGeneratedCommandListAttribute(
+              (ChipClusters.DeltadelfinAnimationGradientCluster.GeneratedCommandListAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedDeltadelfinAnimationGradientClusterGeneratedCommandListAttributeCallback(),
+          readDeltadelfinAnimationGradientGeneratedCommandListCommandParams
+        );
+        result.put("readGeneratedCommandListAttribute", readDeltadelfinAnimationGradientGeneratedCommandListAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientAcceptedCommandListCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientAcceptedCommandListAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readAcceptedCommandListAttribute(
+              (ChipClusters.DeltadelfinAnimationGradientCluster.AcceptedCommandListAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedDeltadelfinAnimationGradientClusterAcceptedCommandListAttributeCallback(),
+          readDeltadelfinAnimationGradientAcceptedCommandListCommandParams
+        );
+        result.put("readAcceptedCommandListAttribute", readDeltadelfinAnimationGradientAcceptedCommandListAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientAttributeListCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientAttributeListAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readAttributeListAttribute(
+              (ChipClusters.DeltadelfinAnimationGradientCluster.AttributeListAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedDeltadelfinAnimationGradientClusterAttributeListAttributeCallback(),
+          readDeltadelfinAnimationGradientAttributeListCommandParams
+        );
+        result.put("readAttributeListAttribute", readDeltadelfinAnimationGradientAttributeListAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientFeatureMapCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientFeatureMapAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readFeatureMapAttribute(
+              (ChipClusters.LongAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedLongAttributeCallback(),
+          readDeltadelfinAnimationGradientFeatureMapCommandParams
+        );
+        result.put("readFeatureMapAttribute", readDeltadelfinAnimationGradientFeatureMapAttributeInteractionInfo);
+     Map<String, CommandParameterInfo> readDeltadelfinAnimationGradientClusterRevisionCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+        InteractionInfo readDeltadelfinAnimationGradientClusterRevisionAttributeInteractionInfo = new InteractionInfo(
+          (cluster, callback, commandArguments) -> {
+            ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).readClusterRevisionAttribute(
+              (ChipClusters.IntegerAttributeCallback) callback
+            );
+          },
+          () -> new ClusterInfoMapping.DelegatedIntegerAttributeCallback(),
+          readDeltadelfinAnimationGradientClusterRevisionCommandParams
+        );
+        result.put("readClusterRevisionAttribute", readDeltadelfinAnimationGradientClusterRevisionAttributeInteractionInfo);
+     
+       return result;
+    }
     private static Map<String, InteractionInfo> readUnitTestingInteractionInfo() {
        Map<String, InteractionInfo> result = new LinkedHashMap<>();Map<String, CommandParameterInfo> readUnitTestingBooleanCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
         InteractionInfo readUnitTestingBooleanAttributeInteractionInfo = new InteractionInfo(
@@ -23151,6 +23276,7 @@ public class ClusterReadMapping {
             put("tlsClientManagement", readTlsClientManagementInteractionInfo());
             put("meterIdentification", readMeterIdentificationInteractionInfo());
             put("commodityMetering", readCommodityMeteringInteractionInfo());
+            put("deltadelfinAnimationGradient", readDeltadelfinAnimationGradientInteractionInfo());
             put("unitTesting", readUnitTestingInteractionInfo());
             put("faultInjection", readFaultInjectionInteractionInfo());
             put("sampleMei", readSampleMeiInteractionInfo());

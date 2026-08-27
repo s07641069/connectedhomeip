@@ -167,6 +167,10 @@
 #include <clusters/ContentLauncher/Commands.ipp>
 #include <clusters/ContentLauncher/Events.ipp>
 #include <clusters/ContentLauncher/Structs.ipp>
+#include <clusters/DeltadelfinAnimationGradient/Attributes.ipp>
+#include <clusters/DeltadelfinAnimationGradient/Commands.ipp>
+#include <clusters/DeltadelfinAnimationGradient/Events.ipp>
+#include <clusters/DeltadelfinAnimationGradient/Structs.ipp>
 #include <clusters/Descriptor/Attributes.ipp>
 #include <clusters/Descriptor/Commands.ipp>
 #include <clusters/Descriptor/Events.ipp>
@@ -1618,6 +1622,13 @@ bool CommandIsFabricScoped(ClusterId aCluster, CommandId aCommand)
             return true;
         case Clusters::TlsClientManagement::Commands::RemoveEndpoint::Id:
             return true;
+        default:
+            return false;
+        }
+    }
+    case Clusters::DeltadelfinAnimationGradient::Id: {
+        switch (aCommand)
+        {
         default:
             return false;
         }

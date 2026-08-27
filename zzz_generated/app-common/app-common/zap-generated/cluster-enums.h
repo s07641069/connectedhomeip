@@ -58,6 +58,7 @@
 #include <clusters/ContentAppObserver/Enums.h>
 #include <clusters/ContentControl/Enums.h>
 #include <clusters/ContentLauncher/Enums.h>
+#include <clusters/DeltadelfinAnimationGradient/Enums.h>
 #include <clusters/Descriptor/Enums.h>
 #include <clusters/DeviceEnergyManagement/Enums.h>
 #include <clusters/DeviceEnergyManagementMode/Enums.h>

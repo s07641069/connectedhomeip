@@ -3984,6 +3984,96 @@ public class ClusterWriteMapping {
     writeAttributeMap.put("meterIdentification", writeMeterIdentificationInteractionInfo);
     Map<String, InteractionInfo> writeCommodityMeteringInteractionInfo = new LinkedHashMap<>();
     writeAttributeMap.put("commodityMetering", writeCommodityMeteringInteractionInfo);
+    Map<String, InteractionInfo> writeDeltadelfinAnimationGradientInteractionInfo = new LinkedHashMap<>();
+    Map<String, CommandParameterInfo> writeDeltadelfinAnimationGradientDisplayModeCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo deltadelfinAnimationGradientdisplayModeCommandParameterInfo =
+        new CommandParameterInfo(
+            "value", 
+            Integer.class, 
+            Integer.class 
+        );
+    writeDeltadelfinAnimationGradientDisplayModeCommandParams.put(
+        "value",
+        deltadelfinAnimationGradientdisplayModeCommandParameterInfo
+    );
+    InteractionInfo writeDeltadelfinAnimationGradientDisplayModeAttributeInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).writeDisplayModeAttribute(
+          (DefaultClusterCallback) callback,
+          (Integer) commandArguments.get("value")
+        );
+      },
+      () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+      writeDeltadelfinAnimationGradientDisplayModeCommandParams
+    );
+    writeDeltadelfinAnimationGradientInteractionInfo.put("writeDisplayModeAttribute", writeDeltadelfinAnimationGradientDisplayModeAttributeInteractionInfo);
+    Map<String, CommandParameterInfo> writeDeltadelfinAnimationGradientCurrentAnimationCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo deltadelfinAnimationGradientcurrentAnimationCommandParameterInfo =
+        new CommandParameterInfo(
+            "value", 
+            Integer.class, 
+            Integer.class 
+        );
+    writeDeltadelfinAnimationGradientCurrentAnimationCommandParams.put(
+        "value",
+        deltadelfinAnimationGradientcurrentAnimationCommandParameterInfo
+    );
+    InteractionInfo writeDeltadelfinAnimationGradientCurrentAnimationAttributeInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).writeCurrentAnimationAttribute(
+          (DefaultClusterCallback) callback,
+          (Integer) commandArguments.get("value")
+        );
+      },
+      () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+      writeDeltadelfinAnimationGradientCurrentAnimationCommandParams
+    );
+    writeDeltadelfinAnimationGradientInteractionInfo.put("writeCurrentAnimationAttribute", writeDeltadelfinAnimationGradientCurrentAnimationAttributeInteractionInfo);
+    Map<String, CommandParameterInfo> writeDeltadelfinAnimationGradientCurrentGradientCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo deltadelfinAnimationGradientcurrentGradientCommandParameterInfo =
+        new CommandParameterInfo(
+            "value", 
+            Integer.class, 
+            Integer.class 
+        );
+    writeDeltadelfinAnimationGradientCurrentGradientCommandParams.put(
+        "value",
+        deltadelfinAnimationGradientcurrentGradientCommandParameterInfo
+    );
+    InteractionInfo writeDeltadelfinAnimationGradientCurrentGradientAttributeInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).writeCurrentGradientAttribute(
+          (DefaultClusterCallback) callback,
+          (Integer) commandArguments.get("value")
+        );
+      },
+      () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+      writeDeltadelfinAnimationGradientCurrentGradientCommandParams
+    );
+    writeDeltadelfinAnimationGradientInteractionInfo.put("writeCurrentGradientAttribute", writeDeltadelfinAnimationGradientCurrentGradientAttributeInteractionInfo);
+    Map<String, CommandParameterInfo> writeDeltadelfinAnimationGradientTransitionTimeMsCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+    CommandParameterInfo deltadelfinAnimationGradienttransitionTimeMsCommandParameterInfo =
+        new CommandParameterInfo(
+            "value", 
+            Integer.class, 
+            Integer.class 
+        );
+    writeDeltadelfinAnimationGradientTransitionTimeMsCommandParams.put(
+        "value",
+        deltadelfinAnimationGradienttransitionTimeMsCommandParameterInfo
+    );
+    InteractionInfo writeDeltadelfinAnimationGradientTransitionTimeMsAttributeInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster).writeTransitionTimeMsAttribute(
+          (DefaultClusterCallback) callback,
+          (Integer) commandArguments.get("value")
+        );
+      },
+      () -> new ClusterInfoMapping.DelegatedDefaultClusterCallback(),
+      writeDeltadelfinAnimationGradientTransitionTimeMsCommandParams
+    );
+    writeDeltadelfinAnimationGradientInteractionInfo.put("writeTransitionTimeMsAttribute", writeDeltadelfinAnimationGradientTransitionTimeMsAttributeInteractionInfo);
+    writeAttributeMap.put("deltadelfinAnimationGradient", writeDeltadelfinAnimationGradientInteractionInfo);
     Map<String, InteractionInfo> writeUnitTestingInteractionInfo = new LinkedHashMap<>();
     Map<String, CommandParameterInfo> writeUnitTestingBooleanCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
     CommandParameterInfo unitTestingbooleanCommandParameterInfo =

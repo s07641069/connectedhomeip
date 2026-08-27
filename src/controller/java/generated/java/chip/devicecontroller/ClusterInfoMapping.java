@@ -23564,6 +23564,69 @@ public class ClusterInfoMapping {
     }
   }
 
+  public static class DelegatedDeltadelfinAnimationGradientClusterGeneratedCommandListAttributeCallback implements ChipClusters.DeltadelfinAnimationGradientCluster.GeneratedCommandListAttributeCallback, DelegatedClusterCallback {
+    private ClusterCommandCallback callback;
+    @Override
+    public void setCallbackDelegate(ClusterCommandCallback callback) {
+      this.callback = callback;
+    }
+
+    @Override
+    public void onSuccess(List<Long> valueList) {
+      Map<CommandResponseInfo, Object> responseValues = new LinkedHashMap<>();
+      CommandResponseInfo commandResponseInfo = new CommandResponseInfo("valueList", "List<Long>");
+      responseValues.put(commandResponseInfo, valueList);
+      callback.onSuccess(responseValues);
+    }
+
+    @Override
+    public void onError(Exception ex) {
+      callback.onFailure(ex);
+    }
+  }
+
+  public static class DelegatedDeltadelfinAnimationGradientClusterAcceptedCommandListAttributeCallback implements ChipClusters.DeltadelfinAnimationGradientCluster.AcceptedCommandListAttributeCallback, DelegatedClusterCallback {
+    private ClusterCommandCallback callback;
+    @Override
+    public void setCallbackDelegate(ClusterCommandCallback callback) {
+      this.callback = callback;
+    }
+
+    @Override
+    public void onSuccess(List<Long> valueList) {
+      Map<CommandResponseInfo, Object> responseValues = new LinkedHashMap<>();
+      CommandResponseInfo commandResponseInfo = new CommandResponseInfo("valueList", "List<Long>");
+      responseValues.put(commandResponseInfo, valueList);
+      callback.onSuccess(responseValues);
+    }
+
+    @Override
+    public void onError(Exception ex) {
+      callback.onFailure(ex);
+    }
+  }
+
+  public static class DelegatedDeltadelfinAnimationGradientClusterAttributeListAttributeCallback implements ChipClusters.DeltadelfinAnimationGradientCluster.AttributeListAttributeCallback, DelegatedClusterCallback {
+    private ClusterCommandCallback callback;
+    @Override
+    public void setCallbackDelegate(ClusterCommandCallback callback) {
+      this.callback = callback;
+    }
+
+    @Override
+    public void onSuccess(List<Long> valueList) {
+      Map<CommandResponseInfo, Object> responseValues = new LinkedHashMap<>();
+      CommandResponseInfo commandResponseInfo = new CommandResponseInfo("valueList", "List<Long>");
+      responseValues.put(commandResponseInfo, valueList);
+      callback.onSuccess(responseValues);
+    }
+
+    @Override
+    public void onError(Exception ex) {
+      callback.onFailure(ex);
+    }
+  }
+
 
   public static class DelegatedUnitTestingClusterTestSpecificResponseCallback implements ChipClusters.UnitTestingCluster.TestSpecificResponseCallback, DelegatedClusterCallback {
     private ClusterCommandCallback callback;
@@ -25804,6 +25867,10 @@ public class ClusterInfoMapping {
       (ptr, endpointId) -> new ChipClusters.CommodityMeteringCluster(ptr, endpointId), new HashMap<>());
     clusterMap.put("commodityMetering", commodityMeteringClusterInfo);
 
+    ClusterInfo deltadelfinAnimationGradientClusterInfo = new ClusterInfo(
+      (ptr, endpointId) -> new ChipClusters.DeltadelfinAnimationGradientCluster(ptr, endpointId), new HashMap<>());
+    clusterMap.put("deltadelfinAnimationGradient", deltadelfinAnimationGradientClusterInfo);
+
     ClusterInfo unitTestingClusterInfo = new ClusterInfo(
       (ptr, endpointId) -> new ChipClusters.UnitTestingCluster(ptr, endpointId), new HashMap<>());
     clusterMap.put("unitTesting", unitTestingClusterInfo);
@@ -25977,6 +26044,7 @@ public class ClusterInfoMapping {
     destination.get("tlsClientManagement").combineCommands(source.get("tlsClientManagement"));
     destination.get("meterIdentification").combineCommands(source.get("meterIdentification"));
     destination.get("commodityMetering").combineCommands(source.get("commodityMetering"));
+    destination.get("deltadelfinAnimationGradient").combineCommands(source.get("deltadelfinAnimationGradient"));
     destination.get("unitTesting").combineCommands(source.get("unitTesting"));
     destination.get("faultInjection").combineCommands(source.get("faultInjection"));
     destination.get("sampleMei").combineCommands(source.get("sampleMei"));
@@ -35662,6 +35730,66 @@ public class ClusterInfoMapping {
     Map<String, InteractionInfo> commodityMeteringClusterInteractionInfoMap = new LinkedHashMap<>();
 
     commandMap.put("commodityMetering", commodityMeteringClusterInteractionInfoMap);
+
+    Map<String, InteractionInfo> deltadelfinAnimationGradientClusterInteractionInfoMap = new LinkedHashMap<>();
+
+    Map<String, CommandParameterInfo> deltadelfinAnimationGradientsetAnimationCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+
+    CommandParameterInfo deltadelfinAnimationGradientsetAnimationidCommandParameterInfo = new CommandParameterInfo("id", Integer.class, Integer.class);
+    deltadelfinAnimationGradientsetAnimationCommandParams.put("id",deltadelfinAnimationGradientsetAnimationidCommandParameterInfo);
+    InteractionInfo deltadelfinAnimationGradientsetAnimationInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster)
+        .setAnimation((DefaultClusterCallback) callback
+        , (Integer)
+        commandArguments.get("id")
+        );
+      },
+      () -> new DelegatedDefaultClusterCallback(),
+        deltadelfinAnimationGradientsetAnimationCommandParams
+    );
+    deltadelfinAnimationGradientClusterInteractionInfoMap.put("setAnimation", deltadelfinAnimationGradientsetAnimationInteractionInfo);
+
+    Map<String, CommandParameterInfo> deltadelfinAnimationGradientsetGradientCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+
+    CommandParameterInfo deltadelfinAnimationGradientsetGradientidCommandParameterInfo = new CommandParameterInfo("id", Integer.class, Integer.class);
+    deltadelfinAnimationGradientsetGradientCommandParams.put("id",deltadelfinAnimationGradientsetGradientidCommandParameterInfo);
+
+    CommandParameterInfo deltadelfinAnimationGradientsetGradienttransitionTimeMsCommandParameterInfo = new CommandParameterInfo("transitionTimeMs", Integer.class, Integer.class);
+    deltadelfinAnimationGradientsetGradientCommandParams.put("transitionTimeMs",deltadelfinAnimationGradientsetGradienttransitionTimeMsCommandParameterInfo);
+    InteractionInfo deltadelfinAnimationGradientsetGradientInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster)
+        .setGradient((DefaultClusterCallback) callback
+        , (Integer)
+        commandArguments.get("id")
+        , (Integer)
+        commandArguments.get("transitionTimeMs")
+        );
+      },
+      () -> new DelegatedDefaultClusterCallback(),
+        deltadelfinAnimationGradientsetGradientCommandParams
+    );
+    deltadelfinAnimationGradientClusterInteractionInfoMap.put("setGradient", deltadelfinAnimationGradientsetGradientInteractionInfo);
+
+    Map<String, CommandParameterInfo> deltadelfinAnimationGradientsetDisplayModeCommandParams = new LinkedHashMap<String, CommandParameterInfo>();
+
+    CommandParameterInfo deltadelfinAnimationGradientsetDisplayModemodeCommandParameterInfo = new CommandParameterInfo("mode", Integer.class, Integer.class);
+    deltadelfinAnimationGradientsetDisplayModeCommandParams.put("mode",deltadelfinAnimationGradientsetDisplayModemodeCommandParameterInfo);
+    InteractionInfo deltadelfinAnimationGradientsetDisplayModeInteractionInfo = new InteractionInfo(
+      (cluster, callback, commandArguments) -> {
+        ((ChipClusters.DeltadelfinAnimationGradientCluster) cluster)
+        .setDisplayMode((DefaultClusterCallback) callback
+        , (Integer)
+        commandArguments.get("mode")
+        );
+      },
+      () -> new DelegatedDefaultClusterCallback(),
+        deltadelfinAnimationGradientsetDisplayModeCommandParams
+    );
+    deltadelfinAnimationGradientClusterInteractionInfoMap.put("setDisplayMode", deltadelfinAnimationGradientsetDisplayModeInteractionInfo);
+
+    commandMap.put("deltadelfinAnimationGradient", deltadelfinAnimationGradientClusterInteractionInfoMap);
 
     Map<String, InteractionInfo> unitTestingClusterInteractionInfoMap = new LinkedHashMap<>();
 

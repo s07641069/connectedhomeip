@@ -82,6 +82,8 @@
 #include <clusters/ContentControl/MetadataProvider.h>
 #include <clusters/ContentLauncher/Ids.h>
 #include <clusters/ContentLauncher/MetadataProvider.h>
+#include <clusters/DeltadelfinAnimationGradient/Ids.h>
+#include <clusters/DeltadelfinAnimationGradient/MetadataProvider.h>
 #include <clusters/Descriptor/Ids.h>
 #include <clusters/Descriptor/MetadataProvider.h>
 #include <clusters/DeviceEnergyManagement/Ids.h>
@@ -521,6 +523,11 @@ std::optional<DataModel::AcceptedCommandEntry> AcceptedCommandEntryFor(ClusterId
     {
         if (id == ContentLauncher::Id)
             return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, ContentLauncher::Id>::EntryFor(command);
+    }
+    if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == DeltadelfinAnimationGradient::Id) || ...))
+    {
+        if (id == DeltadelfinAnimationGradient::Id)
+            return ClusterMetadataProvider<DataModel::AcceptedCommandEntry, DeltadelfinAnimationGradient::Id>::EntryFor(command);
     }
     if constexpr (sizeof...(TClusterIds) == 0 || ((TClusterIds == Descriptor::Id) || ...))
     {

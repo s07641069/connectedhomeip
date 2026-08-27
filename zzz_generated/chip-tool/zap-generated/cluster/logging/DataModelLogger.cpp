@@ -26283,6 +26283,67 @@ CHIP_ERROR DataModelLogger::LogAttribute(const chip::app::ConcreteDataAttributeP
         }
         break;
     }
+    case DeltadelfinAnimationGradient::Id: {
+        switch (path.mAttributeId)
+        {
+        case DeltadelfinAnimationGradient::Attributes::DisplayMode::Id: {
+            chip::app::Clusters::DeltadelfinAnimationGradient::DisplayModeEnum value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("DisplayMode", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::CurrentAnimation::Id: {
+            uint8_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("CurrentAnimation", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::CurrentGradient::Id: {
+            uint8_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("CurrentGradient", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::AnimationCount::Id: {
+            uint8_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("AnimationCount", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::GradientCount::Id: {
+            uint8_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("GradientCount", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::TransitionTimeMs::Id: {
+            uint16_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("TransitionTimeMs", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::GeneratedCommandList::Id: {
+            chip::app::DataModel::DecodableList<chip::CommandId> value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogGeneratedCommandId("GeneratedCommandList", 1, value, DeltadelfinAnimationGradient::Id);
+        }
+        case DeltadelfinAnimationGradient::Attributes::AcceptedCommandList::Id: {
+            chip::app::DataModel::DecodableList<chip::CommandId> value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogAcceptedCommandId("AcceptedCommandList", 1, value, DeltadelfinAnimationGradient::Id);
+        }
+        case DeltadelfinAnimationGradient::Attributes::AttributeList::Id: {
+            chip::app::DataModel::DecodableList<chip::AttributeId> value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogAttributeId("AttributeList", 1, value, DeltadelfinAnimationGradient::Id);
+        }
+        case DeltadelfinAnimationGradient::Attributes::FeatureMap::Id: {
+            uint32_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("FeatureMap", 1, value);
+        }
+        case DeltadelfinAnimationGradient::Attributes::ClusterRevision::Id: {
+            uint16_t value;
+            ReturnErrorOnFailure(chip::app::DataModel::Decode(*data, value));
+            return DataModelLogger::LogValue("ClusterRevision", 1, value);
+        }
+        }
+        break;
+    }
     case UnitTesting::Id: {
         switch (path.mAttributeId)
         {

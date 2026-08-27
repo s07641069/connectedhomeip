@@ -1567,6 +1567,16 @@ void emberAfCommodityMeteringClusterShutdownCallback(chip::EndpointId endpoint);
 /**
  * @param endpoint    Endpoint that is being initialized
  */
+void emberAfDeltadelfinAnimationGradientClusterInitCallback(chip::EndpointId endpoint);
+
+/**
+ * @param endpoint    Endpoint that is being shutdown
+ */
+void emberAfDeltadelfinAnimationGradientClusterShutdownCallback(chip::EndpointId endpoint);
+
+/**
+ * @param endpoint    Endpoint that is being initialized
+ */
 void emberAfUnitTestingClusterInitCallback(chip::EndpointId endpoint);
 
 /**
@@ -7514,6 +7524,45 @@ MatterCommodityMeteringClusterServerPreAttributeChangedCallback(const chip::app:
 void emberAfCommodityMeteringClusterServerTickCallback(chip::EndpointId endpoint);
 
 //
+// DeltadelfinAnimationGradient Cluster
+//
+
+/**
+ * @param endpoint    Endpoint that is being initialized
+ */
+void emberAfDeltadelfinAnimationGradientClusterServerInitCallback(chip::EndpointId endpoint);
+
+/**
+ * @param endpoint    Endpoint that is being shutdown
+ */
+void MatterDeltadelfinAnimationGradientClusterServerShutdownCallback(chip::EndpointId endpoint);
+
+/**
+ * @param endpoint    Endpoint that is being initialized
+ */
+void emberAfDeltadelfinAnimationGradientClusterClientInitCallback(chip::EndpointId endpoint);
+
+/**
+ * @param attributePath Concrete attribute path that changed
+ */
+void MatterDeltadelfinAnimationGradientClusterServerAttributeChangedCallback(
+    const chip::app::ConcreteAttributePath & attributePath);
+
+/**
+ * @param attributePath Concrete attribute path to be changed
+ * @param attributeType Attribute type
+ * @param size          Attribute size
+ * @param value         Attribute value
+ */
+chip::Protocols::InteractionModel::Status MatterDeltadelfinAnimationGradientClusterServerPreAttributeChangedCallback(
+    const chip::app::ConcreteAttributePath & attributePath, EmberAfAttributeType attributeType, uint16_t size, uint8_t * value);
+
+/**
+ * @param endpoint  Endpoint that is being served
+ */
+void emberAfDeltadelfinAnimationGradientClusterServerTickCallback(chip::EndpointId endpoint);
+
+//
 // Unit Testing Cluster
 //
 
@@ -8645,6 +8694,24 @@ bool emberAfJointFabricDatastoreClusterAddACLToNodeCallback(
 bool emberAfJointFabricDatastoreClusterRemoveACLFromNodeCallback(
     chip::app::CommandHandler * commandObj, const chip::app::ConcreteCommandPath & commandPath,
     const chip::app::Clusters::JointFabricDatastore::Commands::RemoveACLFromNode::DecodableType & commandData);
+/**
+ * @brief DeltadelfinAnimationGradient Cluster SetAnimation Command callback (from client)
+ */
+bool emberAfDeltadelfinAnimationGradientClusterSetAnimationCallback(
+    chip::app::CommandHandler * commandObj, const chip::app::ConcreteCommandPath & commandPath,
+    const chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetAnimation::DecodableType & commandData);
+/**
+ * @brief DeltadelfinAnimationGradient Cluster SetGradient Command callback (from client)
+ */
+bool emberAfDeltadelfinAnimationGradientClusterSetGradientCallback(
+    chip::app::CommandHandler * commandObj, const chip::app::ConcreteCommandPath & commandPath,
+    const chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetGradient::DecodableType & commandData);
+/**
+ * @brief DeltadelfinAnimationGradient Cluster SetDisplayMode Command callback (from client)
+ */
+bool emberAfDeltadelfinAnimationGradientClusterSetDisplayModeCallback(
+    chip::app::CommandHandler * commandObj, const chip::app::ConcreteCommandPath & commandPath,
+    const chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetDisplayMode::DecodableType & commandData);
 /**
  * @brief Unit Testing Cluster Test Command callback (from client)
  */

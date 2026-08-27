@@ -331,6 +331,8 @@ char const * ClusterIdToText(chip::ClusterId id)
         return "MeterIdentification";
     case chip::app::Clusters::CommodityMetering::Id:
         return "CommodityMetering";
+    case chip::app::Clusters::DeltadelfinAnimationGradient::Id:
+        return "DeltadelfinAnimationGradient";
     case chip::app::Clusters::UnitTesting::Id:
         return "UnitTesting";
     case chip::app::Clusters::FaultInjection::Id:
@@ -5393,6 +5395,35 @@ char const * AttributeIdToText(chip::ClusterId cluster, chip::AttributeId id)
             return "Unknown";
         }
     }
+    case chip::app::Clusters::DeltadelfinAnimationGradient::Id: {
+        switch (id)
+        {
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::DisplayMode::Id:
+            return "DisplayMode";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::CurrentAnimation::Id:
+            return "CurrentAnimation";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::CurrentGradient::Id:
+            return "CurrentGradient";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::AnimationCount::Id:
+            return "AnimationCount";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::GradientCount::Id:
+            return "GradientCount";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::TransitionTimeMs::Id:
+            return "TransitionTimeMs";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::GeneratedCommandList::Id:
+            return "GeneratedCommandList";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::AcceptedCommandList::Id:
+            return "AcceptedCommandList";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::AttributeList::Id:
+            return "AttributeList";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::FeatureMap::Id:
+            return "FeatureMap";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Attributes::ClusterRevision::Id:
+            return "ClusterRevision";
+        default:
+            return "Unknown";
+        }
+    }
     case chip::app::Clusters::UnitTesting::Id: {
         switch (id)
         {
@@ -7142,6 +7173,19 @@ char const * AcceptedCommandIdToText(chip::ClusterId cluster, chip::CommandId id
             return "FindEndpoint";
         case chip::app::Clusters::TlsClientManagement::Commands::RemoveEndpoint::Id:
             return "RemoveEndpoint";
+        default:
+            return "Unknown";
+        }
+    }
+    case chip::app::Clusters::DeltadelfinAnimationGradient::Id: {
+        switch (id)
+        {
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetAnimation::Id:
+            return "SetAnimation";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetGradient::Id:
+            return "SetGradient";
+        case chip::app::Clusters::DeltadelfinAnimationGradient::Commands::SetDisplayMode::Id:
+            return "SetDisplayMode";
         default:
             return "Unknown";
         }

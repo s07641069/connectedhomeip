@@ -477,6 +477,9 @@ NSString * MTRClusterNameForID(MTRClusterIDType clusterID)
     case MTRClusterIDTypeCommodityMeteringID:
         result = @"CommodityMetering";
         break;
+    case MTRClusterIDTypeDeltadelfinAnimationGradientID:
+        result = @"DeltadelfinAnimationGradient";
+        break;
     case MTRClusterIDTypeUnitTestingID:
         result = @"UnitTesting";
         break;
@@ -10191,6 +10194,62 @@ NSString * MTRAttributeNameForID(MTRClusterIDType clusterID, MTRAttributeIDType 
         }
         break;
 
+    case MTRClusterIDTypeDeltadelfinAnimationGradientID:
+
+        switch (attributeID) {
+
+            // Cluster DeltadelfinAnimationGradient attributes
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeDisplayModeID:
+            result = @"DisplayMode";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeCurrentAnimationID:
+            result = @"CurrentAnimation";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeCurrentGradientID:
+            result = @"CurrentGradient";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeAnimationCountID:
+            result = @"AnimationCount";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeGradientCountID:
+            result = @"GradientCount";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeTransitionTimeMsID:
+            result = @"TransitionTimeMs";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeGeneratedCommandListID:
+            result = @"GeneratedCommandList";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeAcceptedCommandListID:
+            result = @"AcceptedCommandList";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeAttributeListID:
+            result = @"AttributeList";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeFeatureMapID:
+            result = @"FeatureMap";
+            break;
+
+        case MTRAttributeIDTypeClusterDeltadelfinAnimationGradientAttributeClusterRevisionID:
+            result = @"ClusterRevision";
+            break;
+
+        default:
+            // Not a known DeltadelfinAnimationGradient attribute.
+            result = [NSString stringWithFormat:@"<Unknown attributeID %u>", attributeID];
+            break;
+        }
+        break;
+
     case MTRClusterIDTypeUnitTestingID:
 
         switch (attributeID) {
@@ -13779,6 +13838,28 @@ NSString * MTRRequestCommandNameForID(MTRClusterIDType clusterID, MTRCommandIDTy
         }
         break;
 
+    case MTRClusterIDTypeDeltadelfinAnimationGradientID:
+
+        switch (commandID) {
+
+        case MTRCommandIDTypeClusterDeltadelfinAnimationGradientCommandSetAnimationID:
+            result = @"SetAnimation";
+            break;
+
+        case MTRCommandIDTypeClusterDeltadelfinAnimationGradientCommandSetGradientID:
+            result = @"SetGradient";
+            break;
+
+        case MTRCommandIDTypeClusterDeltadelfinAnimationGradientCommandSetDisplayModeID:
+            result = @"SetDisplayMode";
+            break;
+
+        default:
+            result = [NSString stringWithFormat:@"<Unknown commandID %u>", commandID];
+            break;
+        }
+        break;
+
     case MTRClusterIDTypeUnitTestingID:
 
         switch (commandID) {
@@ -15874,6 +15955,16 @@ NSString * MTRResponseCommandNameForID(MTRClusterIDType clusterID, MTRCommandIDT
         break;
 
     case MTRClusterIDTypeCommodityMeteringID:
+
+        switch (commandID) {
+
+        default:
+            result = [NSString stringWithFormat:@"<Unknown commandID %u>", commandID];
+            break;
+        }
+        break;
+
+    case MTRClusterIDTypeDeltadelfinAnimationGradientID:
 
         switch (commandID) {
 
@@ -18143,6 +18234,16 @@ NSString * MTREventNameForID(MTRClusterIDType clusterID, MTREventIDType eventID)
         break;
 
     case MTRClusterIDTypeCommodityMeteringID:
+
+        switch (eventID) {
+
+        default:
+            result = [NSString stringWithFormat:@"<Unknown eventID %u>", eventID];
+            break;
+        }
+        break;
+
+    case MTRClusterIDTypeDeltadelfinAnimationGradientID:
 
         switch (eventID) {
 

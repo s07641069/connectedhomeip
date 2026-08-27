@@ -167,6 +167,10 @@
 #include <clusters/ContentLauncher/Commands.h>
 #include <clusters/ContentLauncher/Events.h>
 #include <clusters/ContentLauncher/Structs.h>
+#include <clusters/DeltadelfinAnimationGradient/Attributes.h>
+#include <clusters/DeltadelfinAnimationGradient/Commands.h>
+#include <clusters/DeltadelfinAnimationGradient/Events.h>
+#include <clusters/DeltadelfinAnimationGradient/Structs.h>
 #include <clusters/Descriptor/Attributes.h>
 #include <clusters/Descriptor/Commands.h>
 #include <clusters/Descriptor/Events.h>

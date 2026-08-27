@@ -7439,6 +7439,49 @@ static BOOL AttributeIsSpecifiedInCommodityMeteringCluster(AttributeId aAttribut
     }
     }
 }
+static BOOL AttributeIsSpecifiedInDeltadelfinAnimationGradientCluster(AttributeId aAttributeId)
+{
+    using namespace Clusters::DeltadelfinAnimationGradient;
+    switch (aAttributeId) {
+    case Attributes::DisplayMode::Id: {
+        return YES;
+    }
+    case Attributes::CurrentAnimation::Id: {
+        return YES;
+    }
+    case Attributes::CurrentGradient::Id: {
+        return YES;
+    }
+    case Attributes::AnimationCount::Id: {
+        return YES;
+    }
+    case Attributes::GradientCount::Id: {
+        return YES;
+    }
+    case Attributes::TransitionTimeMs::Id: {
+        return YES;
+    }
+    case Attributes::GeneratedCommandList::Id: {
+        return YES;
+    }
+    case Attributes::AcceptedCommandList::Id: {
+        return YES;
+    }
+    case Attributes::AttributeList::Id: {
+        return YES;
+    }
+    case Attributes::FeatureMap::Id: {
+        return YES;
+    }
+    case Attributes::ClusterRevision::Id: {
+        return YES;
+    }
+    default: {
+        // Not a known DeltadelfinAnimationGradient attribute.
+        return NO;
+    }
+    }
+}
 static BOOL AttributeIsSpecifiedInUnitTestingCluster(AttributeId aAttributeId)
 {
     using namespace Clusters::UnitTesting;
@@ -8243,6 +8286,9 @@ BOOL MTRAttributeIsSpecified(ClusterId aClusterId, AttributeId aAttributeId)
     }
     case Clusters::CommodityMetering::Id: {
         return AttributeIsSpecifiedInCommodityMeteringCluster(aAttributeId);
+    }
+    case Clusters::DeltadelfinAnimationGradient::Id: {
+        return AttributeIsSpecifiedInDeltadelfinAnimationGradientCluster(aAttributeId);
     }
     case Clusters::UnitTesting::Id: {
         return AttributeIsSpecifiedInUnitTestingCluster(aAttributeId);
