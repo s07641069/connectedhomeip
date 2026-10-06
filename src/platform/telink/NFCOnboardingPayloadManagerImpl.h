@@ -20,11 +20,7 @@
 namespace chip {
 namespace DeviceLayer {
 
-namespace {
-#define NFC_DEV st25dvxxkc
-#define DEV_PTR DEVICE_DT_GET(DT_NODELABEL(NFC_DEV))
-#define NDEF_MSG_BUF_SIZE 128
-} // namespace
+#include "NFCDevice.h"
 
 class NFCOnboardingPayloadManagerImpl final : public NFCOnboardingPayloadManager
 {
@@ -37,11 +33,10 @@ private:
     CHIP_ERROR _StartTagEmulation(const char * payload, size_t payloadLength);
     CHIP_ERROR _StopTagEmulation();
     bool _IsTagEmulationStarted() const { return mIsStarted; };
-    size_t _EncodeNDEFURI(const uint8_t * uri, size_t uri_len, uint8_t * out_buf);
 
     // ===== Members for internal use by this class.
     bool mIsStarted;
-    const struct device * dev = DEV_PTR;
+    struct st25dv_data * mpNFCDevice = &NFCDevice;
     // ===== Members for internal use by the following friends.
 
     friend NFCOnboardingPayloadManager & NFCOnboardingPayloadMgr();

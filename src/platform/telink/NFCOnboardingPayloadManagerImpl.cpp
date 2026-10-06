@@ -21,16 +21,6 @@
 
 #include <lib/support/logging/CHIPLogging.h>
 
-#include <zephyr/drivers/nfc/nfc_tag.h>
-#include <zephyr/kernel.h>
-
-void nfc_callback(const struct device * dev, enum nfc_tag_event event, const uint8_t * data, size_t data_len)
-{
-    ARG_UNUSED(dev);
-    ARG_UNUSED(data);
-    ARG_UNUSED(data_len);
-}
-
 namespace chip {
 namespace DeviceLayer {
 
@@ -38,99 +28,91 @@ NFCOnboardingPayloadManagerImpl NFCOnboardingPayloadManagerImpl::sInstance;
 
 CHIP_ERROR NFCOnboardingPayloadManagerImpl::_Init()
 {
-    return CHIP_NO_ERROR;
+    int result;
+
+    do
+    {
+        result = st25dv_init(mpNFCDevice);
+        if (result)
+        {
+            ChipLogError(DeviceLayer, "NFC init failed %d", result);
+            break;
+        }
+        mIsStarted = false;
+        ChipLogDetail(DeviceLayer, "NFC tag inited");
+    } while (0);
+    return result ? CHIP_ERROR_INTERNAL : CHIP_NO_ERROR;
 }
 
 CHIP_ERROR NFCOnboardingPayloadManagerImpl::_StartTagEmulation(const char * payload, size_t payloadLength)
 {
-    /* Set up NFC driver*/
-    uint8_t ndef_msg_buf[NDEF_MSG_BUF_SIZE];
-    uint32_t len = sizeof(ndef_msg_buf);
+    int result = -EALREADY;
 
-    int err;
-
-    if (!device_is_ready(dev))
+    do
     {
-        ChipLogError(DeviceLayer, "NFC device is not ready for use");
-        return CHIP_ERROR_INTERNAL;
-    }
+        if (mIsStarted)
+        {
+            ChipLogError(DeviceLayer, "NFC tag already enabled");
+            break;
+        }
 
-    err = nfc_tag_init(dev, nfc_callback);
-    if (err != 0)
-    {
-        ChipLogError(DeviceLayer, "Cannot setup NFC subsys!, err=%d", err);
-        return CHIP_ERROR_INTERNAL;
-    }
+        uint8_t * ndef_msg = new uint8_t[8 + payloadLength];
 
-    /* Set up Tag mode */
-    err = nfc_tag_set_type(dev, NFC_TAG_TYPE_T5T);
-    if (err != 0)
-    {
-        ChipLogError(DeviceLayer, "Cannot setup NFC Tag mode!");
-        return CHIP_ERROR_INTERNAL;
-    }
+        ndef_msg[0] = 0xc1;                                           // record header (MB=1, ME=1, CF=0, SR=0, IL=0, TNF=001)
+        ndef_msg[1] = 1;                                              // length of record type
+        ndef_msg[2] = (uint8_t) (((payloadLength + 1) >> 24) & 0xff); // length
+        ndef_msg[3] = (uint8_t) (((payloadLength + 1) >> 16) & 0xff); // length
+        ndef_msg[4] = (uint8_t) (((payloadLength + 1) >> 8) & 0xff);  // length
+        ndef_msg[5] = (uint8_t) ((payloadLength + 1) & 0xff);         // length
+        ndef_msg[6] = (uint8_t) 'U';                                  // record Type
+        ndef_msg[7] = 0x00;                                           // uri prefix code (no prefix)
+        memcpy(&ndef_msg[8], payload, payloadLength);
+        result = st25dv_tag_type5_add(mpNFCDevice, ndef_msg, 8 + payloadLength);
+        delete[] ndef_msg;
+        if (result)
+        {
+            ChipLogError(DeviceLayer, "NFC can't write tag %d", result);
+            break;
+        }
+        result = st25dv_mode_set(mpNFCDevice, ST25DV_MODE_TAG);
+        if (result)
+        {
+            ChipLogError(DeviceLayer, "NFC enabling tag failed %d", result);
+            break;
+        }
+        mIsStarted = true;
+        ChipLogDetail(DeviceLayer, "NFC tag written and enabled");
 
-    size_t encoded_len = _EncodeNDEFURI((const uint8_t *) payload, payloadLength, ndef_msg_buf);
-    if (encoded_len == 0)
-    {
-        ChipLogError(DeviceLayer, "Cannot encode message!");
-        return CHIP_ERROR_INTERNAL;
-    }
-
-    ChipLogDetail(DeviceLayer, "NDEF URI of %d length encoded!", encoded_len);
-    ChipLogDetail(DeviceLayer, "Payload: %s", payload);
-
-    err = nfc_tag_set_ndef(dev, ndef_msg_buf, encoded_len);
-    if (err != 0)
-    {
-        ChipLogError(DeviceLayer, "Cannot set payload! err=%d", err);
-        return CHIP_ERROR_INTERNAL;
-    }
-
-    err = nfc_tag_start(dev);
-    if (err != 0)
-    {
-        return CHIP_ERROR_INTERNAL;
-    }
-
-    sInstance.mIsStarted = true;
-    return CHIP_NO_ERROR;
+    } while (0);
+    return result ? CHIP_ERROR_INTERNAL : CHIP_NO_ERROR;
 }
 
 CHIP_ERROR NFCOnboardingPayloadManagerImpl::_StopTagEmulation()
 {
-    if (nfc_tag_stop(dev))
+    int result = 0;
+
+    do
     {
-        return CHIP_ERROR_INTERNAL;
-    }
-    sInstance.mIsStarted = false;
-    return CHIP_NO_ERROR;
-}
-
-size_t NFCOnboardingPayloadManagerImpl::_EncodeNDEFURI(const uint8_t * uri, size_t uri_len, uint8_t * out_buf)
-{
-    size_t max_len = 128;
-    // NDEF Record Header for short record, TNF = Well Known, Type = 'U'
-    const uint8_t type_field     = 'U';
-    const uint8_t tnf            = 0xD1; // MB=1, ME=1, SR=1, TNF=1
-    const uint8_t payload_prefix = 0x00; // No prefix, full URI follows
-
-    if (max_len < 5 + uri_len)
-    {
-        ChipLogError(DeviceLayer, "NDEF message is too long, (5 + uri_len) required for TNF URI NDEF record");
-        return 0;
-    }
-
-    size_t offset     = 0;
-    out_buf[offset++] = tnf;
-    out_buf[offset++] = 1;           // Type length
-    out_buf[offset++] = uri_len + 1; // Payload length (1 prefix + uri)
-    out_buf[offset++] = type_field;
-    out_buf[offset++] = payload_prefix;
-    memcpy(out_buf + offset, uri, uri_len);
-    offset += uri_len;
-
-    return offset;
+        if (!mIsStarted)
+        {
+            break;
+        }
+        result = st25dv_tag_type5_rm(mpNFCDevice);
+        if (result)
+        {
+            ChipLogError(DeviceLayer, "NFC can't erase tag %d", result);
+            break;
+        }
+        result = st25dv_mode_set(mpNFCDevice, ST25DV_MODE_OFF);
+        if (result)
+        {
+            ChipLogError(DeviceLayer, "NFC disabling tag failed %d", result);
+            break;
+        }
+        mIsStarted = false;
+        ChipLogDetail(DeviceLayer, "NFC tag erased and disabled");
+    } while (0);
+    return result ? CHIP_ERROR_INTERNAL : CHIP_NO_ERROR;
 }
 
 } // namespace DeviceLayer

@@ -49,6 +49,8 @@ static_library("telink") {
     "Reboot.cpp",
     "Reboot.h",
     "SystemPlatformConfig.h",
+    "NFCDevice.c",
+    "NFCDevice.h",
   ]
 
   public = [
