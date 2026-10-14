@@ -213,8 +213,6 @@ void dual_mode_switch(int32_t op)
 
 #elif CONFIG_DUAL_MODE == CONFIG_AUTO_SWITCH_DUAL_MODE
 
-//#include <app-common/zap-generated/attributes/Accessors.h>
-
 #define USER_MATTER_BACK_ZB 0xa0 // only commisiion fail will back to zb
 #define USER_ZB_SW_VAL 0xaa
 
@@ -343,7 +341,7 @@ public:
 AppCallbacks sCallbacks;
 } // namespace
 
-void DofactoryResetDualMode()
+void AppTaskCommon::ResetDualModeState()
 {
 #if CONFIG_DUAL_MODE == CONFIG_ACTION_DUAL_MODE
     dual_mode_switch(OPCODE_FACTORY_RESET);
@@ -351,7 +349,6 @@ void DofactoryResetDualMode()
     dual_mode_auto_switch(OPCODE_FACTORY_RESET);
 #endif
 }
-
 
 static void DoDelayedFactoryReset(struct k_work * work)
 {
@@ -386,11 +383,7 @@ static void DoDelayedFactoryReset(struct k_work * work)
     }
     else
     {
-        #if CONFIG_DUAL_MODE == CONFIG_ACTION_DUAL_MODE
-        dual_mode_switch(OPCODE_FACTORY_RESET);
-        #elif CONFIG_DUAL_MODE == CONFIG_AUTO_SWITCH_DUAL_MODE
-        dual_mode_auto_switch(OPCODE_FACTORY_RESET);
-        #endif
+        AppTaskCommon::ResetDualModeState();
         ChipLogProgress(DeviceLayer, "Do factory_reset and reboot");
         chip::Server::GetInstance().ScheduleFactoryReset();
     }
@@ -910,11 +903,7 @@ void AppTaskCommon::FactoryResetHandler(AppEvent * aEvent)
         k_timer_stop(&sFactoryResetTimer);
         sFactoryResetCntr = 0;
 
-        #if CONFIG_DUAL_MODE == CONFIG_ACTION_DUAL_MODE
-        dual_mode_switch(OPCODE_FACTORY_RESET);
-        #elif CONFIG_DUAL_MODE == CONFIG_AUTO_SWITCH_DUAL_MODE
-        dual_mode_auto_switch(OPCODE_FACTORY_RESET);
-        #endif
+        AppTaskCommon::ResetDualModeState();
         /* clear matter nvs for unclean info in matter nvs */
         LOG_INF("Factory Reset TC: Erase matter nvs directly and reboot");
         flash_erase(matter_nvs_dev, MATTER_NVS_PARTITION_OFFSET, MATTER_NVS_PARTITION_SIZE);

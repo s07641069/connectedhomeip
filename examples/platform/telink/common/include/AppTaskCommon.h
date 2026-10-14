@@ -124,6 +124,8 @@ public:
     static void TriggerMicroSpeechEventHandler(AppEvent * aEvent);
 #endif
 
+    static void ResetDualModeState();
+
 protected:
     CHIP_ERROR InitCommonParts(void);
     void PrintFirmwareInfo(void);
