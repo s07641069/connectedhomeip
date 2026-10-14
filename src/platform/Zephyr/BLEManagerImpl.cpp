@@ -222,10 +222,10 @@ CHIP_ERROR BLEManagerImpl::_Init()
 {
     int err = 0;
     int id  = 0;
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
-    mBLERadioInitialized  = false;
-    mPrescanState         = PrescanState::kIdle;
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
+    mBLERadioInitialized = false;
+    mPrescanState        = PrescanState::kIdle;
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
 
     mServiceMode = ConnectivityManager::kCHIPoBLEServiceMode_Enabled;
     mFlags.ClearAll().Set(Flags::kAdvertisingEnabled, CHIP_DEVICE_CONFIG_CHIPOBLE_ENABLE_ADVERTISING_AUTOSTART);
@@ -242,9 +242,9 @@ CHIP_ERROR BLEManagerImpl::_Init()
     err = bt_enable(nullptr);
 
     VerifyOrReturnError(err == 0, MapErrorZephyr(err));
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
     mBLERadioInitialized = true;
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
 
     settings_load();
 
@@ -281,7 +281,7 @@ CHIP_ERROR BLEManagerImpl::_Init()
 
 void BLEManagerImpl::_Shutdown()
 {
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
     mPrescanState = PrescanState::kIdle;
     if (mBLERadioInitialized)
     {
@@ -290,7 +290,7 @@ void BLEManagerImpl::_Shutdown()
     }
 #else
     bt_disable();
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
 }
 
 void BLEManagerImpl::DriveBLEState(intptr_t arg)
@@ -396,9 +396,9 @@ inline CHIP_ERROR BLEManagerImpl::PrepareAdvertisingRequest()
     }
 #endif
 
-    advertisingData[0]                   = BT_DATA(BT_DATA_FLAGS, &kAdvertisingFlags, sizeof(kAdvertisingFlags));
-    advertisingData[1]                   = BT_DATA(BT_DATA_SVC_DATA16, &serviceData, sizeof(serviceData));
-    scanResponseData[0]                  = BT_DATA(BT_DATA_NAME_COMPLETE, name, nameSize);
+    advertisingData[0]  = BT_DATA(BT_DATA_FLAGS, &kAdvertisingFlags, sizeof(kAdvertisingFlags));
+    advertisingData[1]  = BT_DATA(BT_DATA_SVC_DATA16, &serviceData, sizeof(serviceData));
+    scanResponseData[0] = BT_DATA(BT_DATA_NAME_COMPLETE, name, nameSize);
 #endif // CONFIG_CHIP_CUSTOM_BLE_ADV_DATA
 
     mAdvertisingRequest.priority = CHIP_DEVICE_BLE_ADVERTISING_PRIORITY;
@@ -479,7 +479,7 @@ CHIP_ERROR BLEManagerImpl::UnregisterGattService()
 
 CHIP_ERROR BLEManagerImpl::StartAdvertising()
 {
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
     if (chip::DeviceLayer::ConnectivityMgr().IsThreadProvisioned())
     {
         ChipLogProgress(DeviceLayer, "Device provisioned, can't StartAdvertising");
@@ -496,13 +496,13 @@ CHIP_ERROR BLEManagerImpl::StartAdvertising()
             if (scanErr == CHIP_NO_ERROR)
             {
                 ChipLogProgress(DeviceLayer,
-                    "Advertising resumes from InternalScanCallback::OnFinished once the prescan completes");
+                                "Advertising resumes from InternalScanCallback::OnFinished once the prescan completes");
                 return CHIP_NO_ERROR;
             }
 
             mPrescanState = PrescanState::kIdle;
             ChipLogError(DeviceLayer, "Failed to start Thread prescan: %" CHIP_ERROR_FORMAT "; starting BLE directly",
-                        scanErr.Format());
+                         scanErr.Format());
         }
         else
         {
@@ -511,11 +511,10 @@ CHIP_ERROR BLEManagerImpl::StartAdvertising()
     }
     else if (mPrescanState == PrescanState::kInProgress)
     {
-        ChipLogProgress(DeviceLayer,
-            "Thread prescan is ongoing, advertising resumes from InternalScanCallback::OnFinished.");
+        ChipLogProgress(DeviceLayer, "Thread prescan is ongoing, advertising resumes from InternalScanCallback::OnFinished.");
         return CHIP_NO_ERROR;
     }
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
 
     // Re-initializing the BLE layer after shutdown
     if (!BleLayer::IsInitialized())
@@ -526,14 +525,14 @@ CHIP_ERROR BLEManagerImpl::StartAdvertising()
     // Initialize the BLE radio if not initialized
     if (!bt_is_ready())
     {
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
         TEMPORARY_RETURN_IGNORED ThreadStackMgrImpl().SetThreadEnabled(false);
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
         int err = bt_enable(nullptr);
         VerifyOrReturnError(err == 0, MapErrorZephyr(err));
-#if CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
         mBLERadioInitialized = true;
-#endif /* CHIP_DEVICE_CONFIG_UNCONCURRENT_CONNECTION */
+#endif /* CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD */
     }
 
     // Prepare advertising request
