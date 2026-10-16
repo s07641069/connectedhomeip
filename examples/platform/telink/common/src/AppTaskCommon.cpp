@@ -148,7 +148,6 @@ DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttribut
 
 #endif // CONFIG_DEFERRED_ATTR_STORAGE
 
-#include <ext_driver/ext_pm.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
@@ -160,6 +159,8 @@ DeferredAttributePersistenceProvider gDeferredAttributePersister(gSimpleAttribut
 const struct device * matter_nvs_dev = MATTER_NVS_PARTITION_DEVICE;
 
 #if CONFIG_DUAL_MODE == CONFIG_ACTION_DUAL_MODE || CONFIG_DUAL_MODE == CONFIG_AUTO_SWITCH_DUAL_MODE
+
+#include <ext_driver/ext_pm.h>
 
 #define OPCODE_FACTORY_RESET 0
 #define OPCODE_SWITCH_ZIGBEE 1 // include init state and matter paired state.
