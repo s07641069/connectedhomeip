@@ -396,7 +396,9 @@ static void DoDelayedFactoryReset(struct k_work * work)
     }
 }
 
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 static k_work_delayable sDelayedFactoryResetWork = Z_WORK_DELAYABLE_INITIALIZER(DoDelayedFactoryReset);
+#endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
 class PlatformMgrDelegate : public DeviceLayer::PlatformManagerDelegate
 {
