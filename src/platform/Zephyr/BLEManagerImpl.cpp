@@ -627,6 +627,13 @@ CHIP_ERROR BLEManagerImpl::_SetAdvertisingEnabled(bool val)
     ChipLogDetail(DeviceLayer, "CHIPoBLE advertising set to %s", val ? "on" : "off");
 
     mFlags.Set(Flags::kAdvertisingEnabled, val);
+#if CHIP_DEVICE_CONFIG_NONCONCURRENT_BLE_THREAD
+    if (!val)
+    {
+        mPrescanState = PrescanState::kIdle;
+    }
+#endif
+
     // Ensure that each enabling/disabling of the general advertising clears
     // the extended mode, to make sure we always start fresh in the regular mode
     mFlags.Set(Flags::kExtendedAdvertisingEnabled, false);
