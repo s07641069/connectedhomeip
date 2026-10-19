@@ -357,6 +357,7 @@ void AppTaskCommon::ResetDualModeState()
 #endif
 }
 
+#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 static void DoDelayedFactoryReset(struct k_work * work)
 {
     ChipLogProgress(DeviceLayer, "Erasing settings partition");
@@ -396,7 +397,6 @@ static void DoDelayedFactoryReset(struct k_work * work)
     }
 }
 
-#if CHIP_DEVICE_CONFIG_ENABLE_THREAD
 static k_work_delayable sDelayedFactoryResetWork = Z_WORK_DELAYABLE_INITIALIZER(DoDelayedFactoryReset);
 #endif // CHIP_DEVICE_CONFIG_ENABLE_THREAD
 
