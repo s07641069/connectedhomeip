@@ -32,8 +32,20 @@ config CHIP_DEVICE_VENDOR_NAME
 
 # See config/common/cmake/Kconfig for full definition
 config CHIP_NFC_ONBOARDING_PAYLOAD
-	default n
 	select ST25DV
+
+config CHIP_NFC_BASED_COMMISSIONING
+	select ST25DV
+	help
+	  This opting enables NFC based commissioning on Telink platform.
+
+config CHIP_NFC_BASED_COMMISSIONING_APDU_DEBUG
+	bool "NFC based commissioning APDU hex logging"
+	depends on CHIP_NFC_BASED_COMMISSIONING
+	depends on LOG
+	help
+	  Enables hex dump logging of received command APDUs. General NFC commissioning
+	  messages are logged via ChipLogDetail regardless of this option.
 
 # See config/zephyr/Kconfig for full definition
 config CHIP_OTA_REQUESTOR

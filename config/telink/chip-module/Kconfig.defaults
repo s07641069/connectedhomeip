@@ -126,6 +126,9 @@ config NET_BUF_TX_COUNT
 config GPIO
     default y
 
+config ST25DV_WORKER_STACK_SIZE
+    default 2048 if CHIP_NFC_BASED_COMMISSIONING
+
 # Bluetooth Low Energy configs
 
 config BT
