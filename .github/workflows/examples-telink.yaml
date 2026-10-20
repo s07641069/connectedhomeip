@@ -225,34 +225,6 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
-            - name: Build example Telink (tl321x) Lighting App with Factory Data, 4Mb flash
-              # Run on master/release/merge queue, Telink-related PRs, and Telink organization PRs
-              if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 'telink-semi/tl_matter' || steps.changed_paths.outputs.telink == 'true'
-              run: |
-                  ./scripts/run_in_build_env.sh \
-                    "./scripts/build/build_examples.py --target 'telink-tl3218x-light-ota-factory-data-4mb' build"
-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
-                    telink tl3218x lighting-app-ota-factory-data-4mb \
-                    out/telink-tl3218x-light-ota-factory-data-4mb/zephyr/zephyr.elf \
-                    /tmp/bloat_reports/
-
-            - name: clean out build output (keep tools)
-              run: rm -rf ./out/telink*
-
-            - name: Build example Telink (tl321x_retention) Light Switch App with OTA, Factory Data
-              # Run only for PRs from the Telink organization fork
-              if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'telink-semi/tl_matter'
-              run: |
-                  ./scripts/run_in_build_env.sh \
-                    "./scripts/build/build_examples.py --target 'telink-tl3218x_retention-light-switch-ota-compress-lzma-factory-data' build"
-                  .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
-                    telink tl3218x_retention light-switch-app-ota-compress-lzma-factory-data \
-                    out/telink-tl3218x_retention-light-switch-ota-compress-lzma-factory-data/zephyr/zephyr.elf \
-                    /tmp/bloat_reports/
-
-            - name: clean out build output (keep tools)
-              run: rm -rf ./out/telink*
-
             - name: Build example Telink (tl721x retention) Light Switch App with OTA (LZMA), Factory Data, 4Mb flash
               # Run only for PRs from the Telink organization fork
               if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'telink-semi/tl_matter'
@@ -267,15 +239,15 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
-            - name: Build example Telink (tl721x) Lock App with DFU over BLE SMP, OTA (LZMA), Concurrent Connection, 4Mb flash
+            - name: Build example Telink (tl721x) Lock App with DFU over BLE SMP, OTA (LZMA), 4Mb flash
               # Run only for PRs from the Telink organization fork
               if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'telink-semi/tl_matter'
               run: |
                   ./scripts/run_in_build_env.sh \
-                    "./scripts/build/build_examples.py --target 'telink-tl7218x-lock-dfu-smp-ota-compress-lzma-concurrent-connection-4mb' build"
+                    "./scripts/build/build_examples.py --target 'telink-tl7218x-lock-dfu-smp-ota-compress-lzma-4mb' build"
                   .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
-                    telink tl7218x lock-app-dfu-smp-ota-compress-lzma-concurrent-connection-4mb \
-                    out/telink-tl7218x-lock-dfu-smp-ota-compress-lzma-concurrent-connection-4mb/zephyr/zephyr.elf \
+                    telink tl7218x lock-app-dfu-smp-ota-compress-lzma-4mb \
+                    out/telink-tl7218x-lock-dfu-smp-ota-compress-lzma-4mb/zephyr/zephyr.elf \
                     /tmp/bloat_reports/
 
             - name: clean out build output (keep tools)
@@ -337,14 +309,14 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
-            - name: Build example Telink (tl3228x retention) Smoke CO Alarm App
+            - name: Build example Telink (B92 retention) Smoke CO Alarm App
               # Run for all PRs and master/release/merge queue
               run: |
                   ./scripts/run_in_build_env.sh \
-                    "./scripts/build/build_examples.py --target 'telink-tl3228x_retention-smoke-co-alarm' build"
+                    "./scripts/build/build_examples.py --target 'telink-tlsr9528a_retention-smoke-co-alarm' build"
                   .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
-                    telink tl3228x_retention smoke-co-alarm-app \
-                    out/telink-tl3228x_retention-smoke-co-alarm/zephyr/zephyr.elf \
+                    telink tlsr9528a_retention smoke-co-alarm-app \
+                    out/telink-tlsr9528a_retention-smoke-co-alarm/zephyr/zephyr.elf \
                     /tmp/bloat_reports/
 
             - name: clean out build output (keep tools)
@@ -378,15 +350,15 @@ jobs:
             - name: clean out build output (keep tools)
               run: rm -rf ./out/telink*
 
-            - name: Build example Telink (tl3228x) Window Covering App with OTA (LZMA), Factory Data
+            - name: Build example Telink (tl721x) Window Covering App with OTA (LZMA), Factory Data, 4Mb flash
               # Run on master/release/merge queue, Telink-related PRs, and Telink organization PRs
               if: github.event.pull_request.number == null || github.event.pull_request.head.repo.full_name == 'telink-semi/tl_matter' || steps.changed_paths.outputs.telink == 'true'
               run: |
                   ./scripts/run_in_build_env.sh \
-                    "./scripts/build/build_examples.py --target 'telink-tl3228x-window-covering-ota-compress-lzma-factory-data' build"
+                    "./scripts/build/build_examples.py --target 'telink-tl7218x-window-covering-ota-compress-lzma-factory-data-4mb' build"
                   .environment/pigweed-venv/bin/python3 scripts/tools/memory/gh_sizes.py \
-                    telink tl3228x window-covering-app-ota-compress-lzma-factory-data \
-                    out/telink-tl3228x-window-covering-ota-compress-lzma-factory-data/zephyr/zephyr.elf \
+                    telink tl7218x window-covering-app-ota-compress-lzma-factory-data-4mb \
+                    out/telink-tl7218x-window-covering-ota-compress-lzma-factory-data-4mb/zephyr/zephyr.elf \
                     /tmp/bloat_reports/
 
             - name: clean out build output (keep tools)
