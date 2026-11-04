@@ -24,9 +24,6 @@
 #include <lib/core/Global.h>
 #include <system/SystemPacketBuffer.h>
 
-// TODO: Rework
-// #include <nfc_t4t_lib.h>
-
 #include <cstdint>
 
 namespace chip {
@@ -121,9 +118,7 @@ private:
     };
 
     /** Handle Type 4 Tag (ISO-DEP) event */
-    // TODO: Rework
-    // static void OnT4TEvent(void * context, nfc_t4t_event_t event, const uint8_t * data, size_t dataLength, uint32_t flags);
-
+    static void OnT4TEvent(void * ctx);
     /**
      * Starts the emulation of a raw ISO-DEP (Type 4 Tag) NFC tag,
      * enabling the device to receive APDU commands from an external NFC reader.
@@ -302,6 +297,12 @@ private:
      * Caller must hold the session mutex.
      */
     void RejectUnsupportedSelect(uint8_t p1, uint8_t p2);
+
+    /**
+     * ndef uri encoding
+     */
+    static int nfc_ndef_uri_msg_encode(uint8_t uri_id_code, const char * url_str, size_t url_str_len, uint8_t * out,
+                                       size_t * out_len);
 
     // ===== Members for internal use
 

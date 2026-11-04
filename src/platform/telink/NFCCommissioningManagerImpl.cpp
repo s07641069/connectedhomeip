@@ -34,9 +34,8 @@
 #include <setup_payload/QRCodeSetupPayloadGenerator.h>
 #include <setup_payload/SetupPayload.h>
 
-// TODO: Rework
-// #include <nfc/ndef/uri_msg.h>
-// #include <nfc/ndef/uri_rec.h>
+#include <m24sr.h>
+#include <m24sr_ext.h>
 
 #include <algorithm>
 #include <cstring>
@@ -290,22 +289,17 @@ void NFCCommissioningManagerImpl::StartRawIsoDepTagEmulation()
 {
     VerifyOrReturn(!mRawIsoDepStarted);
 
-    // TODO: Rework
-    // int err = nfc_t4t_setup(OnT4TEvent, this);
-    // if (err)
-    // {
-    //     ChipLogError(DeviceLayer, "nfc_t4t_setup() failed: %d", err);
-    //     return;
-    // }
+    M24SR_SetEventHandler(OnT4TEvent, this);
+    M24SR_Init(M24SR_I2C_ADDRESS, M24SR_GPO_INTERRUPT);
 
-    // err = nfc_t4t_emulation_start();
-    // if (err)
-    // {
-    //     ChipLogError(DeviceLayer, "nfc_t4t_emulation_start() failed: %d", err);
-    //     nfc_t4t_done();
-    //     return;
-    // }
+    uint16_t err = M24SR_ManageRFGPO(M24SR_I2C_ADDRESS, M24SR_GPO_INTERRUPT);
 
+    if (err != M24SR_STATUS_SUCCESS)
+    {
+        ChipLogError(DeviceLayer, "M24SR_ManageRFGPO() failed: %x", err);
+        return;
+    }
+    M24SR_RFConfig(0);
     mRawIsoDepStarted = true;
     ChipLogProgress(DeviceLayer, "NFC NDEF Tag emulation started");
 }
@@ -314,9 +308,13 @@ void NFCCommissioningManagerImpl::StopRawIsoDepTagEmulation()
 {
     VerifyOrReturn(mRawIsoDepStarted);
 
-    // TODO: Rework
-    // nfc_t4t_emulation_stop();
-    // nfc_t4t_done();
+    uint16_t err = M24SR_KillSession(M24SR_I2C_ADDRESS);
+
+    if (err != M24SR_STATUS_SUCCESS)
+    {
+        ChipLogError(DeviceLayer, "M24SR_KillSession() failed: %x", err);
+    }
+    M24SR_RFConfig(1);
     mRawIsoDepStarted = false;
 }
 
@@ -411,11 +409,8 @@ CHIP_ERROR NFCCommissioningManagerImpl::SetOnboardingPayload(const char * payloa
 
     VerifyOrReturnError(CanCastTo<uint8_t>(payloadLength), CHIP_ERROR_BUFFER_TOO_SMALL);
 
-    uint32_t ndefLength = kNdefMessageCapacity;
-    int result          = 0;
-    // TODO: Rework
-    // int result          = nfc_ndef_uri_msg_encode(NFC_URI_NONE, reinterpret_cast<const uint8_t *>(payload),
-    //                                               static_cast<uint8_t>(payloadLength), &mNdefFileBuffer[2], &ndefLength);
+    size_t ndefLength = kNdefMessageCapacity;
+    int result        = nfc_ndef_uri_msg_encode(0, payload, payloadLength, &mNdefFileBuffer[2], &ndefLength);
     if (result)
     {
         ChipLogError(DeviceLayer, "nfc_ndef_uri_msg_encode() failed: %d", result);
@@ -482,9 +477,7 @@ CHIP_ERROR NFCCommissioningManagerImpl::SendToNfcTag(const Transport::PeerAddres
 }
 
 // ===== nfc_t4t_lib raw ISO-DEP callback
-#if 0 // TODO: Rework
-void NFCCommissioningManagerImpl::OnT4TEvent(void * context, nfc_t4t_event_t event, const uint8_t * data, size_t dataLength,
-                                             uint32_t flags)
+void NFCCommissioningManagerImpl::OnT4TEvent(void * context)
 {
     auto * self = static_cast<NFCCommissioningManagerImpl *>(context);
     if (self == nullptr)
@@ -497,25 +490,47 @@ void NFCCommissioningManagerImpl::OnT4TEvent(void * context, nfc_t4t_event_t eve
         return;
     }
 
-    switch (event)
+    do
     {
-    case NFC_T4T_EVENT_FIELD_ON:
-        self->HandleFieldOn();
-        break;
-    case NFC_T4T_EVENT_FIELD_OFF:
-        self->HandleFieldOff();
-        break;
-    case NFC_T4T_EVENT_DATA_IND:
-        self->HandleDataIndication(data, dataLength, flags);
-        break;
-    case NFC_T4T_EVENT_DATA_TRANSMITTED:
-        self->HandleDataTransmitted();
-        break;
-    default:
-        break;
-    }
+        uint16_t result;
+        uint16_t apdu_len;
+
+        result = M24SR_ReadBinary(M24SR_I2C_ADDRESS, 0, sizeof(apdu_len), (uint8_t *) &apdu_len);
+        if (result != M24SR_STATUS_SUCCESS)
+        {
+            ChipLogError(DeviceLayer, "m24sr read apdu length failed %x", result);
+            break;
+        }
+        apdu_len = sys_be16_to_cpu(apdu_len);
+        if (!apdu_len || apdu_len > kMaxApduSize - sizeof(apdu_len))
+        {
+            ChipLogError(DeviceLayer, "m24sr income apdu length failed %u", apdu_len);
+            break;
+        }
+
+        uint8_t * apdu_data = new uint8_t[sizeof(apdu_len) + apdu_len];
+
+        if (!apdu_data)
+        {
+            ChipLogError(DeviceLayer, "m24sr can't allocate apdu %u", sizeof(apdu_len) + apdu_len);
+            break;
+        }
+        result = M24SR_ReadBinary(M24SR_I2C_ADDRESS, sizeof(apdu_len), sizeof(apdu_data) - sizeof(apdu_len),
+                                  &apdu_data[sizeof(apdu_len)]);
+        if (result != M24SR_STATUS_SUCCESS)
+        {
+            ChipLogError(DeviceLayer, "m24sr read apdu data failed %x", result);
+            break;
+        }
+        *reinterpret_cast<uint16_t *>(apdu_data) = sys_cpu_to_be16(apdu_len);
+        self->HandleDataIndication(apdu_data, sizeof(apdu_data), 0);
+        delete[] apdu_data;
+    } while (0);
+    // TODO: Original implementation also rise next events:
+    // - NFC_T4T_EVENT_FIELD_ON => self->HandleFieldOn();
+    // - NFC_T4T_EVENT_FIELD_OFF => self->HandleFieldOff();
+    // - NFC_T4T_EVENT_DATA_TRANSMITTED => self->HandleDataTransmitted();
 }
-#endif
 
 void NFCCommissioningManagerImpl::HandleFieldOn()
 {
@@ -584,8 +599,7 @@ void NFCCommissioningManagerImpl::HandleDataIndication(const uint8_t * data, siz
     mApduLength += dataLength;
     ++mApduFragmentCount;
 
-    // TODO: Rework
-    if (flags & 1) /* NFC_T4T_DI_FLAG_MORE) */
+    if (flags & 1)
     {
         ChipLogDetail(DeviceLayer, "NFC DATA_IND fragment #%u: %u byte(s), MORE data expected, running total %u byte(s)",
                       static_cast<unsigned int>(mApduFragmentCount), static_cast<unsigned int>(dataLength),
@@ -1002,13 +1016,12 @@ int NFCCommissioningManagerImpl::SendDataResponse(const uint8_t * data, size_t d
     mApduBuffer[dataLength]     = sw1;
     mApduBuffer[dataLength + 1] = sw2;
 
-    // TODO: Rework
-    int err = 0; /* nfc_t4t_response_pdu_send(mApduBuffer, dataLength + 2); */
-    ChipLogDetail(DeviceLayer, "Sent response APDU: SW=%02X%02X, %u byte(s) of data, result=%d", sw1, sw2,
+    uint16_t err = M24SR_UpdateBinary(M24SR_I2C_ADDRESS, 0, dataLength + 2, mApduBuffer);
+    ChipLogDetail(DeviceLayer, "Sent response APDU: SW=%02X%02X, %u byte(s) of data, result=%x", sw1, sw2,
                   static_cast<unsigned int>(dataLength), err);
-    if (err)
+    if (err != M24SR_STATUS_SUCCESS)
     {
-        ChipLogError(DeviceLayer, "nfc_t4t_response_pdu_send() failed: %d", err);
+        ChipLogError(DeviceLayer, "M24SR_UpdateBinary() failed: %x", err);
     }
     return err;
 }
@@ -1101,6 +1114,44 @@ void NFCCommissioningManagerImpl::DeliverIncomingMessage()
     }
 
     mAwaitingApplicationResponse = true;
+}
+
+int NFCCommissioningManagerImpl::nfc_ndef_uri_msg_encode(uint8_t uri_id_code, const char * url_str, size_t url_str_len,
+                                                         uint8_t * out, size_t * out_len)
+{
+    if (!out || !out_len || (url_str_len > 0 && !url_str))
+    {
+        return -1;
+    }
+
+    size_t out_len_req = url_str_len + (url_str_len > 0xfe ? 8 : 5);
+
+    if (*out_len < out_len_req)
+    {
+        return -2;
+    }
+    *out_len = out_len_req;
+    if (url_str_len > 0xfe)
+    {
+        out[0] = 0xc1;                                         // record header (MB=1, ME=1, CF=0, SR=0, IL=0, TNF=001)
+        out[1] = 1;                                            // length of record type
+        out[2] = (uint8_t) (((url_str_len + 1) >> 24) & 0xff); // length
+        out[3] = (uint8_t) (((url_str_len + 1) >> 16) & 0xff); // length
+        out[4] = (uint8_t) (((url_str_len + 1) >> 8) & 0xff);  // length
+        out[5] = (uint8_t) ((url_str_len + 1) & 0xff);         // length
+        out[6] = (uint8_t) 'U';                                // record Type
+        out[7] = uri_id_code;                                  // uri prefix code
+    }
+    else
+    {
+        out[0] = 0xd1;            // record header (MB=1, ME=1, CF=0, SR=1, IL=0, TNF=001)
+        out[1] = 1;               // length of record type
+        out[2] = url_str_len + 1; // length
+        out[3] = (uint8_t) 'U';   // record Type
+        out[4] = uri_id_code;     // uri prefix code
+    }
+    memcpy(&out[url_str_len > 0xfe ? 8 : 5], url_str, url_str_len);
+    return 0;
 }
 
 } // namespace Internal
