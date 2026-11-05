@@ -58,8 +58,9 @@ public:
 
     // Maximum size of the NDEF message (URI record) served by the NDEF Tag Application's NDEF
     // file, and total size of that file (message plus its 2-byte NLEN length header).
-    static constexpr size_t kNdefMessageCapacity = 128;
-    static constexpr size_t kNdefFileBufferSize  = kNdefMessageCapacity + 2;
+    static constexpr size_t kNdefMessageCapacity                     = 128;
+    static constexpr size_t kNdefFileBufferSize                      = kNdefMessageCapacity + 2;
+    static constexpr System::Clock::Timeout kRadioFieldActiveTimeout = System::Clock::Milliseconds32(2000);
 
 private:
     // ===== Members that implement the NFCCommissioningManager internal interface.
@@ -119,6 +120,8 @@ private:
 
     /** Handle Type 4 Tag (ISO-DEP) event */
     static void OnT4TEvent(void * ctx);
+    /** Radio field disappear timer event */
+    static void OnRadioFieldActiveTimerExpired(System::Layer * systemLayer, void * appState);
     /**
      * Starts the emulation of a raw ISO-DEP (Type 4 Tag) NFC tag,
      * enabling the device to receive APDU commands from an external NFC reader.
@@ -341,6 +344,8 @@ private:
     // Set when tag emulation is stopped during fail-safe rollback. While set, all NFC
     // callbacks are ignored to avoid corrupting the NFC platform ring buffer on re-tap.
     bool mNfcEmulationPausedForFailSafe = false;
+
+    bool mNfcIsRadioFieldActive = false;
 };
 
 /**

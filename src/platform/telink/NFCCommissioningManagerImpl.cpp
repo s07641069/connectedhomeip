@@ -490,11 +490,20 @@ void NFCCommissioningManagerImpl::OnT4TEvent(void * context)
         return;
     }
 
-    do
+    if (self->mNfcIsRadioFieldActive)
     {
-        uint16_t result;
-        uint16_t apdu_len;
+        DeviceLayer::SystemLayer().CancelTimer(OnRadioFieldActiveTimerExpired, self);
+        if (DeviceLayer::SystemLayer().StartTimer(kRadioFieldActiveTimeout, OnRadioFieldActiveTimerExpired, self) != CHIP_NO_ERROR)
+        {
+            ChipLogError(DeviceLayer, "m24sr restart radio field detection timer failed");
+        }
+    }
 
+    uint16_t result = M24SR_STATUS_SUCCESS;
+    uint16_t apdu_len;
+
+    while (result == M24SR_STATUS_SUCCESS)
+    {
         result = M24SR_ReadBinary(M24SR_I2C_ADDRESS, 0, sizeof(apdu_len), (uint8_t *) &apdu_len);
         if (result != M24SR_STATUS_SUCCESS)
         {
@@ -502,7 +511,16 @@ void NFCCommissioningManagerImpl::OnT4TEvent(void * context)
             break;
         }
         apdu_len = sys_be16_to_cpu(apdu_len);
-        if (!apdu_len || apdu_len > kMaxApduSize - sizeof(apdu_len))
+        break;
+    }
+    while (result == M24SR_STATUS_SUCCESS && !apdu_len)
+    {
+        self->HandleDataTransmitted();
+        break;
+    }
+    while (result == M24SR_STATUS_SUCCESS && apdu_len)
+    {
+        if (apdu_len > kMaxApduSize - sizeof(apdu_len))
         {
             ChipLogError(DeviceLayer, "m24sr income apdu length failed %u", apdu_len);
             break;
@@ -522,14 +540,29 @@ void NFCCommissioningManagerImpl::OnT4TEvent(void * context)
             ChipLogError(DeviceLayer, "m24sr read apdu data failed %x", result);
             break;
         }
+        if (!self->mNfcIsRadioFieldActive)
+        {
+            self->mNfcIsRadioFieldActive = true;
+            DeviceLayer::SystemLayer().CancelTimer(OnRadioFieldActiveTimerExpired, self);
+            if (DeviceLayer::SystemLayer().StartTimer(kRadioFieldActiveTimeout, OnRadioFieldActiveTimerExpired, self) !=
+                CHIP_NO_ERROR)
+            {
+                ChipLogError(DeviceLayer, "m24sr start radio field detection timer failed");
+            }
+            self->HandleFieldOn();
+        }
         *reinterpret_cast<uint16_t *>(apdu_data) = sys_cpu_to_be16(apdu_len);
         self->HandleDataIndication(apdu_data, sizeof(apdu_data), 0);
         delete[] apdu_data;
-    } while (0);
-    // TODO: Original implementation also rise next events:
-    // - NFC_T4T_EVENT_FIELD_ON => self->HandleFieldOn();
-    // - NFC_T4T_EVENT_FIELD_OFF => self->HandleFieldOff();
-    // - NFC_T4T_EVENT_DATA_TRANSMITTED => self->HandleDataTransmitted();
+    }
+}
+
+void NFCCommissioningManagerImpl::OnRadioFieldActiveTimerExpired(System::Layer * systemLayer, void * appState)
+{
+    auto * self = static_cast<NFCCommissioningManagerImpl *>(appState);
+
+    self->mNfcIsRadioFieldActive = false;
+    self->HandleFieldOff();
 }
 
 void NFCCommissioningManagerImpl::HandleFieldOn()
