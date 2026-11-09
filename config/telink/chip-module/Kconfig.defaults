@@ -328,6 +328,9 @@ endchoice
 config CHIP_ENABLE_ICD_SUPPORT
     default y if CHIP_THREAD_DEVICE_ROLE_SLEEPY_END_DEVICE
 
+config OPENTHREAD_MAC_STAY_AWAKE_BETWEEN_FRAGMENTS
+    default y if PM
+
 config OPENTHREAD_CSMABACKOFF_OPTIMIZATION
     bool "Skip initial CSMA-CA backoff when sending data requests"
     depends on CHIP_ENABLE_ICD_SUPPORT
